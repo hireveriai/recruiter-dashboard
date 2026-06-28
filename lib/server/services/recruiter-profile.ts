@@ -19,6 +19,10 @@ type RecruiterProfileRow = {
   permissions: string[] | null
 }
 
+type ExistsRow = {
+  exists: boolean
+}
+
 export type RecruiterProfile = {
   name: string
   email: string
@@ -33,6 +37,19 @@ export type RecruiterProfile = {
   recruiterProfileExists: boolean
   sessionCookieMatched: boolean
   sessionValidatedVia: "auth_session" | "identity_cookie" | "jwt"
+}
+
+async function tableExists(tableName: string) {
+  const rows = await prisma.$queryRaw<ExistsRow[]>(Prisma.sql`
+    select exists (
+      select 1
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_name = ${tableName}
+    ) as exists
+  `)
+
+  return rows[0]?.exists ?? false
 }
 
 export async function getRecruiterProfile(auth: RecruiterRequestContext): Promise<RecruiterProfile> {
@@ -70,7 +87,7 @@ export async function getRecruiterProfile(auth: RecruiterRequestContext): Promis
   let recruiterProfileExists = false
   let permissions: string[] = []
 
-  void prisma.$queryRaw(Prisma.sql`
+  await prisma.$queryRaw(Prisma.sql`
     select public.fn_ensure_default_recruiter_profile(
       ${auth.userId}::uuid,
       ${auth.organizationId}::uuid
@@ -80,19 +97,51 @@ export async function getRecruiterProfile(auth: RecruiterRequestContext): Promis
   })
 
   try {
+    const hasUserPermissionOverrides = await tableExists("recruiter_user_permission_overrides").catch(() => false)
+    const permissionsExpression = hasUserPermissionOverrides
+      ? Prisma.sql`
+          coalesce(
+            array_agg(distinct pd.permission_code)
+              filter (
+                where pd.permission_code is not null
+                  and (
+                    (role_permissions.permission is not null and coalesce(user_permissions.is_granted, true) = true)
+                    or user_permissions.is_granted = true
+                  )
+              ),
+            array[]::text[]
+          )`
+      : Prisma.sql`
+          coalesce(
+            array_agg(distinct role_permissions.permission)
+              filter (where role_permissions.permission is not null),
+            array[]::text[]
+          )`
+
     const profileRows = await prisma.$queryRaw<RecruiterProfileRow[]>(Prisma.sql`
       select
         rp.company_name as profile_company_name,
         rp.recruiter_role_id,
         (rp.recruiter_id is not null) as recruiter_profile_exists,
-        coalesce(
-          array_agg(distinct role_permissions.permission)
-            filter (where role_permissions.permission is not null),
-          array[]::text[]
-        ) as permissions
+        ${permissionsExpression} as permissions
       from public.recruiter_profiles rp
+      ${hasUserPermissionOverrides
+        ? Prisma.sql`
+            left join public.permissions pd
+              on true
+          `
+        : Prisma.sql``}
       left join public.role_permissions role_permissions
         on role_permissions.recruiter_role_id = rp.recruiter_role_id
+        ${hasUserPermissionOverrides ? Prisma.sql`and role_permissions.permission = pd.permission_code` : Prisma.sql``}
+      ${hasUserPermissionOverrides
+        ? Prisma.sql`
+            left join public.recruiter_user_permission_overrides user_permissions
+              on user_permissions.user_id = rp.recruiter_id
+              and user_permissions.organization_id = rp.organization_id
+              and user_permissions.permission_code = pd.permission_code
+          `
+        : Prisma.sql``}
       where rp.recruiter_id::text = ${auth.userId}
         and rp.organization_id::text = ${auth.organizationId}
       group by rp.company_name, rp.recruiter_role_id, rp.recruiter_id

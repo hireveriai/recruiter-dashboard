@@ -674,18 +674,20 @@ export default function InterviewsPage() {
             <table className="w-full table-fixed text-sm">
               <colgroup>
                 <col className="w-[10%]" />
-                <col className="w-[16%]" />
+                <col className="w-[12%]" />
+                <col className="w-[15%]" />
                 <col className="w-[11%]" />
                 <col className="w-[11%]" />
                 <col className="w-[7%]" />
                 <col className="w-[8%]" />
-                <col className="w-[13%]" />
-                <col className="w-[15%]" />
-                <col className="w-[9%]" />
+                <col className="w-[12%]" />
+                <col className="w-[14%]" />
+                <col className="w-[10%]" />
               </colgroup>
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
                   <th className="p-5 text-left font-medium">Candidate</th>
+                  <th className="p-5 text-left font-medium">Recording</th>
                   <th className="p-5 text-left font-medium">Job</th>
                   <th className="p-5 text-left font-medium">Status</th>
                   <th className="px-4 py-5 text-left font-medium">Interview Type</th>
@@ -696,20 +698,41 @@ export default function InterviewsPage() {
                   <th className="p-5 text-center font-medium">Action</th>
                 </tr>
               </thead>
-                <tbody>
+              <tbody>
                   {interviews.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-10 text-center text-slate-400">No interviews available</td>
+                    <td colSpan={10} className="p-10 text-center text-slate-400">No interviews available</td>
                   </tr>
                 ) : filteredInterviews.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
+                    <td colSpan={10} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
                   </tr>
                 ) : (
                   filteredInterviews.map((interview) => (
                     <Fragment key={interview.interviewId}>
                     <tr className="border-t border-slate-800/80 text-slate-200">
                       <td className="p-5 font-medium text-white"><span className="block truncate">{interview.candidateName}</span></td>
+                      <td className="p-5">
+                        {interview.hasRecording && interview.recordingUrl ? (
+                          <Link
+                            href={interview.recordingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white"
+                            aria-label={`View recording for ${interview.candidateName}`}
+                          >
+                            View Recording
+                          </Link>
+                        ) : interview.recordingId ? (
+                          <span className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-100">
+                            Processing
+                          </span>
+                        ) : (
+                          <span className="inline-flex rounded-full border border-slate-700 bg-slate-950/30 px-3 py-1 text-xs font-medium text-slate-500">
+                            Not available
+                          </span>
+                        )}
+                      </td>
                       <td className="p-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
                       <td className="p-5">
                         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(interview.status)}`}>
@@ -792,7 +815,7 @@ export default function InterviewsPage() {
                     </tr>
                     {expandedInterviewId === interview.interviewId ? (
                       <tr key={`${interview.interviewId}-details`} className="border-t border-emerald-400/10">
-                        <td colSpan={9} className="bg-slate-950/30 p-5">
+                        <td colSpan={10} className="bg-slate-950/30 p-5">
                           <CompletedInterviewDetails interview={interview} onClose={() => setExpandedInterviewId("")} />
                         </td>
                       </tr>

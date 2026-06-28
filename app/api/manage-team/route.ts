@@ -16,6 +16,10 @@ type PermissionDetail = {
   description: string | null
 }
 
+type PermissionOverrideDetail = PermissionDetail & {
+  isGranted: boolean
+}
+
 type TeamMemberRow = {
   user_id: string
   full_name: string | null
@@ -27,6 +31,8 @@ type TeamMemberRow = {
   recruiter_role_code: string | null
   recruiter_role_description: string | null
   permission_details: PermissionDetail[] | null
+  role_permission_codes: string[] | null
+  permission_overrides: PermissionOverrideDetail[] | null
   is_admin: boolean
   invite_status: "PENDING" | "ACCEPTED" | "EXPIRED" | null
   invite_expires_at: string | null
@@ -45,6 +51,11 @@ type AvailableRoleRow = {
   code: string | null
   description: string | null
   permission_details: PermissionDetail[] | null
+}
+
+type PermissionRow = {
+  code: string
+  description: string | null
 }
 
 type CreateTeamMemberRow = {
@@ -266,6 +277,113 @@ async function ensureTeamInviteTables() {
   `)
 }
 
+async function ensureUserPermissionOverrideTable() {
+  await prisma.$executeRaw(Prisma.sql`
+    create table if not exists public.recruiter_user_permission_overrides (
+      organization_id uuid not null references public.organizations(organization_id) on delete cascade,
+      user_id uuid not null references public.users(user_id) on delete cascade,
+      permission_code text not null references public.permissions(permission_code) on delete cascade,
+      is_granted boolean not null,
+      updated_by uuid null references public.users(user_id),
+      updated_at timestamptz not null default now(),
+      primary key (organization_id, user_id, permission_code)
+    )
+  `)
+
+  await prisma.$executeRaw(Prisma.sql`
+    create index if not exists idx_recruiter_user_permission_overrides_user
+      on public.recruiter_user_permission_overrides (user_id, organization_id)
+  `)
+}
+
+function normalizePermissionCodes(value: unknown) {
+  if (!Array.isArray(value)) {
+    return null
+  }
+
+  return [...new Set(
+    value
+      .map((permission) => String(permission ?? "").trim())
+      .filter(Boolean)
+  )]
+}
+
+async function saveUserPermissionOverrides(input: {
+  auth: RecruiterAuth
+  targetUserId: string
+  recruiterRoleId: number
+  permissionCodes: string[] | null
+}) {
+  if (!input.permissionCodes) {
+    return
+  }
+
+  await ensureUserPermissionOverrideTable()
+
+  const validRows = await prisma.$queryRaw<{ permission_code: string }[]>(Prisma.sql`
+    select permission_code
+    from public.permissions
+    where permission_code = any(${input.permissionCodes}::text[])
+  `)
+  const validPermissions = new Set(validRows.map((row) => row.permission_code))
+
+  if (validPermissions.size !== input.permissionCodes.length) {
+    throw new ApiError(400, "INVALID_PERMISSION", "One or more selected permissions are not available")
+  }
+
+  const baseRows = await prisma.$queryRaw<{ permission: string }[]>(Prisma.sql`
+    select permission
+    from public.role_permissions
+    where recruiter_role_id = ${input.recruiterRoleId}::smallint
+  `)
+  const basePermissions = new Set(baseRows.map((row) => row.permission).filter(Boolean))
+  const desiredPermissions = new Set(input.permissionCodes)
+  const overrideRows = [
+    ...input.permissionCodes
+      .filter((permission) => !basePermissions.has(permission))
+      .map((permission) => ({ permission, isGranted: true })),
+    ...[...basePermissions]
+      .filter((permission) => !desiredPermissions.has(permission))
+      .map((permission) => ({ permission, isGranted: false })),
+  ]
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(Prisma.sql`
+      delete from public.recruiter_user_permission_overrides
+      where organization_id = ${input.auth.organizationId}::uuid
+        and user_id = ${input.targetUserId}::uuid
+    `)
+
+    for (const override of overrideRows) {
+      await tx.$executeRaw(Prisma.sql`
+        insert into public.recruiter_user_permission_overrides (
+          organization_id,
+          user_id,
+          permission_code,
+          is_granted,
+          updated_by,
+          updated_at
+        )
+        values (
+          ${input.auth.organizationId}::uuid,
+          ${input.targetUserId}::uuid,
+          ${override.permission},
+          ${override.isGranted},
+          ${input.auth.userId}::uuid,
+          now()
+        )
+      `)
+    }
+  })
+}
+
+function hasGlobalAdministratorPermissions(permissionCodes: string[] | null) {
+  return Boolean(
+    permissionCodes?.includes("users.manage") &&
+      permissionCodes.includes("organization.settings")
+  )
+}
+
 async function getRoleOrThrow(roleId: number) {
   const rows = await prisma.$queryRaw<RoleLookupRow[]>(Prisma.sql`
     select
@@ -273,8 +391,18 @@ async function getRoleOrThrow(roleId: number) {
       hrr.name as code,
       null::text as description
     from public.hireveri_recruiter_roles hrr
+    left join public.recruiter_role_pool rrp
+      on rrp.recruiter_role_id = hrr.legacy_role_id
     where hrr.legacy_role_id = ${roleId}::smallint
       and hrr.is_active = true
+      and (
+        rrp.recruiter_role_id is not null
+        or exists (
+          select 1
+          from public.role_permissions role_permission
+          where role_permission.recruiter_role_id = hrr.legacy_role_id
+        )
+      )
     limit 1
   `)
 
@@ -302,17 +430,40 @@ async function getActor(auth: RecruiterAuth) {
 async function assertCanManageUsers(auth: RecruiterAuth) {
   await ensureCurrentRecruiterAdminIfNoAdmin(auth)
 
-  const rows = await prisma.$queryRaw<{ can_manage: boolean }[]>(Prisma.sql`
-    select exists (
-      select 1
-      from public.recruiter_profiles arp
-      inner join public.role_permissions perms
-        on perms.recruiter_role_id = arp.recruiter_role_id
-      where arp.recruiter_id = ${auth.userId}::uuid
-        and arp.organization_id = ${auth.organizationId}::uuid
-        and perms.permission = 'users.manage'
-    ) as can_manage
-  `)
+  const hasUserPermissionOverrides = await tableExists("recruiter_user_permission_overrides").catch(() => false)
+  const rows = hasUserPermissionOverrides
+    ? await prisma.$queryRaw<{ can_manage: boolean }[]>(Prisma.sql`
+        select exists (
+          select 1
+          from public.recruiter_profiles arp
+          left join public.permissions pd
+            on pd.permission_code = 'users.manage'
+          left join public.role_permissions perms
+            on perms.recruiter_role_id = arp.recruiter_role_id
+            and perms.permission = pd.permission_code
+          left join public.recruiter_user_permission_overrides user_perms
+            on user_perms.user_id = arp.recruiter_id
+            and user_perms.organization_id = arp.organization_id
+            and user_perms.permission_code = pd.permission_code
+          where arp.recruiter_id = ${auth.userId}::uuid
+            and arp.organization_id = ${auth.organizationId}::uuid
+            and (
+              (perms.permission is not null and coalesce(user_perms.is_granted, true) = true)
+              or user_perms.is_granted = true
+            )
+        ) as can_manage
+      `)
+    : await prisma.$queryRaw<{ can_manage: boolean }[]>(Prisma.sql`
+        select exists (
+          select 1
+          from public.recruiter_profiles arp
+          inner join public.role_permissions perms
+            on perms.recruiter_role_id = arp.recruiter_role_id
+          where arp.recruiter_id = ${auth.userId}::uuid
+            and arp.organization_id = ${auth.organizationId}::uuid
+            and perms.permission = 'users.manage'
+        ) as can_manage
+      `)
 
   if (!rows[0]?.can_manage) {
     throw new ApiError(403, "INSUFFICIENT_PERMISSION", "users.manage is required")
@@ -450,7 +601,7 @@ async function getExistingUserByEmail(email: string) {
 async function getTeamWorkspace(auth: RecruiterAuth) {
   await ensureManageTeamUserColumns()
 
-  const [hasEnsureProfileFn, hasRecruiterProfiles, hasRecruiterRoles, hasRecruiterRolePool, hasRolePermissions, hasPermissions] =
+  const [hasEnsureProfileFn, hasRecruiterProfiles, hasRecruiterRoles, hasRecruiterRolePool, hasRolePermissions, hasPermissions, hasUserPermissionOverrides] =
     await Promise.all([
       functionExists("fn_ensure_default_recruiter_profile"),
       tableExists("recruiter_profiles"),
@@ -458,6 +609,7 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
       tableExists("recruiter_role_pool"),
       tableExists("role_permissions"),
       tableExists("permissions"),
+      tableExists("recruiter_user_permission_overrides"),
     ])
 
   if (hasEnsureProfileFn) {
@@ -489,6 +641,31 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
   const availableRolePoolJoin = hasRecruiterRolePool
     ? Prisma.sql`left join public.recruiter_role_pool rrp on rrp.recruiter_role_id = hrr.legacy_role_id`
     : Prisma.sql``
+  const permissionCatalogJoin = hasUserPermissionOverrides
+    ? Prisma.sql`left join public.permissions pd on true`
+    : Prisma.sql`left join public.role_permissions perms on perms.recruiter_role_id = rp.recruiter_role_id
+        left join public.permissions pd on pd.permission_code = perms.permission`
+  const rolePermissionJoin = hasUserPermissionOverrides
+    ? Prisma.sql`left join public.role_permissions perms on perms.recruiter_role_id = rp.recruiter_role_id and perms.permission = pd.permission_code`
+    : Prisma.sql``
+  const userPermissionOverrideJoin = hasUserPermissionOverrides
+    ? Prisma.sql`
+        left join public.recruiter_user_permission_overrides user_perms
+          on user_perms.user_id = u.user_id
+          and user_perms.organization_id = u.organization_id
+          and user_perms.permission_code = pd.permission_code
+      `
+    : Prisma.sql``
+  const effectivePermissionFilter = hasUserPermissionOverrides
+    ? Prisma.sql`
+        pd.permission_code is not null
+          and (
+            (perms.permission is not null and coalesce(user_perms.is_granted, true) = true)
+            or user_perms.is_granted = true
+          )
+      `
+    : Prisma.sql`perms.permission is not null`
+  const effectivePermissionCode = hasUserPermissionOverrides ? Prisma.sql`pd.permission_code` : Prisma.sql`perms.permission`
 
   const summaryRowsPromise = prisma.$queryRaw<TeamSummaryRow[]>(Prisma.sql`
     select
@@ -499,17 +676,39 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
       ${hasRoleSystem
         ? Prisma.sql`
             count(*) filter (
-              where rp.recruiter_role_id is not null
-                and (
-                  lower(${roleNameExpression}) like '%founder%'
-                  or lower(${roleNameExpression}) like '%super%'
-                  or exists (
-                    select 1
-                    from public.role_permissions perms_admin
-                    where perms_admin.recruiter_role_id = rp.recruiter_role_id
-                      and perms_admin.permission in ('users.manage', 'organization.settings')
+              where exists (
+                select 1
+                from public.permissions admin_permission
+                left join public.role_permissions role_admin_permission
+                  on role_admin_permission.recruiter_role_id = rp.recruiter_role_id
+                  and role_admin_permission.permission = admin_permission.permission_code
+                ${hasUserPermissionOverrides
+                  ? Prisma.sql`
+                      left join public.recruiter_user_permission_overrides user_admin_permission
+                        on user_admin_permission.user_id = u.user_id
+                        and user_admin_permission.organization_id = u.organization_id
+                        and user_admin_permission.permission_code = admin_permission.permission_code
+                    `
+                  : Prisma.sql``}
+                where admin_permission.permission_code in ('users.manage', 'organization.settings')
+                group by u.user_id
+                having bool_or(
+                  admin_permission.permission_code = 'users.manage'
+                  and (
+                    ${hasUserPermissionOverrides
+                      ? Prisma.sql`(role_admin_permission.permission is not null and coalesce(user_admin_permission.is_granted, true) = true) or user_admin_permission.is_granted = true`
+                      : Prisma.sql`role_admin_permission.permission is not null`}
                   )
                 )
+                and bool_or(
+                  admin_permission.permission_code = 'organization.settings'
+                  and (
+                    ${hasUserPermissionOverrides
+                      ? Prisma.sql`(role_admin_permission.permission is not null and coalesce(user_admin_permission.is_granted, true) = true) or user_admin_permission.is_granted = true`
+                      : Prisma.sql`role_admin_permission.permission is not null`}
+                  )
+                )
+              )
             )::int
           `
         : Prisma.sql`count(*) filter (where u.role in ('ADMIN', 'ORG_OWNER'))::int`} as admins
@@ -543,30 +742,50 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
           ${roleNameExpression} as recruiter_role_code,
           ${roleDescriptionExpression} as recruiter_role_description,
           (
-            bool_or(perms.permission = 'users.manage')
-            and bool_or(perms.permission = 'organization.settings')
+            bool_or(${effectivePermissionCode} = 'users.manage' and (${effectivePermissionFilter}))
+            and bool_or(${effectivePermissionCode} = 'organization.settings' and (${effectivePermissionFilter}))
           ) as is_admin,
           latest_invite.status as invite_status,
           latest_invite.expires_at::text as invite_expires_at,
           coalesce(
             jsonb_agg(
               distinct jsonb_build_object(
-                'code', perms.permission,
+                'code', ${effectivePermissionCode},
                 'description', pd.description
               )
-            ) filter (where perms.permission is not null),
+            ) filter (where ${effectivePermissionFilter}),
             '[]'::jsonb
-          ) as permission_details
+          ) as permission_details,
+          coalesce(
+            array_agg(distinct perms.permission) filter (where perms.permission is not null),
+            array[]::text[]
+          ) as role_permission_codes,
+          ${hasUserPermissionOverrides
+            ? Prisma.sql`
+                coalesce(
+                  jsonb_agg(
+                    distinct jsonb_build_object(
+                      'code', user_perms.permission_code,
+                      'description', override_permission.description,
+                      'isGranted', user_perms.is_granted
+                    )
+                  ) filter (where user_perms.permission_code is not null),
+                  '[]'::jsonb
+                )
+              `
+            : Prisma.sql`'[]'::jsonb`} as permission_overrides
         from public.users u
         left join public.recruiter_profiles rp
           on rp.recruiter_id = u.user_id
         ${rolePoolJoin}
         left join public.hireveri_recruiter_roles hrr
           on hrr.legacy_role_id = rp.recruiter_role_id
-        left join public.role_permissions perms
-          on perms.recruiter_role_id = rp.recruiter_role_id
-        left join public.permissions pd
-          on pd.permission_code = perms.permission
+        ${permissionCatalogJoin}
+        ${rolePermissionJoin}
+        ${userPermissionOverrideJoin}
+        ${hasUserPermissionOverrides
+          ? Prisma.sql`left join public.permissions override_permission on override_permission.permission_code = user_perms.permission_code`
+          : Prisma.sql``}
         left join lateral (
           select
             case
@@ -614,7 +833,9 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
           (u.role in ('ADMIN', 'ORG_OWNER')) as is_admin,
           null::text as invite_status,
           null::text as invite_expires_at,
-          '[]'::jsonb as permission_details
+          '[]'::jsonb as permission_details,
+          array[]::text[] as role_permission_codes,
+          '[]'::jsonb as permission_overrides
         from public.users u
         where u.organization_id = ${auth.organizationId}::uuid
           and u.role in ('RECRUITER', 'ADMIN', 'ORG_OWNER')
@@ -647,15 +868,34 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
           on pd.permission_code = perms.permission
         where hrr.is_active = true
           and hrr.legacy_role_id is not null
+          and (
+            ${hasRecruiterRolePool ? Prisma.sql`rrp.recruiter_role_id is not null or` : Prisma.sql``}
+            exists (
+              select 1
+              from public.role_permissions role_permission_exists
+              where role_permission_exists.recruiter_role_id = hrr.legacy_role_id
+            )
+          )
         group by hrr.legacy_role_id, hrr.name, ${hasRecruiterRolePool ? Prisma.sql`rrp.description` : Prisma.sql`null::text`}, hrr.sort_order
         order by hrr.sort_order asc, hrr.name asc
       `)
     : []
 
-  const [summaryRows, teamRows, availableRoleRows] = await Promise.all([
+  const permissionRowsPromise = hasPermissions
+    ? prisma.$queryRaw<PermissionRow[]>(Prisma.sql`
+        select
+          permission_code as code,
+          description
+        from public.permissions
+        order by permission_code asc
+      `)
+    : []
+
+  const [summaryRows, teamRows, availableRoleRows, permissionRows] = await Promise.all([
     summaryRowsPromise,
     teamRowsPromise,
     availableRoleRowsPromise,
+    permissionRowsPromise,
   ])
 
   const summary = summaryRows[0] ?? {
@@ -677,6 +917,8 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
     organizationRoleCode: member.recruiter_role_code,
     organizationRoleDescription: member.recruiter_role_description,
     permissions: member.permission_details ?? [],
+    rolePermissionCodes: member.role_permission_codes ?? [],
+    permissionOverrides: member.permission_overrides ?? [],
     isAdmin: Boolean(member.is_admin),
     inviteStatus: getInviteStatus(member.invite_status, member.invite_expires_at),
     inviteExpiresAt: member.invite_expires_at,
@@ -704,6 +946,7 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
       description: role.description,
       permissions: role.permission_details ?? [],
     })),
+    allPermissions: permissionRows,
   }
 }
 
@@ -921,6 +1164,7 @@ export async function POST(request: Request) {
     const fullName = String(body.fullName ?? body.full_name ?? "").trim()
     const email = String(body.email ?? "").trim().toLowerCase()
     const recruiterRoleId = Number(body.recruiterRoleId ?? body.recruiter_role_id)
+    const permissionCodes = normalizePermissionCodes(body.permissionCodes ?? body.permissions)
 
     if (!fullName || !email || !Number.isInteger(recruiterRoleId)) {
       return NextResponse.json(
@@ -1045,6 +1289,13 @@ export async function POST(request: Request) {
         `)
       }
 
+      await saveUserPermissionOverrides({
+        auth,
+        targetUserId,
+        recruiterRoleId,
+        permissionCodes,
+      })
+
       await createInviteRecord({
         auth,
         email,
@@ -1129,6 +1380,7 @@ export async function PATCH(request: Request) {
     }
 
     if (action === "resend-invite") {
+      await assertCanManageUsers(auth)
       await ensureTeamInviteTables()
       const teamMember = await getTeamMemberForAccessEmail(auth, targetUserId)
 
@@ -1262,9 +1514,14 @@ export async function PATCH(request: Request) {
         : body.is_active === true || body.is_active === false
           ? Boolean(body.is_active)
           : null
+    const permissionCodes = normalizePermissionCodes(body.permissionCodes ?? body.permissions)
 
-    if (recruiterRoleId === null && isActive === null) {
-      throw new ApiError(400, "INVALID_INPUT", "Provide recruiterRoleId and/or isActive")
+    if (targetUserId === auth.userId && permissionCodes !== null && !hasGlobalAdministratorPermissions(permissionCodes)) {
+      throw new ApiError(400, "SELF_ADMIN_PERMISSION_CHANGE_BLOCKED", "You cannot remove your own Global Administrator permissions")
+    }
+
+    if (recruiterRoleId === null && isActive === null && permissionCodes === null) {
+      throw new ApiError(400, "INVALID_INPUT", "Provide recruiterRoleId, isActive and/or permissions")
     }
 
     if (recruiterRoleId !== null && !Number.isInteger(recruiterRoleId)) {
@@ -1284,6 +1541,32 @@ export async function PATCH(request: Request) {
         ${isActiveFragment}
       )
     `)
+
+    if (permissionCodes) {
+      await assertCanManageUsers(auth)
+      const existingRoleRows = recruiterRoleId === null
+        ? await prisma.$queryRaw<{ recruiter_role_id: number | null }[]>(Prisma.sql`
+          select recruiter_role_id
+          from public.recruiter_profiles
+          where recruiter_id = ${targetUserId}::uuid
+            and organization_id = ${auth.organizationId}::uuid
+          limit 1
+        `)
+        : []
+      const roleIdForOverrides = recruiterRoleId ?? existingRoleRows[0]?.recruiter_role_id
+
+      if (!Number.isInteger(roleIdForOverrides)) {
+        throw new ApiError(400, "ROLE_NOT_ASSIGNED", "Assign an organization role before setting permissions")
+      }
+      const resolvedRoleIdForOverrides = Number(roleIdForOverrides)
+
+      await saveUserPermissionOverrides({
+        auth,
+        targetUserId,
+        recruiterRoleId: resolvedRoleIdForOverrides,
+        permissionCodes,
+      })
+    }
 
     const data = await getTeamWorkspace(auth)
 

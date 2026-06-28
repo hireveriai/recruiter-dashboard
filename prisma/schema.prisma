@@ -116,8 +116,56 @@ model User {
   userTypeId      Int?       @db.SmallInt @map("user_type_id")
   firstName       String?    @map("first_name")
   lastName        String?    @map("last_name")
+  teamRemovedAt   DateTime?  @db.Timestamptz(6) @map("team_removed_at")
 
   @@map("users")
+}
+
+model Permission {
+  permissionCode String  @id @map("permission_code")
+  description    String?
+
+  @@map("permissions")
+}
+
+model RecruiterRolePool {
+  recruiterRoleId Int     @id @db.SmallInt @map("recruiter_role_id")
+  code            String?
+  description     String?
+
+  @@map("recruiter_role_pool")
+}
+
+model RecruiterProfile {
+  recruiterId     String  @id @db.Uuid @map("recruiter_id")
+  companyName     String? @map("company_name")
+  recruiterRoleId Int?    @db.SmallInt @map("recruiter_role_id")
+  organizationId  String? @db.Uuid @map("organization_id")
+
+  @@index([organizationId, recruiterId, recruiterRoleId], map: "idx_recruiter_profiles_org_recruiter_role")
+  @@map("recruiter_profiles")
+}
+
+model RolePermission {
+  recruiterRoleId Int    @db.SmallInt @map("recruiter_role_id")
+  permission      String
+
+  @@id([recruiterRoleId, permission])
+  @@index([recruiterRoleId, permission], map: "idx_role_permissions_role_permission")
+  @@map("role_permissions")
+}
+
+model RecruiterUserPermissionOverride {
+  organizationId String   @db.Uuid @map("organization_id")
+  userId         String   @db.Uuid @map("user_id")
+  permissionCode String   @map("permission_code")
+  isGranted      Boolean  @map("is_granted")
+  updatedBy      String?  @db.Uuid @map("updated_by")
+  updatedAt      DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  @@id([organizationId, userId, permissionCode])
+  @@index([userId, organizationId], map: "idx_recruiter_user_permission_overrides_user")
+  @@map("recruiter_user_permission_overrides")
 }
 
 model Candidate {

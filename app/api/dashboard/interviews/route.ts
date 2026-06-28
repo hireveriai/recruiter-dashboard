@@ -41,6 +41,21 @@ type AttemptScoreSummaryRow = {
   fallback_decision: string | null
 }
 
+type InterviewRecordingRow = {
+  interviewId: string
+  recordingId: string
+  mediaUrl: string | null
+  recordingStatus: string | null
+}
+
+type RecordingColumnRow = {
+  column_name: string
+}
+
+function quoteIdentifier(value: string) {
+  return `"${value.replace(/"/g, "\"\"")}"`
+}
+
 function toNumberOrNull(value: unknown) {
   if (value === null || value === undefined) {
     return null
@@ -385,6 +400,76 @@ async function fetchAttemptScoreSummaries(attemptIds: string[]) {
   }, new Map<string, { score: number | null; decision: string | null }>())
 }
 
+async function fetchLatestRecordingsForInterviews(organizationId: string, interviewIds: string[]) {
+  if (interviewIds.length === 0) {
+    return new Map<string, InterviewRecordingRow>()
+  }
+
+  const columns = await prisma.$queryRaw<RecordingColumnRow[]>`
+    select column_name
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'interview_recordings'
+  `.catch(() => [])
+  const columnSet = new Set(columns.map((row) => row.column_name))
+
+  if (columnSet.size === 0) {
+    return new Map<string, InterviewRecordingRow>()
+  }
+
+  const idColumn = columnSet.has("recording_id") ? "recording_id" : columnSet.has("id") ? "id" : null
+  if (!idColumn) {
+    return new Map<string, InterviewRecordingRow>()
+  }
+
+  const joinInterviewExpression = columnSet.has("interview_id") && columnSet.has("attempt_id")
+    ? "coalesce(ir.interview_id, ia.interview_id)"
+    : columnSet.has("interview_id")
+      ? "ir.interview_id"
+      : columnSet.has("attempt_id")
+        ? "ia.interview_id"
+        : null
+
+  if (!joinInterviewExpression) {
+    return new Map<string, InterviewRecordingRow>()
+  }
+
+  const attemptJoin = columnSet.has("attempt_id")
+    ? "left join public.interview_attempts ia on ia.attempt_id = ir.attempt_id"
+    : "left join public.interview_attempts ia on false"
+  const mediaExpressions = [
+    columnSet.has("video_url") ? "nullif(ir.video_url::text, '')" : null,
+    columnSet.has("audio_url") ? "nullif(ir.audio_url::text, '')" : null,
+    columnSet.has("recording_url") ? "nullif(ir.recording_url::text, '')" : null,
+    columnSet.has("file_path") ? "nullif(ir.file_path::text, '')" : null,
+  ].filter(Boolean)
+  const mediaExpression = mediaExpressions.length > 0 ? `coalesce(${mediaExpressions.join(", ")})` : "null::text"
+  const statusExpression = columnSet.has("status") ? "ir.status::text" : "null::text"
+  const createdSortExpression = columnSet.has("created_at") ? "ir.created_at desc nulls last" : `ir.${quoteIdentifier(idColumn)} desc`
+  const statusSortExpression = columnSet.has("status") ? "case when coalesce(ir.status, 'completed') = 'completed' then 0 else 1 end" : "0"
+  const mediaSortExpression = columnSet.has("file_path")
+    ? "case when ir.file_path ilike '%.mp4%' then 0 when ir.file_path is not null then 1 else 2 end"
+    : "0"
+
+  const query = `
+    select distinct on (i.interview_id)
+      i.interview_id::text as "interviewId",
+      ir.${quoteIdentifier(idColumn)}::text as "recordingId",
+      ${mediaExpression} as "mediaUrl",
+      ${statusExpression} as "recordingStatus"
+    from public.interview_recordings ir
+    ${attemptJoin}
+    inner join public.interviews i
+      on i.interview_id = ${joinInterviewExpression}
+    where i.organization_id = $1::uuid
+      and i.interview_id::text = any($2::text[])
+    order by i.interview_id, ${statusSortExpression}, ${mediaSortExpression}, ${createdSortExpression}
+  `
+
+  const rows = await prisma.$queryRawUnsafe<InterviewRecordingRow[]>(query, organizationId, interviewIds).catch(() => [])
+  return new Map(rows.map((row) => [row.interviewId, row]))
+}
+
 type InterviewScreenOptions = {
   includeAnswers?: boolean
   limit?: number
@@ -472,12 +557,17 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
     auth.organizationId,
     interviews.map((interview) => interview.interviewId)
   )
+  const recordingMap = await fetchLatestRecordingsForInterviews(
+    auth.organizationId,
+    interviews.map((interview) => interview.interviewId)
+  )
 
   const rows = interviews.map((interview) => {
     const latestInvite = interview.interviewInvites[0] ?? null
     const latestAttempt = interview.attempts[0] ?? null
     const evaluation = latestAttempt?.evaluation ?? null
     const recruiterDecision = recruiterDecisionMap.get(interview.interviewId) ?? null
+    const recording = recordingMap.get(interview.interviewId) ?? null
     const answerSummaries = latestAttempt?.attemptId ? answerSummaryMap.get(latestAttempt.attemptId) ?? [] : []
     const fallbackScoreSummary = latestAttempt?.attemptId ? attemptScoreSummaryMap.get(latestAttempt.attemptId) : null
     const calculatedResult = deriveResultFromAnswerSummaries(answerSummaries)
@@ -525,6 +615,10 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       recruiterDecisionStatus: recruiterDecision?.status ?? null,
       recruiterDecisionAt: recruiterDecision?.decidedAt ?? null,
       recruiterDecisionNotes: recruiterDecision?.notes ?? null,
+      recordingId: recording?.recordingId ?? null,
+      recordingUrl: recording?.recordingId ? `/recordings/${encodeURIComponent(recording.recordingId)}` : null,
+      recordingStatus: recording?.recordingStatus ?? null,
+      hasRecording: Boolean(recording?.recordingId && recording?.mediaUrl),
       aiSummary: evaluation?.aiSummary ?? buildAnswerFallbackSummary(answerSummaries),
       answerSummaries,
       detailsLoaded: options.includeAnswers !== false,

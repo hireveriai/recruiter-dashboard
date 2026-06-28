@@ -38,7 +38,7 @@ function getOrgRoleTone(code) {
 
 function getMemberRoleLabel(member) {
   if (member?.isAdmin) {
-    return "Admin";
+    return "Global Administrator";
   }
 
   return member?.organizationRoleCode || "Unassigned";
@@ -46,6 +46,10 @@ function getMemberRoleLabel(member) {
 
 function getRoleDisplayName(role) {
   return role?.code || "Organization Role";
+}
+
+function getPermissionCodes(source) {
+  return (source ?? []).map((permission) => permission.code).filter(Boolean);
 }
 
 function getInviteStatusTone(status) {
@@ -60,10 +64,70 @@ function getInviteStatusTone(status) {
   return "border-amber-400/20 bg-amber-500/10 text-amber-200";
 }
 
-function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, submitting, error }) {
+function PermissionSelector({ allPermissions, selectedPermissions, onToggle, onSelectAll, onClear }) {
+  return (
+    <div className="mt-5 max-h-[320px] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Permissions</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onSelectAll}
+            className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-300 transition hover:border-blue-400/30 hover:text-white"
+          >
+            Select All
+          </button>
+          <button
+            type="button"
+            onClick={onClear}
+            className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-300 transition hover:border-slate-500 hover:text-white"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+      {allPermissions.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-400">No permission catalog is available.</p>
+      ) : (
+        <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+          {allPermissions.map((permission) => {
+            const checked = selectedPermissions.includes(permission.code);
+
+            return (
+              <label
+                key={permission.code}
+                className={`flex cursor-pointer gap-2 rounded-xl border px-2.5 py-2 transition ${
+                  checked
+                    ? "border-blue-400/30 bg-blue-500/10"
+                    : "border-slate-700 bg-slate-900/75 hover:border-slate-500"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggle(permission.code)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-950 accent-blue-500"
+                />
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-medium text-slate-100">{permission.code}</span>
+                  {permission.description ? (
+                    <span className="mt-1 line-clamp-2 block text-[11px] leading-4 text-slate-400">{permission.description}</span>
+                  ) : null}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermissions, submitting, error }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [recruiterRoleId, setRecruiterRoleId] = useState("");
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -71,6 +135,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, submitting, e
         setFullName("");
         setEmail("");
         setRecruiterRoleId("");
+        setSelectedPermissions([]);
       });
     }
   }, [isOpen]);
@@ -79,6 +144,20 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, submitting, e
     () => availableRoles.find((role) => String(role.recruiterRoleId) === recruiterRoleId),
     [availableRoles, recruiterRoleId]
   );
+
+  function handleRoleChange(value) {
+    const role = availableRoles.find((item) => String(item.recruiterRoleId) === value);
+    setRecruiterRoleId(value);
+    setSelectedPermissions(getPermissionCodes(role?.permissions));
+  }
+
+  function togglePermission(permissionCode) {
+    setSelectedPermissions((current) => (
+      current.includes(permissionCode)
+        ? current.filter((permission) => permission !== permissionCode)
+        : [...current, permissionCode].sort()
+    ));
+  }
 
   if (!isOpen) {
     return null;
@@ -134,7 +213,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, submitting, e
           <label className="mb-2 block text-sm text-slate-400">Organization Role</label>
           <select
             value={recruiterRoleId}
-            onChange={(event) => setRecruiterRoleId(event.target.value)}
+            onChange={(event) => handleRoleChange(event.target.value)}
             className="w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
           >
             <option value="">Select role</option>
@@ -146,8 +225,8 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, submitting, e
           </select>
         </div>
 
-        <div className="mt-5 max-h-[320px] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
-          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Permissions Preview</p>
+        <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
+          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Role Default</p>
           {!selectedRole ? (
             <p className="mt-3 text-sm text-slate-400">Select a role to preview the permission set.</p>
           ) : (
@@ -160,26 +239,20 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, submitting, e
               {selectedRole.description ? (
                 <p className="mt-3 text-sm text-slate-400">{selectedRole.description}</p>
               ) : null}
-              <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                {selectedRole.permissions.length === 0 ? (
-                  <span className="text-sm text-slate-500">No permissions mapped</span>
-                ) : (
-                  selectedRole.permissions.map((permission) => (
-                    <div
-                      key={`${selectedRole.recruiterRoleId}-${permission.code}`}
-                      className="rounded-xl border border-slate-700 bg-slate-900/75 px-2.5 py-2"
-                    >
-                      <p className="truncate text-xs font-medium text-slate-100">{permission.code}</p>
-                      {permission.description ? (
-                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-400">{permission.description}</p>
-                      ) : null}
-                    </div>
-                  ))
-                )}
-              </div>
+              <p className="mt-3 text-sm text-slate-400">
+                {selectedRole.permissions.length} default permissions selected. Adjust the exact access below.
+              </p>
             </>
           )}
         </div>
+
+        <PermissionSelector
+          allPermissions={allPermissions}
+          selectedPermissions={selectedPermissions}
+          onToggle={togglePermission}
+          onSelectAll={() => setSelectedPermissions(getPermissionCodes(allPermissions))}
+          onClear={() => setSelectedPermissions([])}
+        />
 
         {error ? (
           <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
@@ -199,7 +272,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, submitting, e
           <button
             type="button"
             disabled={submitting}
-            onClick={() => onSubmit({ fullName, email, recruiterRoleId })}
+            onClick={() => onSubmit({ fullName, email, recruiterRoleId, permissionCodes: selectedPermissions })}
             className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Saving..." : "Add User"}
@@ -210,15 +283,17 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, submitting, e
   );
 }
 
-function EditUserModal({ isOpen, member, availableRoles, saving, error, onClose, onSubmit }) {
+function EditUserModal({ isOpen, member, availableRoles, allPermissions, saving, error, onClose, onSubmit }) {
   const [recruiterRoleId, setRecruiterRoleId] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
 
   useEffect(() => {
     if (isOpen && member) {
       window.queueMicrotask(() => {
         setRecruiterRoleId(member.recruiterRoleId ? String(member.recruiterRoleId) : "");
         setIsActive(Boolean(member.isActive));
+        setSelectedPermissions(getPermissionCodes(member.permissions));
       });
     }
   }, [isOpen, member]);
@@ -227,6 +302,20 @@ function EditUserModal({ isOpen, member, availableRoles, saving, error, onClose,
     () => availableRoles.find((role) => String(role.recruiterRoleId) === recruiterRoleId),
     [availableRoles, recruiterRoleId]
   );
+
+  function handleRoleChange(value) {
+    const role = availableRoles.find((item) => String(item.recruiterRoleId) === value);
+    setRecruiterRoleId(value);
+    setSelectedPermissions(getPermissionCodes(role?.permissions));
+  }
+
+  function togglePermission(permissionCode) {
+    setSelectedPermissions((current) => (
+      current.includes(permissionCode)
+        ? current.filter((permission) => permission !== permissionCode)
+        : [...current, permissionCode].sort()
+    ));
+  }
 
   if (!isOpen || !member) {
     return null;
@@ -264,7 +353,7 @@ function EditUserModal({ isOpen, member, availableRoles, saving, error, onClose,
           <label className="mb-2 block text-sm text-slate-400">Organization Role</label>
           <select
             value={recruiterRoleId}
-            onChange={(event) => setRecruiterRoleId(event.target.value)}
+            onChange={(event) => handleRoleChange(event.target.value)}
             className="w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
           >
             <option value="">Select role</option>
@@ -298,8 +387,8 @@ function EditUserModal({ isOpen, member, availableRoles, saving, error, onClose,
           </div>
         </div>
 
-        <div className="mt-5 max-h-[320px] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
-          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Permissions Preview</p>
+        <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
+          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Role Default</p>
           {!selectedRole ? (
             <p className="mt-3 text-sm text-slate-400">Select a role to preview the permission set.</p>
           ) : (
@@ -312,26 +401,20 @@ function EditUserModal({ isOpen, member, availableRoles, saving, error, onClose,
               {selectedRole.description ? (
                 <p className="mt-3 text-sm text-slate-400">{selectedRole.description}</p>
               ) : null}
-              <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                {selectedRole.permissions.length === 0 ? (
-                  <span className="text-sm text-slate-500">No permissions mapped</span>
-                ) : (
-                  selectedRole.permissions.map((permission) => (
-                    <div
-                      key={`${selectedRole.recruiterRoleId}-${permission.code}`}
-                      className="rounded-xl border border-slate-700 bg-slate-900/75 px-2.5 py-2"
-                    >
-                      <p className="truncate text-xs font-medium text-slate-100">{permission.code}</p>
-                      {permission.description ? (
-                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-400">{permission.description}</p>
-                      ) : null}
-                    </div>
-                  ))
-                )}
-              </div>
+              <p className="mt-3 text-sm text-slate-400">
+                {selectedRole.permissions.length} default permissions. Adjust this member&apos;s exact access below.
+              </p>
             </>
           )}
         </div>
+
+        <PermissionSelector
+          allPermissions={allPermissions}
+          selectedPermissions={selectedPermissions}
+          onToggle={togglePermission}
+          onSelectAll={() => setSelectedPermissions(getPermissionCodes(allPermissions))}
+          onClear={() => setSelectedPermissions([])}
+        />
 
         {error ? (
           <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
@@ -351,7 +434,7 @@ function EditUserModal({ isOpen, member, availableRoles, saving, error, onClose,
           <button
             type="button"
             disabled={saving}
-            onClick={() => onSubmit({ userId: member.userId, recruiterRoleId, isActive })}
+            onClick={() => onSubmit({ userId: member.userId, recruiterRoleId, isActive, permissionCodes: selectedPermissions })}
             className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save Changes"}
@@ -435,6 +518,7 @@ export default function ManageTeamPage() {
 
   const team = useMemo(() => data?.team ?? [], [data]);
   const availableRoles = useMemo(() => data?.availableRoles ?? [], [data]);
+  const allPermissions = useMemo(() => data?.allPermissions ?? [], [data]);
   const canManageUsers = Boolean(data?.canManageUsers);
   const summary = data?.summary ?? {
     totalMembers: 0,
@@ -463,6 +547,7 @@ export default function ManageTeamPage() {
           fullName: form.fullName,
           email: form.email,
           recruiterRoleId: Number(form.recruiterRoleId),
+          permissionCodes: form.permissionCodes ?? [],
         }),
       });
 
@@ -504,6 +589,7 @@ export default function ManageTeamPage() {
           userId: form.userId,
           recruiterRoleId: Number(form.recruiterRoleId),
           isActive: Boolean(form.isActive),
+          permissionCodes: form.permissionCodes ?? [],
         }),
       });
 
@@ -680,7 +766,7 @@ export default function ManageTeamPage() {
               <p className="mt-3 text-4xl font-semibold text-cyan-300">{summary.recruiters}</p>
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-5">
-              <p className="text-sm text-slate-400">Admins / Owners</p>
+              <p className="text-sm text-slate-400">Global Admins</p>
               <p className="mt-3 text-4xl font-semibold text-amber-300">{summary.admins}</p>
             </div>
           </div>
@@ -840,6 +926,7 @@ export default function ManageTeamPage() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleAddUser}
         availableRoles={availableRoles}
+        allPermissions={allPermissions}
         submitting={submitting}
         error={submitError}
       />
@@ -848,6 +935,7 @@ export default function ManageTeamPage() {
         isOpen={isEditModalOpen}
         member={selectedMember}
         availableRoles={availableRoles}
+        allPermissions={allPermissions}
         saving={savingEdit}
         error={editError}
         onClose={() => {
