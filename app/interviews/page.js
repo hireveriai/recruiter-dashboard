@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Fragment, useEffect, useMemo, useState } from "react"
+import { Download, FileText, Link2, RotateCw, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -159,6 +160,21 @@ function getAccessLabel(item) {
 
   return "Flexible"
 }
+
+const tableActionBase =
+  "inline-flex h-11 min-w-[8.25rem] items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-55"
+const tableActionNeutral =
+  `${tableActionBase} border-slate-600/80 bg-slate-900/75 text-slate-100 hover:border-slate-400 hover:bg-slate-800/85 hover:text-white`
+const tableActionCyan =
+  `${tableActionBase} border-cyan-300/25 bg-cyan-400/10 text-cyan-100 hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white`
+const tableActionEmerald =
+  `${tableActionBase} border-emerald-400/25 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/50 hover:bg-emerald-400/15 hover:text-white`
+const tableActionAmber =
+  `${tableActionBase} border-amber-400/25 bg-amber-400/10 text-amber-100 hover:border-amber-300/50 hover:bg-amber-400/15 hover:text-white`
+const tableActionRose =
+  `${tableActionBase} border-rose-400/25 bg-rose-400/10 text-rose-100 hover:border-rose-300/50 hover:bg-rose-400/15 hover:text-white`
+const tableMutedChip =
+  "inline-flex h-9 min-w-[8.25rem] items-center justify-center rounded-xl border border-slate-700/70 bg-slate-950/25 px-3 text-xs font-medium leading-none text-slate-500"
 
 function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
@@ -776,17 +792,18 @@ export default function InterviewsPage() {
                             href={interview.recordingUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white"
+                            className={tableActionCyan}
                             aria-label={`View recording for ${interview.candidateName}`}
                           >
+                            <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
                             View Recording
                           </Link>
                         ) : interview.recordingId ? (
-                          <span className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-100">
+                          <span className="inline-flex h-9 min-w-[8.25rem] items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 text-xs font-medium leading-none text-amber-100">
                             Processing
                           </span>
                         ) : (
-                          <span className="inline-flex rounded-full border border-slate-700 bg-slate-950/30 px-3 py-1 text-xs font-medium text-slate-500">
+                          <span className={tableMutedChip}>
                             Not available
                           </span>
                         )}
@@ -809,9 +826,10 @@ export default function InterviewsPage() {
                             <button
                               type="button"
                               onClick={() => setReviewInterview(interview)}
-                              className="inline-flex h-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white"
+                              className={tableActionCyan}
                               aria-label={`Take hiring action for ${interview.candidateName}`}
                             >
+                              <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
                               Take Action
                             </button>
                           )
@@ -821,22 +839,24 @@ export default function InterviewsPage() {
                       </td>
                       <td className="p-4 text-center">
                         {isCompletedInterview(interview) ? (
-                          <div className="flex flex-col items-stretch gap-2 2xl:flex-row 2xl:justify-center">
+                          <div className="flex flex-col items-center gap-2">
                             <button
                               type="button"
                               onClick={() => toggleInterviewDetails(interview)}
-                              className="inline-flex items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-300/50 hover:bg-emerald-400/15 hover:text-white"
+                              className={tableActionEmerald}
                               aria-label={`View completed summary for ${interview.candidateName}`}
                             >
+                              <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
                               {expandedInterviewId === interview.interviewId ? "Hide Summary" : "View Summary"}
                             </button>
                             <button
                               type="button"
                               onClick={() => downloadInterviewReport(interview)}
                               disabled={reportDownloadId === interview.interviewId}
-                              className="inline-flex items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                              className={tableActionCyan}
                               aria-label={`Download candidate report for ${interview.candidateName}`}
                             >
+                              <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
                               {reportDownloadId === interview.interviewId ? "Generating..." : "Download"}
                             </button>
                           </div>
@@ -845,26 +865,29 @@ export default function InterviewsPage() {
                             type="button"
                             onClick={() => retryPreparation(interview)}
                             disabled={actionBusyId === interview.interviewId}
-                            className="inline-flex items-center justify-center rounded-xl border border-rose-400/25 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:border-rose-300/50 hover:bg-rose-400/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            className={tableActionRose}
                           >
+                            <RotateCw className="h-4 w-4 shrink-0" aria-hidden="true" />
                             {actionBusyId === interview.interviewId ? "Retrying..." : "Retry Prep"}
                           </button>
                         ) : String(interview.status).toUpperCase() === "EMAIL_FAILED" ? (
-                          <div className="flex flex-col items-stretch gap-2 2xl:flex-row 2xl:justify-center">
+                          <div className="flex flex-col items-center gap-2">
                             <button
                               type="button"
                               onClick={() => copyLink(interview)}
                               disabled={!interview.link}
-                              className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                              className={tableActionNeutral}
                             >
+                              <Link2 className="h-4 w-4 shrink-0" aria-hidden="true" />
                               {copiedInterviewId === interview.interviewId ? "Copied" : "Copy Link"}
                             </button>
                             <button
                               type="button"
                               onClick={() => retryEmail(interview)}
                               disabled={actionBusyId === interview.interviewId}
-                              className="inline-flex items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100 transition hover:border-amber-300/50 hover:bg-amber-400/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                              className={tableActionAmber}
                             >
+                              <RotateCw className="h-4 w-4 shrink-0" aria-hidden="true" />
                               {actionBusyId === interview.interviewId ? "Sending..." : "Retry Email"}
                             </button>
                           </div>
@@ -873,8 +896,9 @@ export default function InterviewsPage() {
                             type="button"
                             onClick={() => copyLink(interview)}
                             disabled={!interview.link}
-                            className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                            className={tableActionNeutral}
                           >
+                            <Link2 className="h-4 w-4 shrink-0" aria-hidden="true" />
                             {copiedInterviewId === interview.interviewId ? "Copied" : "Copy Link"}
                           </button>
                         ) : (
