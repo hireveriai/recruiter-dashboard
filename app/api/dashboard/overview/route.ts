@@ -229,7 +229,7 @@ async function buildFastOverview(
 ): Promise<OverviewPayload> {
   const [profileStep, alertsStep, trialCreditsStep, quickWorkflowStep, fastSnapshotStep] = await Promise.all([
     timedStep("profile", () => getRecruiterProfile(auth)),
-    safeTimedStep("alerts", () => getDashboardAlerts(auth.organizationId, 8, auth.userId), []),
+    safeTimedStep("alerts", () => getDashboardAlerts(auth.organizationId, "all", auth.userId), []),
     safeTimedStep<TrialCreditSnapshot | null>("trialCredits", () => getTrialCreditsDashboardSnapshot(auth.organizationId), null),
     safeTimedStep("quickWorkflow", () => getQuickWorkflowMetrics(auth.organizationId), buildWorkflowMetricsFromQuickRow()),
     safeTimedStep("fastSnapshot", () => getFastDashboardSnapshot(auth.organizationId), {
@@ -282,7 +282,7 @@ async function buildOverview(
     timedStep("profile", () => getRecruiterProfile(auth)),
     safeTimedStep("candidates", () => getFastDashboardCandidates(auth.organizationId, 5), []),
     pipelinePromise,
-    safeTimedStep("alerts", () => getDashboardAlerts(auth.organizationId, 8, auth.userId), []),
+    safeTimedStep("alerts", () => getDashboardAlerts(auth.organizationId, "all", auth.userId), []),
     safeTimedStep<TrialCreditSnapshot | null>("trialCredits", () => getTrialCreditsDashboardSnapshot(auth.organizationId), null),
     safeTimedStep("recordedInterviews", () => getDashboardRecordings(auth.organizationId, 6, { verifyStorage: false }), []),
     safeTimedStep("veris", () => getFastVerisSummaryCards(auth.organizationId, 4), []),

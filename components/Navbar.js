@@ -207,7 +207,7 @@ function cacheAlerts(alerts) {
   }
 
   try {
-    window.sessionStorage.setItem(ALERTS_CACHE_KEY, JSON.stringify(alerts.slice(0, 12)));
+    window.sessionStorage.setItem(ALERTS_CACHE_KEY, JSON.stringify(alerts));
   } catch {
     // Alerts cache is only a startup accelerator.
   }
@@ -604,7 +604,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                   {unreadAlerts.length > 0 ? (
                     <span className="relative inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-cyan-300/35 bg-cyan-400/18 px-1 text-[10px] font-semibold leading-none text-cyan-50 shadow-[0_0_14px_rgba(34,211,238,0.18)]">
                       <span className="absolute inset-0 rounded-full border border-cyan-300/20 motion-safe:animate-[hv-alert-badge-pulse_2.8s_ease-in-out_infinite]" />
-                      {unreadAlerts.length > 9 ? "9+" : unreadAlerts.length}
+                      {unreadAlerts.length}
                     </span>
                   ) : null}
                   <span className={["pointer-events-none absolute inset-x-2 -bottom-px h-px rounded-full bg-cyan-300 transition-all duration-200", alertsOpen ? "opacity-100 shadow-[0_0_12px_rgba(34,211,238,0.62)]" : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-55"].join(" ")} />
@@ -634,7 +634,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                           No unread interview activity alerts.
                         </div>
                       ) : (
-                        unreadAlerts.slice(0, 8).map((alert) => (
+                        unreadAlerts.map((alert) => (
                           <article key={alert.id} className={`rounded-2xl border px-4 py-3 ${getAlertToneClass(alert.tone)}`}>
                             <div className="flex items-start justify-between gap-3">
                               <p className="text-sm font-semibold text-white">{alert.title}</p>

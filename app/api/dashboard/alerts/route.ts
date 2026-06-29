@@ -6,14 +6,17 @@ import { errorResponse } from "@/lib/server/response"
 import { getDashboardAlerts, markDashboardAlertsRead } from "@/lib/server/services/dashboard-alerts"
 
 const markAlertsReadSchema = z.object({
-  alertIds: z.array(z.string().trim().min(1)).min(1).max(50),
+  alertIds: z.array(z.string().trim().min(1)).min(1),
 })
 
 export async function GET(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
     const { searchParams } = new URL(request.url)
-    const limit = Math.max(1, Math.min(Number(searchParams.get("limit") || 8) || 8, 25))
+    const requestedLimit = searchParams.get("limit")
+    const limit = requestedLimit
+      ? Math.max(1, Math.floor(Number(requestedLimit) || 0))
+      : "all"
     const alerts = await getDashboardAlerts(auth.organizationId, limit, auth.userId)
 
     return NextResponse.json({

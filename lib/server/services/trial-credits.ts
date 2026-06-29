@@ -47,8 +47,17 @@ type TrialCreditCacheEntry = {
   expiresAt: number
 }
 
+type RefundableInviteRow = {
+  invite_id: string
+  interview_id: string
+  organization_id: string
+  status: string | null
+  expires_at: Date | string | null
+}
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TRIAL_CREDIT_DASHBOARD_CACHE_TTL_MS = 0
+const INTERVIEW_REFUND_EVENT_SOURCE = "unused_interview_refund"
 const trialCreditDashboardCache = new Map<string, TrialCreditCacheEntry>()
 let ensureTrialCreditSchemaPromise: Promise<void> | null = null
 
@@ -264,6 +273,12 @@ export async function ensureTrialCreditOrganization(organizationId: string, clie
 
 export async function getOrCreateTrialCredits(organizationId: string, client: QueryClient = prisma) {
   await ensureTrialCreditOrganization(organizationId, client)
+  if (client === prisma) {
+    await refundExpiredUnusedInterviewCredits({ organizationId }).catch((error) => {
+      console.warn("Unused interview credit refund reconciliation skipped", error)
+    })
+  }
+
   const subscriptionCredits = await getActiveSubscriptionCredits(organizationId, client)
   if (subscriptionCredits) {
     return subscriptionCredits
@@ -394,6 +409,168 @@ async function deductSubscriptionCredits(input: {
 
   invalidateTrialCreditDashboardCache(input.organizationId)
   return mapSubscriptionCreditRow(row)
+}
+
+async function getRefundableInviteRows(organizationId: string, inviteIds?: string[]) {
+  const inviteFilter =
+    inviteIds && inviteIds.length > 0
+      ? Prisma.sql`and ii.invite_id = any(${inviteIds}::uuid[])`
+      : Prisma.empty
+
+  return prisma.$queryRaw<RefundableInviteRow[]>(Prisma.sql`
+    select
+      ii.invite_id::text,
+      ii.interview_id::text,
+      i.organization_id::text,
+      ii.status,
+      ii.expires_at
+    from public.interview_invites ii
+    inner join public.interviews i
+      on i.interview_id = ii.interview_id
+    where i.organization_id = ${organizationId}::uuid
+      ${inviteFilter}
+      and coalesce(upper(ii.access_type), '') <> 'RECOVERY'
+      and ii.used_at is null
+      and (
+        upper(coalesce(ii.status, 'ACTIVE')) in ('EXPIRED', 'REVOKED')
+        or ii.expires_at <= now()
+      )
+      and not exists (
+        select 1
+        from public.workspace_trial_credit_events evt
+        where evt.organization_id = i.organization_id
+          and evt.kind = 'INTERVIEW'
+          and evt.source = ${INTERVIEW_REFUND_EVENT_SOURCE}
+          and evt.source_id = ii.invite_id::text
+      )
+    order by ii.expires_at asc nulls last, ii.created_at asc
+    limit 250
+  `)
+}
+
+async function insertRefundEvent(input: {
+  organizationId: string
+  invite: RefundableInviteRow
+}) {
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    insert into public.workspace_trial_credit_events (
+      organization_id,
+      kind,
+      amount,
+      source,
+      source_id,
+      metadata
+    )
+    values (
+      ${input.organizationId}::uuid,
+      'INTERVIEW',
+      1,
+      ${INTERVIEW_REFUND_EVENT_SOURCE},
+      ${input.invite.invite_id},
+      ${JSON.stringify({
+        refund: true,
+        reason: "unused_interview_link_expired_or_revoked",
+        inviteId: input.invite.invite_id,
+        interviewId: input.invite.interview_id,
+        inviteStatus: input.invite.status,
+        expiresAt: input.invite.expires_at
+          ? new Date(input.invite.expires_at).toISOString()
+          : null,
+      })}::jsonb
+    )
+    on conflict do nothing
+    returning id::text
+  `)
+
+  return rows.length > 0
+}
+
+async function refundOneInterviewCredit(input: {
+  organizationId: string
+  invite: RefundableInviteRow
+}) {
+  const trialDeductionEvents = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    select id::text
+    from public.workspace_trial_credit_events
+    where organization_id = ${input.organizationId}::uuid
+      and kind = 'INTERVIEW'
+      and source = 'interview_link'
+      and source_id = ${input.invite.interview_id}
+    limit 1
+  `)
+
+  if (trialDeductionEvents.length > 0) {
+    await upsertTrialCreditRow(input.organizationId)
+    await prisma.$executeRaw(Prisma.sql`
+      update public.workspace_trial_credits
+      set
+        interview_credits_remaining = interview_credits_remaining + 1,
+        updated_at = now()
+      where organization_id = ${input.organizationId}::uuid
+    `)
+    return
+  }
+
+  const activeSubscription = await getActiveSubscriptionCredits(input.organizationId)
+
+  if (activeSubscription?.subscriptionId) {
+    await prisma.$executeRaw(Prisma.sql`
+      update public.hireveri_user_subscriptions
+      set
+        "totalCredits" = "totalCredits" + 1,
+        "usedCredits" = greatest(coalesce("usedCredits", 0) - 1, 0),
+        "updatedAt" = now()
+      where id = ${activeSubscription.subscriptionId}
+        and "organizationId" = ${input.organizationId}::uuid
+    `)
+    return
+  }
+
+  await upsertTrialCreditRow(input.organizationId)
+  await prisma.$executeRaw(Prisma.sql`
+    update public.workspace_trial_credits
+    set
+      interview_credits_remaining = interview_credits_remaining + 1,
+      updated_at = now()
+    where organization_id = ${input.organizationId}::uuid
+  `)
+}
+
+export async function refundExpiredUnusedInterviewCredits(input: {
+  organizationId: string
+  inviteIds?: string[]
+}) {
+  if (!UUID_REGEX.test(input.organizationId)) {
+    throw new ApiError(400, "INVALID_ORGANIZATION_ID", "Invalid recruiter workspace.")
+  }
+
+  await ensureTrialCreditSchema()
+
+  const invites = await getRefundableInviteRows(input.organizationId, input.inviteIds)
+  let refunded = 0
+
+  for (const invite of invites) {
+    const eventInserted = await insertRefundEvent({
+      organizationId: input.organizationId,
+      invite,
+    })
+
+    if (!eventInserted) {
+      continue
+    }
+
+    await refundOneInterviewCredit({
+      organizationId: input.organizationId,
+      invite,
+    })
+    refunded += 1
+  }
+
+  if (refunded > 0) {
+    invalidateTrialCreditDashboardCache(input.organizationId)
+  }
+
+  return { refunded }
 }
 
 export async function getTrialCreditsDashboardSnapshot(organizationId: string, client: QueryClient = prisma) {

@@ -2,6 +2,7 @@ import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { revokeInterviewInviteSchema, updateInterviewInviteSchema } from "@/lib/server/validators"
 import { revokeInterviewInvite, updateInterviewInvite } from "@/lib/server/services/interview.service"
+import { refundExpiredUnusedInterviewCredits } from "@/lib/server/services/trial-credits"
 
 type RouteContext = {
   params: Promise<{
@@ -41,6 +42,13 @@ export async function DELETE(request: Request, context: RouteContext) {
       inviteId: String(inviteId ?? "").trim(),
       organizationId: auth.organizationId,
       reason: parsed.reason ?? null,
+    })
+
+    await refundExpiredUnusedInterviewCredits({
+      organizationId: auth.organizationId,
+      inviteIds: [result.inviteId],
+    }).catch((error) => {
+      console.warn("Unable to refund revoked unused interview invite", error)
     })
 
     return successResponse(result)

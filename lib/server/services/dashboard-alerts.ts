@@ -162,8 +162,12 @@ function buildAlert(row: AlertRow): DashboardAlert {
   }
 }
 
-export async function getDashboardAlerts(organizationId: string, limit = 8, userId?: string): Promise<DashboardAlert[]> {
+export async function getDashboardAlerts(organizationId: string, limit?: number | "all", userId?: string): Promise<DashboardAlert[]> {
   const canFilterReadAlerts = Boolean(userId) && await dashboardAlertReadsTableExists()
+  const limitClause =
+    typeof limit === "number" && Number.isFinite(limit) && limit > 0
+      ? Prisma.sql`limit ${Math.floor(limit)}`
+      : Prisma.empty
 
   const rows = await prisma.$queryRaw<AlertRow[]>(Prisma.sql`
     with latest_attempts as (
@@ -216,7 +220,7 @@ export async function getDashboardAlerts(organizationId: string, limit = 8, user
         )`
         : Prisma.empty}
     order by occurred_at desc nulls last
-    limit ${Math.max(1, Math.min(limit, 25))}
+    ${limitClause}
   `)
 
   return rows
@@ -233,7 +237,7 @@ export async function markDashboardAlertsRead(input: {
   userId: string
   alertIds: string[]
 }) {
-  const alertIds = Array.from(new Set(input.alertIds.map((id) => id.trim()).filter(Boolean))).slice(0, 50)
+  const alertIds = Array.from(new Set(input.alertIds.map((id) => id.trim()).filter(Boolean)))
 
   if (alertIds.length === 0) {
     return { marked: 0 }

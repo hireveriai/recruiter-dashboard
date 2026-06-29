@@ -17,7 +17,11 @@ import {
   prepareInterviewQuestionsWithRetry,
   sendInterviewEmailForInterview,
 } from "@/lib/server/services/interview-workflow"
-import { assertTrialCreditsAvailable, deductTrialCredits } from "@/lib/server/services/trial-credits"
+import {
+  assertTrialCreditsAvailable,
+  deductTrialCredits,
+  refundExpiredUnusedInterviewCredits,
+} from "@/lib/server/services/trial-credits"
 
 type CandidateEmailRow = {
   full_name: string | null
@@ -104,6 +108,13 @@ async function revokeActiveInvitesForCandidate(params: {
       status = 'EXPIRED'
     where interview_id = any(${interviewIds}::uuid[])
   `)
+
+  await refundExpiredUnusedInterviewCredits({
+    organizationId: params.organizationId,
+    inviteIds,
+  }).catch((error) => {
+    console.warn("Unable to refund replaced unused interview invites", error)
+  })
 }
 
 async function markInterviewReadyWithoutQuestionGeneration(organizationId: string, interviewId: string) {
@@ -332,6 +343,8 @@ export async function POST(request: Request) {
       const trialCredits = await deductTrialCredits({
         organizationId: auth.organizationId,
         kind: "INTERVIEW",
+        source: "interview_link",
+        sourceId: result.interviewId,
       })
 
       after(() =>

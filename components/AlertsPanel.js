@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { buildAuthUrl, hasAuthQuery } from "@/lib/client/auth-query"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
@@ -46,11 +46,10 @@ export default function AlertsPanel({ initialAlerts, isLoading = false }) {
   const searchParams = useAuthSearchParams()
   const [alerts, setAlerts] = useState(() => initialAlerts ?? [])
   const displayAlerts = alerts
-  const visibleAlerts = useMemo(() => displayAlerts.slice(0, 5), [displayAlerts])
 
   useEffect(() => {
     if (initialAlerts !== undefined) {
-      setAlerts(initialAlerts ?? [])
+      queueMicrotask(() => setAlerts(initialAlerts ?? []))
     }
   }, [initialAlerts])
 
@@ -112,13 +111,13 @@ export default function AlertsPanel({ initialAlerts, isLoading = false }) {
       </div>
       {isLoading ? (
         <TimelineSkeleton count={3} className="mt-4" />
-      ) : visibleAlerts.length === 0 ? (
+      ) : displayAlerts.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/30 px-4 py-5 text-sm text-slate-400">
           No interview activity alerts yet.
         </div>
       ) : (
         <div className="mt-4 space-y-3">
-          {visibleAlerts.map((alert) => (
+          {displayAlerts.map((alert) => (
             <article key={alert.id} className={`rounded-2xl border px-4 py-3 ${getToneClass(alert.tone)}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
