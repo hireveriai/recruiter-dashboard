@@ -162,7 +162,7 @@ function getAccessLabel(item) {
 }
 
 const tableActionBase =
-  "inline-flex h-11 min-w-[8.25rem] items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-55"
+  "inline-flex h-10 w-[116px] max-w-full items-center justify-center gap-1.5 rounded-xl border px-2 text-sm font-semibold leading-tight transition disabled:cursor-not-allowed disabled:opacity-55"
 const tableActionNeutral =
   `${tableActionBase} border-slate-600/80 bg-slate-900/75 text-slate-100 hover:border-slate-400 hover:bg-slate-800/85 hover:text-white`
 const tableActionCyan =
@@ -174,7 +174,9 @@ const tableActionAmber =
 const tableActionRose =
   `${tableActionBase} border-rose-400/25 bg-rose-400/10 text-rose-100 hover:border-rose-300/50 hover:bg-rose-400/15 hover:text-white`
 const tableMutedChip =
-  "inline-flex h-9 min-w-[8.25rem] items-center justify-center rounded-xl border border-slate-700/70 bg-slate-950/25 px-3 text-xs font-medium leading-none text-slate-500"
+  "inline-flex h-9 w-[116px] max-w-full items-center justify-center rounded-xl border border-slate-700/70 bg-slate-950/25 px-2 text-xs font-medium leading-none text-slate-500"
+const tableProcessingChip =
+  "inline-flex h-9 w-[116px] max-w-full items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 px-2 text-xs font-medium leading-none text-amber-100"
 
 function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
@@ -741,31 +743,31 @@ export default function InterviewsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed text-sm">
+            <table className="min-w-[1480px] w-full table-fixed text-sm">
               <colgroup>
-                <col className="w-[10%]" />
-                <col className="w-[12%]" />
-                <col className="w-[15%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[7%]" />
                 <col className="w-[8%]" />
+                <col className="w-[11%]" />
+                <col className="w-[15%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[6%]" />
+                <col className="w-[7%]" />
+                <col className="w-[11%]" />
                 <col className="w-[12%]" />
-                <col className="w-[14%]" />
                 <col className="w-[10%]" />
               </colgroup>
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
-                  <th className="p-5 text-left font-medium">Candidate</th>
-                  <th className="p-5 text-left font-medium">Recording</th>
-                  <th className="p-5 text-left font-medium">Job</th>
-                  <th className="p-5 text-left font-medium">Status</th>
+                  <th className="px-4 py-5 text-left font-medium">Candidate</th>
+                  <th className="px-4 py-5 text-left font-medium">Recording</th>
+                  <th className="px-4 py-5 text-left font-medium">Job</th>
+                  <th className="px-4 py-5 text-left font-medium">Status</th>
                   <th className="px-4 py-5 text-left font-medium">Interview Type</th>
-                  <th className="p-5 text-left font-medium">Score</th>
-                  <th className="p-5 text-left font-medium">Decision</th>
-                  <th className="p-5 text-left font-medium">Latest Activity</th>
-                  <th className="p-5 text-left font-medium">Hiring Action</th>
-                  <th className="p-5 text-center font-medium">Action</th>
+                  <th className="px-4 py-5 text-left font-medium">Score</th>
+                  <th className="px-4 py-5 text-left font-medium">Decision</th>
+                  <th className="px-4 py-5 text-left font-medium">Latest Activity</th>
+                  <th className="px-4 py-5 text-left font-medium">Hiring Action</th>
+                  <th className="px-4 py-5 text-center font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -781,12 +783,12 @@ export default function InterviewsPage() {
                   filteredInterviews.map((interview) => (
                     <Fragment key={interview.interviewId}>
                     <tr className="border-t border-slate-800/80 text-slate-200">
-                      <td className="p-5 font-medium text-white">
+                      <td className="px-4 py-5 font-medium text-white">
                         <span className="block truncate" title={interview.candidateName || "Candidate"}>
                           {interview.candidateName}
                         </span>
                       </td>
-                      <td className="p-5">
+                      <td className="px-4 py-5">
                         {interview.hasRecording && interview.recordingUrl ? (
                           <Link
                             href={interview.recordingUrl}
@@ -799,7 +801,7 @@ export default function InterviewsPage() {
                             View Recording
                           </Link>
                         ) : interview.recordingId ? (
-                          <span className="inline-flex h-9 min-w-[8.25rem] items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 text-xs font-medium leading-none text-amber-100">
+                          <span className={tableProcessingChip}>
                             Processing
                           </span>
                         ) : (
@@ -808,17 +810,17 @@ export default function InterviewsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="p-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
-                      <td className="p-5">
+                      <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
+                      <td className="px-4 py-5">
                         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(interview.status)}`}>
                           {formatStatusText(interview.status)}
                         </span>
                       </td>
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
-                      <td className="p-5 text-slate-300">{formatScore(interview.score)}</td>
-                      <td className="p-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
-                      <td className="p-5 text-slate-400"><span className="block truncate">{formatDateTime(getInterviewActivityValue(interview))}</span></td>
-                      <td className="p-4 align-middle">
+                      <td className="px-4 py-5 text-slate-300">{formatScore(interview.score)}</td>
+                      <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
+                      <td className="px-4 py-5 text-slate-400"><span className="block truncate">{formatDateTime(getInterviewActivityValue(interview))}</span></td>
+                      <td className="px-4 py-5 align-middle">
                         {isCompletedInterview(interview) ? (
                           interview.recruiterDecisionStatus ? (
                             <DecisionPill status={interview.recruiterDecisionStatus} />
@@ -837,7 +839,7 @@ export default function InterviewsPage() {
                           <span className="text-slate-600">After completion</span>
                         )}
                       </td>
-                      <td className="p-4 text-center">
+                      <td className="px-4 py-5 text-center">
                         {isCompletedInterview(interview) ? (
                           <div className="flex flex-col items-center gap-2">
                             <button
