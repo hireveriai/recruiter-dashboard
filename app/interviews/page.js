@@ -759,7 +759,7 @@ export default function InterviewsPage() {
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
                   <th className="px-4 py-5 text-left font-medium">Candidate</th>
-                  <th className="px-4 py-5 text-left font-medium">Recording</th>
+                  <th className="px-4 py-5 text-center font-medium">Recording</th>
                   <th className="px-4 py-5 text-left font-medium">Job</th>
                   <th className="px-4 py-5 text-left font-medium">Status</th>
                   <th className="px-4 py-5 text-left font-medium">Interview Type</th>
@@ -788,7 +788,7 @@ export default function InterviewsPage() {
                           {interview.candidateName}
                         </span>
                       </td>
-                      <td className="px-4 py-5">
+                      <td className="px-4 py-5 text-center">
                         {interview.hasRecording && interview.recordingUrl ? (
                           <Link
                             href={interview.recordingUrl}
