@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server"
 
+import { Prisma } from "@prisma/client"
 import { getRecruiterRequestContext, type RecruiterRequestContext } from "@/lib/server/auth-context"
 import { evaluateCandidateResponse } from "@/lib/server/ai/interview-flow"
 import { errorResponse } from "@/lib/server/response"
@@ -41,6 +42,25 @@ type AttemptScoreSummaryRow = {
   fallback_decision: string | null
 }
 
+type AttemptExitMetadata = {
+  earlyExit: boolean
+  terminationType: string | null
+  terminationReason: string | null
+  disconnectReason: string | null
+  terminationDetectedAt: string | null
+  completionPercentage: number | null
+}
+
+type AttemptExitMetadataRow = {
+  attempt_id: string
+  early_exit: boolean | null
+  termination_type: string | null
+  termination_reason: string | null
+  disconnect_reason: string | null
+  termination_detected_at: string | null
+  completion_percentage: unknown | null
+}
+
 type InterviewRecordingRow = {
   interviewId: string
   recordingId: string
@@ -54,6 +74,17 @@ type RecordingColumnRow = {
 
 function quoteIdentifier(value: string) {
   return `"${value.replace(/"/g, "\"\"")}"`
+}
+
+async function getTableColumns(tableName: string) {
+  const rows = await prisma.$queryRaw<RecordingColumnRow[]>(Prisma.sql`
+    select column_name
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = ${tableName}
+  `)
+
+  return new Set(rows.map((row) => row.column_name))
 }
 
 function toNumberOrNull(value: unknown) {
@@ -400,6 +431,47 @@ async function fetchAttemptScoreSummaries(attemptIds: string[]) {
   }, new Map<string, { score: number | null; decision: string | null }>())
 }
 
+async function fetchAttemptExitMetadata(attemptIds: string[]) {
+  if (attemptIds.length === 0) {
+    return new Map<string, AttemptExitMetadata>()
+  }
+
+  const columns = await getTableColumns("interview_attempts")
+
+  const selectColumn = (name: string, fallback: string) =>
+    columns.has(name) ? `ia.${quoteIdentifier(name)}` : fallback
+
+  const rows = await prisma.$queryRawUnsafe<AttemptExitMetadataRow[]>(
+    `
+      select
+        ia.attempt_id::text,
+        ${selectColumn("early_exit", "false")} as early_exit,
+        ${selectColumn("termination_type", "null::text")} as termination_type,
+        ${selectColumn("termination_reason", "null::text")} as termination_reason,
+        ${selectColumn("disconnect_reason", "null::text")} as disconnect_reason,
+        ${selectColumn("termination_detected_at", "null::timestamptz")}::text as termination_detected_at,
+        ${selectColumn("completion_percentage", "null::numeric")} as completion_percentage
+      from public.interview_attempts ia
+      where ia.attempt_id = any($1::uuid[])
+    `,
+    attemptIds
+  )
+
+  return new Map(
+    rows.map((row) => [
+      row.attempt_id,
+      {
+        earlyExit: Boolean(row.early_exit),
+        terminationType: row.termination_type,
+        terminationReason: row.termination_reason,
+        disconnectReason: row.disconnect_reason,
+        terminationDetectedAt: row.termination_detected_at,
+        completionPercentage: toNumberOrNull(row.completion_percentage),
+      },
+    ])
+  )
+}
+
 async function fetchLatestRecordingsForInterviews(organizationId: string, interviewIds: string[]) {
   if (interviewIds.length === 0) {
     return new Map<string, InterviewRecordingRow>()
@@ -553,6 +625,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
     options.includeAnswers === false
       ? await fetchAttemptScoreSummaries(attemptIds)
       : new Map<string, { score: number | null; decision: string | null }>()
+  const attemptExitMetadataMap = await fetchAttemptExitMetadata(attemptIds)
   const recruiterDecisionMap = await getRecruiterDecisionsForInterviews(
     auth.organizationId,
     interviews.map((interview) => interview.interviewId)
@@ -570,6 +643,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
     const recording = recordingMap.get(interview.interviewId) ?? null
     const answerSummaries = latestAttempt?.attemptId ? answerSummaryMap.get(latestAttempt.attemptId) ?? [] : []
     const fallbackScoreSummary = latestAttempt?.attemptId ? attemptScoreSummaryMap.get(latestAttempt.attemptId) : null
+    const exitMetadata = latestAttempt?.attemptId ? attemptExitMetadataMap.get(latestAttempt.attemptId) : null
     const calculatedResult = deriveResultFromAnswerSummaries(answerSummaries)
     const questionStatus = interview.questionStatus ?? null
     const emailStatus = interview.emailStatus ?? null
@@ -579,7 +653,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       interviewStatus: interview.status,
       questionStatus,
       emailStatus,
-      latestAttempt,
+      latestAttempt: latestAttempt ? { ...latestAttempt, earlyExit: exitMetadata?.earlyExit ?? false } : null,
       latestInvite,
     })
 
@@ -601,6 +675,12 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       inviteToken: latestInvite?.token ?? null,
       link: latestInvite?.token ? `${getInterviewAppUrl().replace(/\/$/, "")}/interview/${latestInvite.token}` : null,
       attemptStatus: latestAttempt?.status ?? null,
+      earlyExit: exitMetadata?.earlyExit ?? false,
+      terminationType: exitMetadata?.terminationType ?? null,
+      terminationReason: exitMetadata?.terminationReason ?? null,
+      disconnectReason: exitMetadata?.disconnectReason ?? null,
+      terminationDetectedAt: exitMetadata?.terminationDetectedAt ?? null,
+      completionPercentage: exitMetadata?.completionPercentage ?? null,
       accessType: latestInvite?.accessType ?? "FLEXIBLE",
       startTime: latestInvite?.startTime ?? null,
       endTime: latestInvite?.endTime ?? null,

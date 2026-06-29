@@ -20,6 +20,7 @@ import { VerisGlobeLoader } from "../../components/system/loaders"
 function getStatusBadge(status) {
   const normalized = String(status ?? "PENDING").toUpperCase()
   if (normalized === "COMPLETED") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+  if (normalized === "EARLY_EXIT") return "border-amber-400/25 bg-amber-400/10 text-amber-200"
   if (normalized === "READY") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
   if (normalized === "EMAIL_FAILED") return "border-amber-500/20 bg-amber-500/10 text-amber-300"
   if (normalized === "PREPARATION_FAILED") return "border-rose-500/20 bg-rose-500/10 text-rose-300"
@@ -151,6 +152,25 @@ function formatEvaluationText(evaluation) {
 
 function isCompletedInterview(interview) {
   return String(interview?.status ?? "").toUpperCase() === "COMPLETED"
+}
+
+function isEarlyExitInterview(interview) {
+  const status = String(interview?.status ?? interview?.attemptStatus ?? "").toUpperCase()
+  return Boolean(interview?.earlyExit) || ["EARLY_EXIT", "MANUAL_EXIT", "ABANDONED"].includes(status)
+}
+
+function getEarlyExitText(interview) {
+  const reason = String(interview?.terminationReason ?? interview?.disconnectReason ?? "").trim()
+  if (!reason) {
+    return "Exited early"
+  }
+
+  return reason
+    .toLowerCase()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
 }
 
 function getAccessLabel(item) {
@@ -827,7 +847,9 @@ export default function InterviewsPage() {
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
                       <td className="px-4 py-5 text-slate-400"><span className="block truncate">{formatDateTime(getInterviewActivityValue(interview))}</span></td>
                       <td className="px-4 py-5 align-middle">
-                        {isCompletedInterview(interview) ? (
+                        {isEarlyExitInterview(interview) ? (
+                          <span className="text-amber-200/80">{getEarlyExitText(interview)}</span>
+                        ) : isCompletedInterview(interview) ? (
                           interview.recruiterDecisionStatus ? (
                             <DecisionPill status={interview.recruiterDecisionStatus} />
                           ) : (
@@ -846,7 +868,11 @@ export default function InterviewsPage() {
                         )}
                       </td>
                       <td className="px-4 py-5 text-center">
-                        {isCompletedInterview(interview) ? (
+                        {isEarlyExitInterview(interview) ? (
+                          <span className="inline-flex h-10 w-[116px] max-w-full items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 px-2 text-xs font-semibold leading-tight text-amber-100">
+                            Exited Early
+                          </span>
+                        ) : isCompletedInterview(interview) ? (
                           <div className="flex flex-col items-center gap-2">
                             <button
                               type="button"
