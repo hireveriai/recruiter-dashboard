@@ -711,7 +711,11 @@ export default function InterviewsPage() {
                   filteredInterviews.map((interview) => (
                     <Fragment key={interview.interviewId}>
                     <tr className="border-t border-slate-800/80 text-slate-200">
-                      <td className="p-5 font-medium text-white"><span className="block truncate">{interview.candidateName}</span></td>
+                      <td className="p-5 font-medium text-white">
+                        <span className="block truncate" title={interview.candidateName || "Candidate"}>
+                          {interview.candidateName}
+                        </span>
+                      </td>
                       <td className="p-5">
                         {interview.hasRecording && interview.recordingUrl ? (
                           <Link

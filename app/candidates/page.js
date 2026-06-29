@@ -662,7 +662,9 @@ export default function CandidatesPage() {
                       <Fragment key={rowKey}>
                       <tr className="border-t border-slate-800/80 align-top">
                         <td className="p-5 font-medium text-white">
-                          <span className="block truncate">{candidate.candidateName}</span>
+                          <span className="block truncate" title={candidate.candidateName || "Candidate"}>
+                            {candidate.candidateName}
+                          </span>
                           {candidate.aiSummaryFull && isCompletedCandidate(candidate) ? (
                             <button
                               type="button"
