@@ -10,6 +10,7 @@ import { getRecruiterProfile } from "@/lib/server/services/recruiter-profile"
 import { getDashboardAlerts, type DashboardAlert } from "@/lib/server/services/dashboard-alerts"
 import { getDashboardRecordings } from "@/lib/server/services/dashboard-recordings"
 import { getDashboardWorkflowSnapshot } from "@/lib/server/services/dashboard-workflow"
+import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
 import {
   getFastDashboardCandidates,
   getFastDashboardSnapshot,
@@ -61,7 +62,7 @@ type CacheEntry = {
   expiresAt: number
 }
 
-const CACHE_TTL_MS = 60000
+const CACHE_TTL_MS = 5000
 const CACHE_MAX = 50
 const SLOW_DASHBOARD_ROUTE_MS = 1200
 const SLOW_DASHBOARD_STEP_MS = 750
@@ -378,12 +379,14 @@ export async function GET(request: Request) {
     const forceRefresh = searchParams.has("refresh") || searchParams.get("cache") === "bust"
     const fullOverview = searchParams.get("full") === "1"
 
+    await finalizeStaleInterviewAttempts(auth.organizationId)
+
     const cached = forceRefresh ? null : getCachedOverview(cacheKey)
     const cachedSatisfiesRequest = cached && (!fullOverview || !cached.partial)
     if (cachedSatisfiesRequest) {
       const response = NextResponse.json({ success: true, data: cached })
       const durationMs = Date.now() - routeStartedAt
-      response.headers.set("Cache-Control", "private, max-age=15, stale-while-revalidate=60")
+      response.headers.set("Cache-Control", "private, max-age=5, stale-while-revalidate=10")
       response.headers.set("X-HireVeri-Cache", "hit")
       response.headers.set("Server-Timing", `auth;dur=${authMs}, total;dur=${durationMs}`)
       return response
@@ -404,7 +407,7 @@ export async function GET(request: Request) {
       const durationMs = Date.now() - routeStartedAt
       setCachedOverview(cacheKey, overview)
       const response = NextResponse.json({ success: true, data: overview })
-      response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=120")
+      response.headers.set("Cache-Control", "private, max-age=5, stale-while-revalidate=10")
       response.headers.set("X-HireVeri-Cache", "fast")
       response.headers.set("Server-Timing", `auth;dur=${authMs}, data;dur=${dataMs}, total;dur=${durationMs}`)
       return response
@@ -428,7 +431,7 @@ export async function GET(request: Request) {
     const response = NextResponse.json({ success: true, data: overview })
     const durationMs = Date.now() - routeStartedAt
 
-    response.headers.set("Cache-Control", forceRefresh ? "no-store" : "private, max-age=15, stale-while-revalidate=60")
+    response.headers.set("Cache-Control", forceRefresh ? "no-store" : "private, max-age=5, stale-while-revalidate=10")
     response.headers.set("X-HireVeri-Cache", forceRefresh ? "refresh" : "miss")
     response.headers.set("Server-Timing", `auth;dur=${authMs}, data;dur=${dataMs}, total;dur=${durationMs}`)
 

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { errorResponse } from "@/lib/server/response"
 import { getFastVerisSummaryCards } from "@/lib/server/services/dashboard-fast-snapshot"
+import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
 import { getVerisSummaryCards } from "@/lib/server/services/reports.service"
 
 export async function GET(request: Request) {
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? rawOffset : 0
     const fast = searchParams.get("fast") === "1" || searchParams.get("summary") === "1"
     const startedAt = Date.now()
+    await finalizeStaleInterviewAttempts(auth.organizationId)
     const cards = fast && offset === 0
       ? await getFastVerisSummaryCards(auth.organizationId, limit ?? 20)
       : await getVerisSummaryCards(auth.organizationId, limit, offset)

@@ -1659,6 +1659,10 @@ async function getRecentVerisAttemptRows(organizationId: string, limit: number |
     inner join public.job_positions jp on jp.job_id = i.job_id
     left join public.interview_evaluations iev on iev.attempt_id = ia.attempt_id
     where i.organization_id = ${organizationId}::uuid
+      and (
+        upper(coalesce(i.status, ia.status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED')
+        or ia.ended_at is not null
+      )
     order by coalesce(ia.ended_at, ia.started_at, i.created_at) desc nulls last
     limit ${safeLimit}
     offset ${safeOffset}

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/server/prisma"
 
 const STALE_ATTEMPT_THRESHOLD_SECONDS = 300
-const SESSION_END_BUFFER_SECONDS = 600
+const SESSION_END_BUFFER_SECONDS = 0
 
 const ACTIVE_ATTEMPT_STATUSES = [
   "STARTED",
@@ -18,7 +18,7 @@ const ACTIVE_ATTEMPT_STATUSES = [
   "INTERRUPTED",
 ]
 
-const FINALIZE_INTERVAL_MS = 60_000
+const FINALIZE_INTERVAL_MS = 5_000
 const lastFinalizedAtByOrganization = new Map<string, number>()
 const finalizeInFlightByOrganization = new Map<string, Promise<void>>()
 

@@ -4,6 +4,7 @@ import type { RecruiterRequestContext } from "@/lib/server/auth-context"
 import { prisma } from "@/lib/server/prisma"
 import { getFastDashboardCandidates } from "@/lib/server/services/dashboard-fast-snapshot"
 import { getCandidatesDashboard } from "@/lib/server/services/dashboard.service"
+import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
 import { getOrganizationBillingHistory } from "@/lib/server/services/invoices"
 import {
   jobPositionsSupportCodingConfig,
@@ -53,6 +54,8 @@ export async function getCandidatesScreenData(
   options: CandidateScreenOptions = {}
 ) {
   const limit = options.limit ?? 5
+
+  await finalizeStaleInterviewAttempts(auth.organizationId)
 
   if (options.includeAnswerSummaries) {
     return getCandidatesDashboard({

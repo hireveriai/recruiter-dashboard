@@ -221,30 +221,35 @@ export async function getFastDashboardCandidates(organizationId: string, limit =
     limit ${safeLimit}
   `).catch(() => [] as FastCandidateRow[])
 
-  return rows.map((row) => ({
-    candidateId: row.candidate_id,
-    interviewId: row.interview_id,
-    attemptId: row.attempt_id,
-    candidateName: row.candidate_name || "Candidate",
-    jobTitle: row.job_title || "-",
-    status: normalizeStatus(row.status),
-    score: toNumberOrNull(row.score ?? row.fallback_score),
-    verisScreeningScore: toNumberOrNull(row.veris_screening_score),
-    aiSummaryShort: shortText(row.ai_summary),
-    aiSummaryFull: row.ai_summary,
-    decision: row.decision,
-    recruiterDecisionStatus: row.recruiter_decision_status,
-    recruiterDecisionAt: row.recruiter_decision_at,
-    recruiterDecisionNotes: row.recruiter_decision_notes,
-    accessType: row.access_type ?? "FLEXIBLE",
-    startTime: row.start_time,
-    endTime: row.end_time,
-    expiresAt: row.expires_at,
-    startedAt: row.started_at,
-    endedAt: row.ended_at,
-    createdAt: row.created_at,
-    answerSummaries: [],
-  }))
+  return rows.map((row) => {
+    const status = normalizeStatus(row.status)
+    const interviewCompleted = Boolean(row.ended_at || ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(status))
+
+    return {
+      candidateId: row.candidate_id,
+      interviewId: row.interview_id,
+      attemptId: row.attempt_id,
+      candidateName: row.candidate_name || "Candidate",
+      jobTitle: row.job_title || "-",
+      status,
+      score: toNumberOrNull(row.score ?? row.fallback_score),
+      verisScreeningScore: toNumberOrNull(row.veris_screening_score),
+      aiSummaryShort: interviewCompleted ? shortText(row.ai_summary) : "-",
+      aiSummaryFull: interviewCompleted ? row.ai_summary : null,
+      decision: interviewCompleted ? row.decision : null,
+      recruiterDecisionStatus: row.recruiter_decision_status,
+      recruiterDecisionAt: row.recruiter_decision_at,
+      recruiterDecisionNotes: row.recruiter_decision_notes,
+      accessType: row.access_type ?? "FLEXIBLE",
+      startTime: row.start_time,
+      endTime: row.end_time,
+      expiresAt: row.expires_at,
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
+      createdAt: row.created_at,
+      answerSummaries: [],
+    }
+  })
 }
 
 export async function getFastVerisSummaryCards(organizationId: string, limit = 4) {
@@ -267,6 +272,10 @@ export async function getFastVerisSummaryCards(organizationId: string, limit = 4
     inner join public.job_positions jp on jp.job_id = i.job_id
     left join public.interview_evaluations iev on iev.attempt_id = ia.attempt_id
     where i.organization_id = ${organizationId}::uuid
+      and (
+        upper(coalesce(i.status, ia.status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED')
+        or ia.ended_at is not null
+      )
     order by coalesce(ia.ended_at, ia.started_at, i.created_at) desc nulls last
     limit ${safeLimit}
   `).catch(() => [] as FastVerisRow[])

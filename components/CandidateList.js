@@ -77,6 +77,11 @@ function isDecisionReady(candidate) {
   return Boolean(candidate.endedAt || candidate.score !== null || candidate.decision || ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(status))
 }
 
+function isCompletedCandidate(candidate) {
+  const status = String(candidate?.status ?? "").toUpperCase()
+  return Boolean(candidate?.endedAt || ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(status))
+}
+
 export default function CandidateList({ initialCandidates, isLoading = false }) {
   const searchParams = useAuthSearchParams()
   const [candidates, setCandidates] = useState(() => initialCandidates ?? [])
@@ -238,7 +243,7 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
                   <tr key={`${candidate.candidateName}-${index}`} className="border-b border-gray-800">
                     <td className="px-4 py-4 align-middle">
                       <span className="block truncate font-semibold text-white">{candidate.candidateName}</span>
-                      {candidate.aiSummaryFull ? (
+                      {candidate.aiSummaryFull && isCompletedCandidate(candidate) ? (
                         <button
                           type="button"
                           className="mt-1 block max-w-full truncate text-left text-xs font-medium text-cyan-300/80 transition hover:text-cyan-100"

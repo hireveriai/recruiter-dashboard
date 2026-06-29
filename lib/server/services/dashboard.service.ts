@@ -146,16 +146,19 @@ function deriveCandidateInterviewStatus(row: CandidateDashboardRow) {
 function hasInterviewEvaluation(row: CandidateDashboardRow, answerSummaries: InterviewAnswerSummary[]) {
   const attemptStatus = String(row.attempt_status ?? "").toUpperCase()
   const interviewStatus = String(row.interview_status ?? "").toUpperCase()
+  const isTerminalInterview =
+    Boolean(row.attempt_ended_at) ||
+    ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(attemptStatus) ||
+    ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(interviewStatus)
+
+  if (!isTerminalInterview) {
+    return false
+  }
 
   return (
     row.final_score !== null ||
     row.decision !== null ||
-    answerSummaries.length > 0 ||
-    Boolean(row.attempt_ended_at) ||
-    attemptStatus === "COMPLETED" ||
-    attemptStatus === "SUBMITTED" ||
-    attemptStatus === "EVALUATED" ||
-    interviewStatus === "COMPLETED"
+    answerSummaries.length > 0
   )
 }
 
@@ -300,7 +303,7 @@ export async function getCandidatesDashboard(
       verisScreeningScore: hasScreening ? row.screening_match_score : null,
       aiSummaryShort: getShortSummary(aiSummaryFull),
       aiSummaryFull,
-      decision: row.decision ?? calculatedResult.decision,
+      decision: hasEvaluation ? row.decision ?? calculatedResult.decision : null,
       recruiterDecisionStatus: row.recruiter_decision_status,
       recruiterDecisionAt: row.recruiter_decision_at,
       recruiterDecisionNotes: row.recruiter_decision_notes,
