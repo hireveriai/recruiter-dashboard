@@ -177,6 +177,8 @@ const tableMutedChip =
   "inline-flex h-9 w-[116px] max-w-full items-center justify-center rounded-xl border border-slate-700/70 bg-slate-950/25 px-2 text-xs font-medium leading-none text-slate-500"
 const tableProcessingChip =
   "inline-flex h-9 w-[116px] max-w-full items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 px-2 text-xs font-medium leading-none text-amber-100"
+const recordingAction =
+  "relative inline-flex h-10 w-[128px] max-w-full items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-3 text-sm font-semibold leading-tight text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white"
 
 function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
@@ -794,11 +796,15 @@ export default function InterviewsPage() {
                             href={interview.recordingUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className={tableActionCyan}
+                            className={recordingAction}
                             aria-label={`View recording for ${interview.candidateName}`}
                           >
-                            <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
-                            View Recording
+                            <Video className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" aria-hidden="true" />
+                            <span className="block w-full text-center">
+                              View
+                              <br />
+                              Recording
+                            </span>
                           </Link>
                         ) : interview.recordingId ? (
                           <span className={tableProcessingChip}>
