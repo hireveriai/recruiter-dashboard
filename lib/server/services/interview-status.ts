@@ -9,6 +9,7 @@ type AttemptStatusInput = {
   status?: string | null
   endedAt?: Date | string | null
   earlyExit?: boolean | null
+  terminationType?: string | null
 }
 
 type DeriveInterviewStatusInput = {
@@ -40,9 +41,14 @@ export function isAttemptCompleted(attempt: AttemptStatusInput) {
   return normalizedStatus === "COMPLETED" || Boolean(attempt.endedAt)
 }
 
-export function isAttemptEarlyExit(attempt: AttemptStatusInput) {
+export function isAttemptManualExit(attempt: AttemptStatusInput) {
   const normalizedStatus = normalizeStatus(attempt.status)
-  return Boolean(attempt.earlyExit) || ["MANUAL_EXIT", "EARLY_EXIT", "ABANDONED"].includes(normalizedStatus)
+  const normalizedTerminationType = normalizeStatus(attempt.terminationType)
+  return Boolean(attempt.earlyExit) || ["MANUAL_EXIT", "EARLY_EXIT"].includes(normalizedStatus) || normalizedTerminationType === "MANUAL_EXIT"
+}
+
+export function isAttemptAbandoned(attempt: AttemptStatusInput) {
+  return normalizeStatus(attempt.status) === "ABANDONED"
 }
 
 export function deriveInterviewStatus({
@@ -66,8 +72,12 @@ export function deriveInterviewStatus({
     return "PREPARING_INTERVIEW"
   }
 
-  if (latestAttempt && isAttemptEarlyExit(latestAttempt)) {
+  if (latestAttempt && isAttemptManualExit(latestAttempt)) {
     return "EARLY_EXIT"
+  }
+
+  if (latestAttempt && isAttemptAbandoned(latestAttempt)) {
+    return "ABANDONED"
   }
 
   if (normalizedInterviewStatus === "COMPLETED" || (latestAttempt ? isAttemptCompleted(latestAttempt) : false)) {

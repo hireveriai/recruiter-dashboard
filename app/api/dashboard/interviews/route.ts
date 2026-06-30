@@ -649,11 +649,15 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
     const emailStatus = interview.emailStatus ?? null
     const failureReason = interview.failureReason ?? null
     const lastError = interview.lastError ?? null
+    const normalizedAttemptStatus = String(latestAttempt?.status ?? "").toUpperCase()
+    const normalizedTerminationType = String(exitMetadata?.terminationType ?? "").toUpperCase()
+    const isManualExit =
+      ["MANUAL_EXIT", "EARLY_EXIT"].includes(normalizedAttemptStatus) || normalizedTerminationType === "MANUAL_EXIT"
     const status = deriveInterviewStatus({
       interviewStatus: interview.status,
       questionStatus,
       emailStatus,
-      latestAttempt: latestAttempt ? { ...latestAttempt, earlyExit: exitMetadata?.earlyExit ?? false } : null,
+      latestAttempt: latestAttempt ? { ...latestAttempt, earlyExit: isManualExit, terminationType: exitMetadata?.terminationType ?? null } : null,
       latestInvite,
     })
 
@@ -675,7 +679,8 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       inviteToken: latestInvite?.token ?? null,
       link: latestInvite?.token ? `${getInterviewAppUrl().replace(/\/$/, "")}/interview/${latestInvite.token}` : null,
       attemptStatus: latestAttempt?.status ?? null,
-      earlyExit: exitMetadata?.earlyExit ?? false,
+      earlyExit: isManualExit,
+      earlyExitRecorded: exitMetadata?.earlyExit ?? false,
       terminationType: exitMetadata?.terminationType ?? null,
       terminationReason: exitMetadata?.terminationReason ?? null,
       disconnectReason: exitMetadata?.disconnectReason ?? null,

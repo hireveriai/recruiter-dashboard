@@ -21,6 +21,7 @@ function getStatusBadge(status) {
   const normalized = String(status ?? "PENDING").toUpperCase()
   if (normalized === "COMPLETED") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
   if (normalized === "EARLY_EXIT") return "border-amber-400/25 bg-amber-400/10 text-amber-200"
+  if (normalized === "ABANDONED") return "border-orange-400/25 bg-orange-400/10 text-orange-200"
   if (normalized === "READY") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
   if (normalized === "EMAIL_FAILED") return "border-amber-500/20 bg-amber-500/10 text-amber-300"
   if (normalized === "PREPARATION_FAILED") return "border-rose-500/20 bg-rose-500/10 text-rose-300"
@@ -156,7 +157,7 @@ function isCompletedInterview(interview) {
 
 function isEarlyExitInterview(interview) {
   const status = String(interview?.status ?? interview?.attemptStatus ?? "").toUpperCase()
-  return Boolean(interview?.earlyExit) || ["EARLY_EXIT", "MANUAL_EXIT", "ABANDONED"].includes(status)
+  return Boolean(interview?.earlyExit) || ["EARLY_EXIT", "MANUAL_EXIT"].includes(status)
 }
 
 function getEarlyExitText(interview) {
