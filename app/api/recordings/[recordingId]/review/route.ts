@@ -4,6 +4,7 @@ import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse } from "@/lib/server/response"
+import { fillMissingAnswersFromTranscript } from "@/lib/server/services/transcript-fallback"
 
 type RecordingRow = {
   recording_id: string
@@ -267,7 +268,7 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
       `.catch(() => [] as SignalRow[]),
     ])
 
-    const timeline = timelineRows.map((row, index) => {
+    const timeline = fillMissingAnswersFromTranscript(timelineRows.map((row, index) => {
       const questionOffset = offsetMs(recording.started_at, row.asked_at)
       const answerOffset = offsetMs(recording.started_at, row.answered_at)
       const fraudScore = toPercent(row.fraud_score)
@@ -294,7 +295,7 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
         feedback: row.feedback,
         riskLevel: fraudScore !== null && fraudScore >= 70 ? "high" : fraudScore !== null && fraudScore >= 45 ? "medium" : "low",
       }
-    })
+    }), recording.transcript)
 
     const signals = signalRows.reduce<ReviewSignal[]>((items, row) => {
       if (!isActionableSignal(row.type, row.value)) {

@@ -765,7 +765,7 @@ export default function InterviewsPage() {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-auto overscroll-contain">
             <table className="min-w-[1480px] w-full table-fixed text-sm">
               <colgroup>
                 <col className="w-[8%]" />
@@ -779,7 +779,7 @@ export default function InterviewsPage() {
                 <col className="w-[12%]" />
                 <col className="w-[10%]" />
               </colgroup>
-              <thead className="bg-slate-950/20 text-slate-400">
+              <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
                   <th className="px-4 py-5 text-left font-medium">Candidate</th>
                   <th className="px-4 py-5 text-center font-medium">Recording</th>

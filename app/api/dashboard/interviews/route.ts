@@ -9,6 +9,10 @@ import { getInterviewAppUrl } from "@/lib/server/interview-url"
 import { deriveInterviewStatus } from "@/lib/server/services/interview-status"
 import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
 import { getRecruiterDecisionsForInterviews } from "@/lib/server/services/recruiter-decisions"
+import {
+  extractCandidateAnswersFromTranscript,
+  fillMissingAnswersFromTranscript,
+} from "@/lib/server/services/transcript-fallback"
 
 type InterviewAnswerSummaryRow = {
   attempt_id: string
@@ -59,6 +63,21 @@ type AttemptExitMetadataRow = {
   disconnect_reason: string | null
   termination_detected_at: string | null
   completion_percentage: unknown | null
+}
+
+type AttemptTranscriptRow = {
+  attempt_id: string
+  transcript: string | null
+}
+
+type SessionQuestionFallbackRow = {
+  attempt_id: string
+  session_question_id: string
+  question_id: string | null
+  question_text: string | null
+  question_order: number | null
+  question_type: string | null
+  question_source: string | null
 }
 
 type InterviewRecordingRow = {
@@ -152,6 +171,35 @@ function mapAnswerSummaryRow(row: InterviewAnswerSummaryRow) {
     confidenceScore: toNumberOrNull(row.confidence_score),
     fraudScore: toNumberOrNull(row.fraud_score),
     evaluation: row.evaluation_json ?? null,
+  }
+}
+
+function mapSessionQuestionFallbackRow(
+  row: SessionQuestionFallbackRow,
+  fallbackAnswer: string | null
+): ReturnType<typeof mapAnswerSummaryRow> {
+  return {
+    answerId: `session-question-${row.session_question_id}`,
+    question: row.question_text || "Question text was not recorded for this answer.",
+    answerText: fallbackAnswer || "No response provided.",
+    answerPayload: {
+      recovered_from: "recording_transcript",
+      session_question_id: row.session_question_id,
+      question_id: row.question_id,
+    },
+    answeredAt: null,
+    questionOrder: row.question_order,
+    questionType: row.question_type,
+    questionSource: row.question_source,
+    skill: null,
+    score: null,
+    feedback: "Recovered for display from the recording transcript because the live answer row was missing.",
+    skillScore: null,
+    clarityScore: null,
+    depthScore: null,
+    confidenceScore: null,
+    fraudScore: null,
+    evaluation: null,
   }
 }
 
@@ -345,16 +393,92 @@ async function fetchAnswerSummaries(attemptIds: string[]) {
       attemptIds
     )
 
-    return rows.reduce((map, row) => {
+    const transcriptMap = await fetchRecordingTranscriptsForAttempts(attemptIds)
+    const summaries = rows.reduce((map, row) => {
       const current = map.get(row.attempt_id) ?? []
       current.push(mapAnswerSummaryRow(row))
       map.set(row.attempt_id, current)
       return map
     }, new Map<string, ReturnType<typeof mapAnswerSummaryRow>[]>())
+
+    for (const [attemptId, answerRows] of summaries) {
+      summaries.set(attemptId, fillMissingAnswersFromTranscript(answerRows, transcriptMap.get(attemptId)))
+    }
+
+    const missingAttemptIds = attemptIds.filter((attemptId) => !summaries.has(attemptId))
+    const fallbackSummaries = await fetchSessionQuestionFallbackSummaries(missingAttemptIds, transcriptMap)
+    for (const [attemptId, answerRows] of fallbackSummaries) {
+      summaries.set(attemptId, answerRows)
+    }
+
+    return summaries
   } catch (error) {
     console.error("Failed to fetch interview answer summaries", error)
     return new Map<string, ReturnType<typeof mapAnswerSummaryRow>[]>()
   }
+}
+
+async function fetchSessionQuestionFallbackSummaries(
+  attemptIds: string[],
+  transcriptMap: Map<string, string>
+) {
+  if (attemptIds.length === 0) {
+    return new Map<string, ReturnType<typeof mapAnswerSummaryRow>[]>()
+  }
+
+  const rows = await prisma.$queryRawUnsafe<SessionQuestionFallbackRow[]>(
+    `
+      select
+        sq.attempt_id,
+        sq.session_question_id,
+        sq.question_id,
+        sq.content as question_text,
+        sq.question_order,
+        sq.question_kind as question_type,
+        sq.source as question_source
+      from public.session_questions sq
+      where sq.attempt_id = any($1::uuid[])
+      order by sq.attempt_id, sq.question_order asc nulls last, sq.asked_at asc nulls last
+    `,
+    attemptIds
+  )
+
+  return rows.reduce((map, row) => {
+    const current = map.get(row.attempt_id) ?? []
+    const transcriptAnswers = extractCandidateAnswersFromTranscript(transcriptMap.get(row.attempt_id))
+    const answerIndex = row.question_order ? row.question_order - 1 : current.length
+    const fallbackAnswer = transcriptAnswers[answerIndex] ?? null
+    current.push(mapSessionQuestionFallbackRow(row, fallbackAnswer))
+    map.set(row.attempt_id, current)
+    return map
+  }, new Map<string, ReturnType<typeof mapAnswerSummaryRow>[]>())
+}
+
+async function fetchRecordingTranscriptsForAttempts(attemptIds: string[]) {
+  if (attemptIds.length === 0) {
+    return new Map<string, string>()
+  }
+
+  const columns = await getTableColumns("interview_recordings")
+  if (!columns.has("attempt_id") || !columns.has("transcript")) {
+    return new Map<string, string>()
+  }
+
+  const rows = await prisma.$queryRawUnsafe<AttemptTranscriptRow[]>(
+    `
+      select distinct on (ir.attempt_id)
+        ir.attempt_id::text,
+        ir.transcript
+      from public.interview_recordings ir
+      where ir.attempt_id = any($1::uuid[])
+        and ir.transcript is not null
+        and btrim(ir.transcript) <> ''
+      order by ir.attempt_id, ir.created_at desc nulls last
+    `,
+    attemptIds
+  )
+
+  return new Map(rows.map((row) => [row.attempt_id, row.transcript ?? ""]))
 }
 
 async function fetchAttemptScoreSummaries(attemptIds: string[]) {
