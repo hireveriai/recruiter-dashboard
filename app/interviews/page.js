@@ -765,19 +765,19 @@ export default function InterviewsPage() {
             </button>
           </div>
 
-          <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-auto overscroll-contain">
-            <table className="min-w-[1480px] w-full table-fixed text-sm">
+          <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
+            <table className="w-full table-fixed text-sm">
               <colgroup>
-                <col className="w-[8%]" />
+                <col className="w-[10%]" />
                 <col className="w-[11%]" />
-                <col className="w-[15%]" />
+                <col className="w-[16%]" />
                 <col className="w-[10%]" />
                 <col className="w-[10%]" />
                 <col className="w-[6%]" />
                 <col className="w-[7%]" />
-                <col className="w-[11%]" />
-                <col className="w-[12%]" />
+                <col className="w-[13%]" />
                 <col className="w-[10%]" />
+                <col className="w-[7%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
