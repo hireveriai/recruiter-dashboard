@@ -183,23 +183,23 @@ function getAccessLabel(item) {
 }
 
 const tableActionBase =
-  "inline-flex h-10 w-[116px] max-w-full items-center justify-center gap-1.5 rounded-xl border px-2 text-sm font-semibold leading-tight transition disabled:cursor-not-allowed disabled:opacity-55"
+  "inline-flex min-h-9 max-w-full items-center justify-center gap-1.5 rounded-lg px-1.5 py-1 text-sm font-semibold leading-tight transition disabled:cursor-not-allowed disabled:opacity-55"
 const tableActionNeutral =
-  `${tableActionBase} border-slate-600/80 bg-slate-900/75 text-slate-100 hover:border-slate-400 hover:bg-slate-800/85 hover:text-white`
+  `${tableActionBase} text-slate-200 hover:bg-slate-800/55 hover:text-white`
 const tableActionCyan =
-  `${tableActionBase} border-cyan-300/25 bg-cyan-400/10 text-cyan-100 hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white`
+  `${tableActionBase} text-cyan-100 hover:bg-cyan-400/10 hover:text-white`
 const tableActionEmerald =
-  `${tableActionBase} border-emerald-400/25 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/50 hover:bg-emerald-400/15 hover:text-white`
+  `${tableActionBase} text-emerald-100 hover:bg-emerald-400/10 hover:text-white`
 const tableActionAmber =
-  `${tableActionBase} border-amber-400/25 bg-amber-400/10 text-amber-100 hover:border-amber-300/50 hover:bg-amber-400/15 hover:text-white`
+  `${tableActionBase} text-amber-100 hover:bg-amber-400/10 hover:text-white`
 const tableActionRose =
-  `${tableActionBase} border-rose-400/25 bg-rose-400/10 text-rose-100 hover:border-rose-300/50 hover:bg-rose-400/15 hover:text-white`
+  `${tableActionBase} text-rose-100 hover:bg-rose-400/10 hover:text-white`
 const tableMutedChip =
-  "inline-flex h-9 w-[116px] max-w-full items-center justify-center rounded-xl border border-slate-700/70 bg-slate-950/25 px-2 text-xs font-medium leading-none text-slate-500"
+  "inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-medium leading-none text-slate-500"
 const tableProcessingChip =
-  "inline-flex h-9 w-[116px] max-w-full items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 px-2 text-xs font-medium leading-none text-amber-100"
+  "inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-medium leading-none text-amber-100"
 const recordingAction =
-  "relative inline-flex h-10 w-[128px] max-w-full items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-3 text-sm font-semibold leading-tight text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white"
+  "inline-flex max-w-full items-center justify-center gap-1.5 rounded-lg px-1.5 py-1 text-sm font-semibold leading-tight text-cyan-100 transition hover:bg-cyan-400/10 hover:text-white"
 
 function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
@@ -768,16 +768,16 @@ export default function InterviewsPage() {
           <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
             <table className="w-full table-fixed text-sm">
               <colgroup>
-                <col className="w-[10%]" />
+                <col className="w-[9%]" />
                 <col className="w-[11%]" />
-                <col className="w-[16%]" />
+                <col className="w-[15%]" />
                 <col className="w-[10%]" />
                 <col className="w-[10%]" />
                 <col className="w-[6%]" />
                 <col className="w-[7%]" />
-                <col className="w-[13%]" />
-                <col className="w-[10%]" />
-                <col className="w-[7%]" />
+                <col className="w-[12%]" />
+                <col className="w-[11%]" />
+                <col className="w-[9%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
@@ -820,12 +820,8 @@ export default function InterviewsPage() {
                             className={recordingAction}
                             aria-label={`View recording for ${interview.candidateName}`}
                           >
-                            <Video className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" aria-hidden="true" />
-                            <span className="block w-full text-center">
-                              View
-                              <br />
-                              Recording
-                            </span>
+                            <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
+                            <span className="truncate">View Recording</span>
                           </Link>
                         ) : interview.recordingId ? (
                           <span className={tableProcessingChip}>
@@ -870,11 +866,11 @@ export default function InterviewsPage() {
                       </td>
                       <td className="px-4 py-5 text-center">
                         {isEarlyExitInterview(interview) ? (
-                          <span className="inline-flex h-10 w-[116px] max-w-full items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 px-2 text-xs font-semibold leading-tight text-amber-100">
+                          <span className="inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-semibold leading-tight text-amber-100">
                             Exited Early
                           </span>
                         ) : isCompletedInterview(interview) ? (
-                          <div className="flex flex-col items-center gap-2">
+                          <div className="flex flex-col items-start gap-1.5">
                             <button
                               type="button"
                               onClick={() => toggleInterviewDetails(interview)}
