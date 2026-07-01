@@ -341,6 +341,7 @@ export default function BillingPage() {
         <Navbar onSendInterviewClick={() => undefined} />
         <VerisGlobeLoader
           eyebrow="Billing"
+          viewportOffset="navbar"
           steps={[
             { label: "Loading billing", detail: "Fetching organization billing profile and subscription status." },
             { label: "Reading invoices", detail: "Collecting GST invoices, payments, and Razorpay references." },

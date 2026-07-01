@@ -206,6 +206,7 @@ export default function VerisInsightsPage() {
         <Navbar />
         <VerisGlobeLoader
           eyebrow="VERIS Insights"
+          viewportOffset="navbar"
           steps={[
             { label: "Loading insights", detail: "Fetching candidate intelligence summaries and evidence signals." },
             { label: "Reading risk", detail: "Preparing recommendation, score, and risk posture details." },

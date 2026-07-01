@@ -172,6 +172,7 @@ export default function SubscriptionPage() {
         <Navbar onSendInterviewClick={() => undefined} />
         <VerisGlobeLoader
           eyebrow="Subscription"
+          viewportOffset="navbar"
           steps={[
             { label: "Loading plans", detail: "Fetching active workspace and available subscription plans." },
             { label: "Checking capacity", detail: "Reading interview sessions and VERIS Screening add-ons." },

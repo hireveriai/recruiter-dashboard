@@ -216,6 +216,7 @@ function DashboardContent({ profile, overview, isLoading }) {
         <Navbar onSendInterviewClick={() => setIsModalOpen(true)} initialProfile={displayProfile} initialAlerts={overview?.alerts} />
         <VerisGlobeLoader
           eyebrow="Dashboard"
+          viewportOffset="navbar"
           steps={[
             { label: "Syncing dashboard", detail: "Loading hiring workflow, alerts, and workspace metrics." },
             { label: "Reading pipeline", detail: "Preparing candidate and interview activity." },

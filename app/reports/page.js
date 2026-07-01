@@ -159,6 +159,7 @@ export default function ReportsPage() {
         <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
         <VerisGlobeLoader
           eyebrow="Reports"
+          viewportOffset="navbar"
           steps={[
             { label: "Loading reports", detail: "Fetching hiring analytics and forensic signals." },
             { label: "Reading metrics", detail: "Preparing funnel and risk data." },

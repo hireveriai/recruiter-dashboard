@@ -652,6 +652,7 @@ export default function InterviewsPage() {
         <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
         <VerisGlobeLoader
           eyebrow="Interviews"
+          viewportOffset="navbar"
           steps={[
             { label: "Loading interviews", detail: "Fetching active, scheduled, and completed interviews." },
             { label: "Syncing telemetry", detail: "Preparing scorecards, recovery status, and recruiter actions." },

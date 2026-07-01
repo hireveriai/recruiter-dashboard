@@ -509,6 +509,7 @@ export default function CandidatesPage() {
         <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
         <VerisGlobeLoader
           eyebrow="Candidates"
+          viewportOffset="navbar"
           steps={[
             { label: "Loading candidates", detail: "Fetching candidate profiles and screening history." },
             { label: "Syncing scores", detail: "Preparing VERIS scores and status." },
