@@ -893,40 +893,38 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
               ) : null}
 
               <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-[minmax(280px,420px)_minmax(0,1fr)] md:items-end">
-                  <div>
-                    <label className="text-sm text-gray-400">Select Job *</label>
-                    <select
-                      className="mt-1.5 w-full truncate rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
-                      value={jobId}
-                      onChange={(e) => setJobId(e.target.value)}
-                      disabled={jobsLoading}
-                    >
-                      <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
-                      {jobs.map((job) => {
-                        const optionId = job.jobId || job.job_id
-                        const optionTitle = job.jobTitle || job.job_title
+                <div className="w-full sm:w-4/5 md:w-3/5 lg:max-w-[420px]">
+                  <label className="text-sm text-gray-400">Select Job *</label>
+                  <select
+                    className="mt-1.5 w-full truncate rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                    value={jobId}
+                    onChange={(e) => setJobId(e.target.value)}
+                    disabled={jobsLoading}
+                  >
+                    <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
+                    {jobs.map((job) => {
+                      const optionId = job.jobId || job.job_id
+                      const optionTitle = job.jobTitle || job.job_title
 
-                        return (
-                          <option key={optionId} value={optionId}>
-                            {optionTitle}
-                          </option>
-                        )
-                      })}
-                    </select>
-                  </div>
-
-                  <div className="pb-1 md:border-l md:border-slate-800/80 md:pl-4">
-                    <p className="text-sm font-semibold text-white">
-                      {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Name, email, and resume for this invite.
-                    </p>
-                  </div>
+                      return (
+                        <option key={optionId} value={optionId}>
+                          {optionTitle}
+                        </option>
+                      )
+                    })}
+                  </select>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Name, email, and resume for this invite.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-[minmax(0,0.94fr)_minmax(0,0.94fr)]">
                   <div>
                     <label className="text-sm text-gray-400">Candidate Full Name *</label>
                     <input
@@ -951,11 +949,11 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
 
                 <div>
                   <label className="block text-sm text-gray-400">Resume *</label>
-                  <div className="mt-1.5 rounded-2xl border border-dashed border-slate-600 bg-slate-900/70 p-2.5">
+                  <div className="mt-1.5 rounded-2xl border border-dashed border-slate-600 bg-slate-900/70 p-3">
                     <input
                       ref={primaryFileInputRef}
                       type="file"
-                      className="w-full text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/15 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-cyan-200 hover:file:bg-cyan-500/25"
+                      className="w-full text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-cyan-200 hover:file:bg-cyan-500/25"
                       onChange={handleResumeSelect}
                     />
 
@@ -1064,7 +1062,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     ["expiry", "Auto Expiry", "Links expire automatically after the access window."],
                     ["integrity", "Integrity Monitoring", "Sessions are watched for trust signals."],
                   ].map(([type, title, detail]) => (
-                    <div key={title} className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3">
+                    <div key={title} className="flex min-h-[112px] flex-col rounded-2xl border border-slate-800 bg-slate-900/45 p-3">
                       <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
                         <span className="flex h-8 w-8 items-center justify-center rounded-full border border-cyan-400/18 bg-cyan-400/[0.07]">
                           <AccessFeatureIcon type={type} />
@@ -1076,7 +1074,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                   ))}
                 </div>
 
-                <div className={`rounded-2xl border p-3.5 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
+                <div className={`inline-flex w-fit max-w-full rounded-full border px-4 py-2 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
                   {trialCredits.interviewCreditsRemaining <= 0
                     ? (
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1092,7 +1090,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     )
                     : (
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span>AI Interviews Left: {trialCredits.interviewCreditsRemaining}</span>
+                        <span>{trialCredits.interviewCreditsRemaining} Credits Remaining</span>
                         {pendingCandidateCount > 0 ? (
                           <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold">
                             This batch uses {pendingCandidateCount}
