@@ -47,6 +47,45 @@ function CalendarIcon() {
   )
 }
 
+function AccessFeatureIcon({ type }) {
+  const paths = {
+    single: (
+      <>
+        <path d="M12 3 5 6v5c0 4.1 2.7 7.9 7 9.5 4.3-1.6 7-5.4 7-9.5V6l-7-3Z" />
+        <path d="m9.5 12 1.7 1.7 3.8-4" />
+      </>
+    ),
+    expiry: (
+      <>
+        <circle cx="12" cy="13" r="7" />
+        <path d="M12 9v4l2.5 1.5" />
+        <path d="M9 2h6" />
+      </>
+    ),
+    integrity: (
+      <>
+        <path d="M12 3a7 7 0 0 0-7 7v2c0 3.7 2.4 7 7 9 4.6-2 7-5.3 7-9v-2a7 7 0 0 0-7-7Z" />
+        <path d="M9 12.5 11 14l4-5" />
+      </>
+    ),
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4 text-cyan-200"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {paths[type]}
+    </svg>
+  )
+}
+
 function DateTimeField({ label, value, onChange }) {
   return (
     <div>
@@ -762,7 +801,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
           </div>
         </div>
       ) : null}
-      <div className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-cyan-500/20 bg-[#06101f]/95 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)]">
+      <div className="relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-cyan-500/20 bg-[#06101f]/95 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_30%)]" />
         <div className="relative max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-h-[calc(100dvh-1.5rem)] sm:p-5 md:p-5">
           <div className="mb-4 flex items-start justify-between gap-4">
@@ -853,65 +892,63 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                 </div>
               ) : null}
 
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] md:items-start">
-                <div className="min-w-0">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-400">Select Job *</label>
+                  <select
+                    className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                    value={jobId}
+                    onChange={(e) => setJobId(e.target.value)}
+                    disabled={jobsLoading}
+                  >
+                    <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
+                    {jobs.map((job) => {
+                      const optionId = job.jobId || job.job_id
+                      const optionTitle = job.jobTitle || job.job_title
+
+                      return (
+                        <option key={optionId} value={optionId}>
+                          {optionTitle}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Name, email, and resume for this invite.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
                   <div>
-                    <label className="text-sm text-gray-400">Select Job *</label>
-                    <select
-                      className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
-                      value={jobId}
-                      onChange={(e) => setJobId(e.target.value)}
-                      disabled={jobsLoading}
-                    >
-                      <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
-                      {jobs.map((job) => {
-                        const optionId = job.jobId || job.job_id
-                        const optionTitle = job.jobTitle || job.job_title
-
-                        return (
-                          <option key={optionId} value={optionId}>
-                            {optionTitle}
-                          </option>
-                        )
-                      })}
-                    </select>
+                    <label className="text-sm text-gray-400">Candidate Full Name *</label>
+                    <input
+                      className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                      placeholder="Enter candidate name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
                   </div>
 
-                  <div className="mb-2.5 mt-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Name, email, and resume for this invite.
-                      </p>
-                    </div>
+                  <div>
+                    <label className="text-sm text-gray-400">Candidate Email *</label>
+                    <input
+                      type="email"
+                      className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                      placeholder="Enter email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </div>
+                </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm text-gray-400">Candidate Full Name *</label>
-                      <input
-                        className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
-                        placeholder="Enter candidate name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm text-gray-400">Candidate Email *</label>
-                      <input
-                        type="email"
-                        className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
-                        placeholder="Enter email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <label className="mt-2.5 block text-sm text-gray-400">Resume *</label>
+                <div>
+                  <label className="block text-sm text-gray-400">Resume *</label>
                   <div className="mt-1.5 rounded-2xl border border-dashed border-slate-600 bg-slate-900/70 p-2.5">
                     <input
                       ref={primaryFileInputRef}
@@ -952,108 +989,115 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                       </div>
                     ) : null}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={addCandidateToBatch}
-                    disabled={loading}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/18 bg-transparent px-4 py-2 text-sm font-semibold text-cyan-100/90 transition hover:border-cyan-300/45 hover:bg-cyan-400/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="text-lg leading-none">+</span>
-                    Add candidate to batch
-                  </button>
                 </div>
 
-                <div className="min-w-0 space-y-4 border-t border-slate-800/80 pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
-                  <div>
-                    <p className="text-sm font-semibold text-white">Interview Access Type</p>
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/35 p-4">
+                  <p className="text-sm font-semibold text-white">Interview Access Type</p>
 
-                    <div className="mt-3 grid gap-2">
-                      <label
-                        className={[
-                          "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
-                          accessType === "FLEXIBLE"
-                            ? "border-cyan-400/30 bg-cyan-400/[0.07] text-white"
-                            : "border-transparent text-slate-300 hover:border-cyan-500/20 hover:bg-slate-800/40",
-                        ].join(" ")}
-                      >
-                        <input
-                          type="radio"
-                          value="FLEXIBLE"
-                          checked={accessType === "FLEXIBLE"}
-                          onChange={() => setAccessType("FLEXIBLE")}
-                          className="h-4 w-4 accent-cyan-400"
-                        />
-                        <span>Flexible (24h access)</span>
-                      </label>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <label
+                      className={[
+                        "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
+                        accessType === "FLEXIBLE"
+                          ? "border-cyan-400/30 bg-cyan-400/[0.07] text-white"
+                          : "border-slate-800 text-slate-300 hover:border-cyan-500/20 hover:bg-slate-800/40",
+                      ].join(" ")}
+                    >
+                      <input
+                        type="radio"
+                        value="FLEXIBLE"
+                        checked={accessType === "FLEXIBLE"}
+                        onChange={() => setAccessType("FLEXIBLE")}
+                        className="h-4 w-4 accent-cyan-400"
+                      />
+                      <span>Flexible (24h access)</span>
+                    </label>
 
-                      <label
-                        className={[
-                          "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
-                          accessType === "SCHEDULED"
-                            ? "border-cyan-400/30 bg-cyan-400/[0.07] text-white"
-                            : "border-transparent text-slate-300 hover:border-cyan-500/20 hover:bg-slate-800/40",
-                        ].join(" ")}
-                      >
-                        <input
-                          type="radio"
-                          value="SCHEDULED"
-                          checked={accessType === "SCHEDULED"}
-                          onChange={() => setAccessType("SCHEDULED")}
-                          className="h-4 w-4 accent-cyan-400"
-                        />
-                        <span>Scheduled window</span>
-                      </label>
+                    <label
+                      className={[
+                        "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
+                        accessType === "SCHEDULED"
+                          ? "border-cyan-400/30 bg-cyan-400/[0.07] text-white"
+                          : "border-slate-800 text-slate-300 hover:border-cyan-500/20 hover:bg-slate-800/40",
+                      ].join(" ")}
+                    >
+                      <input
+                        type="radio"
+                        value="SCHEDULED"
+                        checked={accessType === "SCHEDULED"}
+                        onChange={() => setAccessType("SCHEDULED")}
+                        className="h-4 w-4 accent-cyan-400"
+                      />
+                      <span>Scheduled window</span>
+                    </label>
+                  </div>
+                </div>
+
+                {accessType === "SCHEDULED" && (
+                  <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/45 p-4">
+                    <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.28em] text-cyan-200/75">
+                      <CalendarIcon />
+                      <span>Schedule Window</span>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <DateTimeField label="Start Time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                      <DateTimeField label="End Time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                     </div>
                   </div>
+                )}
 
-                  {accessType === "SCHEDULED" && (
-                    <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/45 p-4">
-                      <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.28em] text-cyan-200/75">
-                        <CalendarIcon />
-                        <span>Schedule Window</span>
+                <button
+                  type="button"
+                  onClick={addCandidateToBatch}
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/18 bg-transparent px-4 py-2 text-sm font-semibold text-cyan-100/90 transition hover:border-cyan-300/45 hover:bg-cyan-400/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="text-lg leading-none">+</span>
+                  Add candidate to batch
+                </button>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  {[
+                    ["single", "Single-use Access", "Each invite works for one candidate only."],
+                    ["expiry", "Auto Expiry", "Links expire automatically after the access window."],
+                    ["integrity", "Integrity Monitoring", "Sessions are watched for trust signals."],
+                  ].map(([type, title, detail]) => (
+                    <div key={title} className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-cyan-400/18 bg-cyan-400/[0.07]">
+                          <AccessFeatureIcon type={type} />
+                        </span>
+                        <span>{title}</span>
                       </div>
-                      <div className="grid gap-3">
-                        <DateTimeField label="Start Time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-                        <DateTimeField label="End Time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-                      </div>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">{detail}</p>
                     </div>
-                  )}
+                  ))}
+                </div>
 
-                  <div className="text-sm leading-6 text-slate-400">
-                    <span>Single-use access</span>
-                    <span className="mx-2 text-slate-600">/</span>
-                    <span>Expires automatically</span>
-                    <span className="mx-2 text-slate-600">/</span>
-                    <span>Monitored integrity</span>
-                  </div>
-
-                  <div className={`inline-flex max-w-full rounded-full border px-4 py-2 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
-                    {trialCredits.interviewCreditsRemaining <= 0
-                      ? (
-                        <div className="flex flex-col gap-3">
-                          <span>{trialCredits.upgradeMessage}</span>
-                          <button
-                            type="button"
-                            onClick={() => setUpgradeLimitOpen(true)}
-                            className="rounded-xl border border-amber-200/35 bg-amber-300/12 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:border-amber-100/60"
-                          >
-                            View Subscription Plans
-                          </button>
-                        </div>
-                      )
-                      : (
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span>AI Interviews Left: {trialCredits.interviewCreditsRemaining}</span>
-                          {pendingCandidateCount > 0 ? (
-                            <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold">
-                              This batch uses {pendingCandidateCount}
-                            </span>
-                          ) : null}
-                        </div>
-                      )}
-                  </div>
-
+                <div className={`rounded-2xl border p-3.5 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
+                  {trialCredits.interviewCreditsRemaining <= 0
+                    ? (
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span>{trialCredits.upgradeMessage}</span>
+                        <button
+                          type="button"
+                          onClick={() => setUpgradeLimitOpen(true)}
+                          className="rounded-xl border border-amber-200/35 bg-amber-300/12 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:border-amber-100/60"
+                        >
+                          View Subscription Plans
+                        </button>
+                      </div>
+                    )
+                    : (
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span>AI Interviews Left: {trialCredits.interviewCreditsRemaining}</span>
+                        {pendingCandidateCount > 0 ? (
+                          <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold">
+                            This batch uses {pendingCandidateCount}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                 </div>
               </div>
 
