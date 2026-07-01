@@ -764,12 +764,12 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
       ) : null}
       <div className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-cyan-500/20 bg-[#06101f]/95 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_30%)]" />
-        <div className="relative max-h-[calc(100dvh-1.5rem)] overflow-y-auto p-4 sm:max-h-[calc(100dvh-2rem)] sm:p-5 md:p-6">
-          <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="relative max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-h-[calc(100dvh-1.5rem)] sm:p-5 md:p-5">
+          <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">Interview Access</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Send Interview Link</h2>
-              <p className="mt-2 max-w-lg text-sm text-slate-300">
+              <h2 className="mt-1.5 text-2xl font-semibold text-white sm:text-3xl">Send Interview Link</h2>
+              <p className="mt-1.5 max-w-lg text-sm leading-6 text-slate-300">
                 Add one or several candidates, apply one access window, and send every
                 secure interview invite in a single batch.
               </p>
@@ -853,12 +853,12 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                 </div>
               ) : null}
 
-              <div className="grid gap-5 md:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] md:items-start">
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] md:items-start">
                 <div className="min-w-0">
                   <div>
                     <label className="text-sm text-gray-400">Select Job *</label>
                     <select
-                      className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                      className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
                       value={jobId}
                       onChange={(e) => setJobId(e.target.value)}
                       disabled={jobsLoading}
@@ -877,7 +877,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     </select>
                   </div>
 
-                  <div className="mb-3 mt-4 flex items-center justify-between gap-3">
+                  <div className="mb-2.5 mt-3 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-white">
                         {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
@@ -892,7 +892,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     <div>
                       <label className="text-sm text-gray-400">Candidate Full Name *</label>
                       <input
-                        className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                        className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
                         placeholder="Enter candidate name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -903,7 +903,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                       <label className="text-sm text-gray-400">Candidate Email *</label>
                       <input
                         type="email"
-                        className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                        className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
                         placeholder="Enter email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -911,12 +911,12 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     </div>
                   </div>
 
-                  <label className="mt-3 block text-sm text-gray-400">Resume *</label>
-                  <div className="mt-1.5 rounded-2xl border border-dashed border-slate-600 bg-slate-900/70 p-3">
+                  <label className="mt-2.5 block text-sm text-gray-400">Resume *</label>
+                  <div className="mt-1.5 rounded-2xl border border-dashed border-slate-600 bg-slate-900/70 p-2.5">
                     <input
                       ref={primaryFileInputRef}
                       type="file"
-                      className="w-full text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-cyan-200 hover:file:bg-cyan-500/25"
+                      className="w-full text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/15 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-cyan-200 hover:file:bg-cyan-500/25"
                       onChange={handleResumeSelect}
                     />
 
@@ -957,7 +957,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     type="button"
                     onClick={addCandidateToBatch}
                     disabled={loading}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/25 bg-cyan-400/[0.07] px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/25 bg-cyan-400/[0.07] px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span className="text-lg leading-none">+</span>
                     Add candidate to batch
@@ -965,11 +965,11 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                 </div>
 
                 <div className="min-w-0 space-y-3">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/55 p-4">
-                    <p className="mb-3 text-sm font-medium text-slate-300">Interview Access Type</p>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/55 p-3.5">
+                    <p className="mb-2.5 text-sm font-medium text-slate-300">Interview Access Type</p>
 
                     <div className="grid gap-2">
-                      <label className="flex items-center gap-3 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] px-3 py-2 text-sm text-slate-200 transition hover:border-cyan-500/25 hover:bg-slate-800/60">
+                      <label className="flex items-center gap-3 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] px-3 py-1.5 text-sm text-slate-200 transition hover:border-cyan-500/25 hover:bg-slate-800/60">
                         <input
                           type="radio"
                           value="FLEXIBLE"
@@ -980,7 +980,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                         <span>Flexible (24h access)</span>
                       </label>
 
-                      <label className="flex items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-sm text-slate-200 transition hover:border-cyan-500/20 hover:bg-slate-800/60">
+                      <label className="flex items-center gap-3 rounded-xl border border-transparent px-3 py-1.5 text-sm text-slate-200 transition hover:border-cyan-500/20 hover:bg-slate-800/60">
                         <input
                           type="radio"
                           value="SCHEDULED"
@@ -1006,13 +1006,13 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     </div>
                   )}
 
-                  <div className="grid gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300 sm:grid-cols-3 md:grid-cols-1 xl:grid-cols-3">
-                    <div className="rounded-xl bg-slate-950/35 px-3 py-2">Single-use access</div>
-                    <div className="rounded-xl bg-slate-950/35 px-3 py-2">Expires automatically</div>
-                    <div className="rounded-xl bg-slate-950/35 px-3 py-2">Monitored integrity</div>
+                  <div className="grid gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 text-sm text-slate-300 sm:grid-cols-3 md:grid-cols-1 xl:grid-cols-3">
+                    <div className="rounded-xl bg-slate-950/35 px-3 py-1.5">Single-use access</div>
+                    <div className="rounded-xl bg-slate-950/35 px-3 py-1.5">Expires automatically</div>
+                    <div className="rounded-xl bg-slate-950/35 px-3 py-1.5">Monitored integrity</div>
                   </div>
 
-                  <div className={`rounded-2xl border p-4 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
+                  <div className={`rounded-2xl border p-3.5 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
                     {trialCredits.interviewCreditsRemaining <= 0
                       ? (
                         <div className="flex flex-col gap-3">
@@ -1042,7 +1042,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                   <button
                     onClick={() => handleSubmit()}
                     disabled={loading || jobsLoading || trialCredits.interviewCreditsRemaining <= 0}
-                    className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-4 py-3 text-base font-medium text-white shadow-[0_18px_30px_rgba(37,99,235,0.3)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-4 py-2.5 text-base font-medium text-white shadow-[0_18px_30px_rgba(37,99,235,0.3)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading
                       ? `Preparing ${pendingCandidateCount || queuedCandidates.length} ${pendingCandidateCount === 1 ? "invite" : "invites"}...`
