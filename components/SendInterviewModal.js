@@ -1038,19 +1038,22 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                       )}
                   </div>
 
-                  {error && <p className="text-sm text-red-400">{error}</p>}
-                  <button
-                    onClick={() => handleSubmit()}
-                    disabled={loading || jobsLoading || trialCredits.interviewCreditsRemaining <= 0}
-                    className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-4 py-2.5 text-base font-medium text-white shadow-[0_18px_30px_rgba(37,99,235,0.3)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loading
-                      ? `Preparing ${pendingCandidateCount || queuedCandidates.length} ${pendingCandidateCount === 1 ? "invite" : "invites"}...`
-                      : pendingCandidateCount > 1
-                        ? `Send ${pendingCandidateCount} Interview Invites`
-                        : "Send Interview Invite"}
-                  </button>
                 </div>
+              </div>
+
+              {error && <p className="mt-3 text-center text-sm text-red-400">{error}</p>}
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => handleSubmit()}
+                  disabled={loading || jobsLoading || trialCredits.interviewCreditsRemaining <= 0}
+                  className="w-full max-w-xl rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-5 py-3 text-base font-semibold text-white shadow-[0_18px_30px_rgba(37,99,235,0.3)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading
+                    ? `Preparing ${pendingCandidateCount || queuedCandidates.length} ${pendingCandidateCount === 1 ? "invite" : "invites"}...`
+                    : pendingCandidateCount > 1
+                      ? `Send ${pendingCandidateCount} Interview Invites`
+                      : "Send Interview Invite"}
+                </button>
               </div>
 
               {batchResults.length > 1 || batchResults.some((result) => result.status === "failed") ? (
