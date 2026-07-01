@@ -893,35 +893,37 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
               ) : null}
 
               <div className="space-y-4">
-                <div className="w-full sm:w-4/5 md:w-3/5 lg:max-w-[420px]">
-                  <label className="text-sm text-gray-400">Select Job *</label>
-                  <select
-                    className="mt-1.5 w-full truncate rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
-                    value={jobId}
-                    onChange={(e) => setJobId(e.target.value)}
-                    disabled={jobsLoading}
-                  >
-                    <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
-                    {jobs.map((job) => {
-                      const optionId = job.jobId || job.job_id
-                      const optionTitle = job.jobTitle || job.job_title
+                <div className="grid gap-4 md:grid-cols-[minmax(280px,420px)_minmax(0,1fr)] md:items-end">
+                  <div>
+                    <label className="text-sm text-gray-400">Select Job *</label>
+                    <select
+                      className="mt-1.5 w-full truncate rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                      value={jobId}
+                      onChange={(e) => setJobId(e.target.value)}
+                      disabled={jobsLoading}
+                    >
+                      <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
+                      {jobs.map((job) => {
+                        const optionId = job.jobId || job.job_id
+                        const optionTitle = job.jobTitle || job.job_title
 
-                      return (
-                        <option key={optionId} value={optionId}>
-                          {optionTitle}
-                        </option>
-                      )
-                    })}
-                  </select>
-                </div>
+                        return (
+                          <option key={optionId} value={optionId}>
+                            {optionTitle}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
 
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Name, email, and resume for this invite.
-                  </p>
+                  <div className="pb-1 md:border-l md:border-slate-800/80 md:pl-4">
+                    <p className="text-sm font-semibold text-white">
+                      {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Name, email, and resume for this invite.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
