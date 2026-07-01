@@ -815,26 +815,6 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
             </div>
           ) : (
             <>
-              <label className="text-sm text-gray-400">Select Job *</label>
-              <select
-                className="mb-4 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
-                value={jobId}
-                onChange={(e) => setJobId(e.target.value)}
-                disabled={jobsLoading}
-              >
-                <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
-                {jobs.map((job) => {
-                  const optionId = job.jobId || job.job_id
-                  const optionTitle = job.jobTitle || job.job_title
-
-                  return (
-                    <option key={optionId} value={optionId}>
-                      {optionTitle}
-                    </option>
-                  )
-                })}
-              </select>
-
               {queuedCandidates.length > 0 ? (
                 <div className="mb-5 rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.045] p-4">
                   <div className="flex items-center justify-between gap-3">
@@ -875,7 +855,29 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
 
               <div className="grid gap-5 md:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] md:items-start">
                 <div className="min-w-0">
-                  <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <label className="text-sm text-gray-400">Select Job *</label>
+                    <select
+                      className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                      value={jobId}
+                      onChange={(e) => setJobId(e.target.value)}
+                      disabled={jobsLoading}
+                    >
+                      <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
+                      {jobs.map((job) => {
+                        const optionId = job.jobId || job.job_id
+                        const optionTitle = job.jobTitle || job.job_title
+
+                        return (
+                          <option key={optionId} value={optionId}>
+                            {optionTitle}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+
+                  <div className="mb-3 mt-4 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-white">
                         {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
@@ -1004,10 +1006,10 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     </div>
                   )}
 
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm leading-6 text-slate-300">
-                    <div>Single-use access</div>
-                    <div>Expires automatically</div>
-                    <div>Monitored for integrity</div>
+                  <div className="grid gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300 sm:grid-cols-3 md:grid-cols-1 xl:grid-cols-3">
+                    <div className="rounded-xl bg-slate-950/35 px-3 py-2">Single-use access</div>
+                    <div className="rounded-xl bg-slate-950/35 px-3 py-2">Expires automatically</div>
+                    <div className="rounded-xl bg-slate-950/35 px-3 py-2">Monitored integrity</div>
                   </div>
 
                   <div className={`rounded-2xl border p-4 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
