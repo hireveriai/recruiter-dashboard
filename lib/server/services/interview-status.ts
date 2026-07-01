@@ -38,7 +38,7 @@ export function isInviteUsable(invite: InviteStatusInput) {
 
 export function isAttemptCompleted(attempt: AttemptStatusInput) {
   const normalizedStatus = normalizeStatus(attempt.status)
-  return normalizedStatus === "COMPLETED" || Boolean(attempt.endedAt)
+  return ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(normalizedStatus)
 }
 
 export function isAttemptManualExit(attempt: AttemptStatusInput) {
@@ -72,16 +72,19 @@ export function deriveInterviewStatus({
     return "PREPARING_INTERVIEW"
   }
 
+  if (
+    ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(normalizedInterviewStatus) ||
+    (latestAttempt ? isAttemptCompleted(latestAttempt) : false)
+  ) {
+    return "COMPLETED"
+  }
+
   if (latestAttempt && isAttemptManualExit(latestAttempt)) {
     return "EARLY_EXIT"
   }
 
   if (latestAttempt && isAttemptAbandoned(latestAttempt)) {
     return "ABANDONED"
-  }
-
-  if (normalizedInterviewStatus === "COMPLETED" || (latestAttempt ? isAttemptCompleted(latestAttempt) : false)) {
-    return "COMPLETED"
   }
 
   if (normalizedInterviewStatus === "FLAGGED") {
