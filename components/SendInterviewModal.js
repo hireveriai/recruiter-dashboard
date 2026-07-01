@@ -957,19 +957,26 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     type="button"
                     onClick={addCandidateToBatch}
                     disabled={loading}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/25 bg-cyan-400/[0.07] px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/18 bg-transparent px-4 py-2 text-sm font-semibold text-cyan-100/90 transition hover:border-cyan-300/45 hover:bg-cyan-400/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span className="text-lg leading-none">+</span>
                     Add candidate to batch
                   </button>
                 </div>
 
-                <div className="min-w-0 space-y-3">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/55 p-3.5">
-                    <p className="mb-2.5 text-sm font-medium text-slate-300">Interview Access Type</p>
+                <div className="min-w-0 space-y-4 border-t border-slate-800/80 pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Interview Access Type</p>
 
-                    <div className="grid gap-2">
-                      <label className="flex items-center gap-3 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] px-3 py-1.5 text-sm text-slate-200 transition hover:border-cyan-500/25 hover:bg-slate-800/60">
+                    <div className="mt-3 grid gap-2">
+                      <label
+                        className={[
+                          "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
+                          accessType === "FLEXIBLE"
+                            ? "border-cyan-400/30 bg-cyan-400/[0.07] text-white"
+                            : "border-transparent text-slate-300 hover:border-cyan-500/20 hover:bg-slate-800/40",
+                        ].join(" ")}
+                      >
                         <input
                           type="radio"
                           value="FLEXIBLE"
@@ -980,7 +987,14 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                         <span>Flexible (24h access)</span>
                       </label>
 
-                      <label className="flex items-center gap-3 rounded-xl border border-transparent px-3 py-1.5 text-sm text-slate-200 transition hover:border-cyan-500/20 hover:bg-slate-800/60">
+                      <label
+                        className={[
+                          "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
+                          accessType === "SCHEDULED"
+                            ? "border-cyan-400/30 bg-cyan-400/[0.07] text-white"
+                            : "border-transparent text-slate-300 hover:border-cyan-500/20 hover:bg-slate-800/40",
+                        ].join(" ")}
+                      >
                         <input
                           type="radio"
                           value="SCHEDULED"
@@ -994,7 +1008,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                   </div>
 
                   {accessType === "SCHEDULED" && (
-                    <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/55 p-4">
+                    <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/45 p-4">
                       <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.28em] text-cyan-200/75">
                         <CalendarIcon />
                         <span>Schedule Window</span>
@@ -1006,13 +1020,15 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     </div>
                   )}
 
-                  <div className="grid gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 text-sm text-slate-300 sm:grid-cols-3 md:grid-cols-1 xl:grid-cols-3">
-                    <div className="rounded-xl bg-slate-950/35 px-3 py-1.5">Single-use access</div>
-                    <div className="rounded-xl bg-slate-950/35 px-3 py-1.5">Expires automatically</div>
-                    <div className="rounded-xl bg-slate-950/35 px-3 py-1.5">Monitored integrity</div>
+                  <div className="text-sm leading-6 text-slate-400">
+                    <span>Single-use access</span>
+                    <span className="mx-2 text-slate-600">/</span>
+                    <span>Expires automatically</span>
+                    <span className="mx-2 text-slate-600">/</span>
+                    <span>Monitored integrity</span>
                   </div>
 
-                  <div className={`rounded-2xl border p-3.5 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
+                  <div className={`inline-flex max-w-full rounded-full border px-4 py-2 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
                     {trialCredits.interviewCreditsRemaining <= 0
                       ? (
                         <div className="flex flex-col gap-3">
