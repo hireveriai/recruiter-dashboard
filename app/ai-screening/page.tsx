@@ -61,11 +61,23 @@ type MatchRow = {
 }
 
 type SelectedInsight = {
+  candidateId: string
   candidateName: string
+  email: string | null
+  phone: string | null
+  resumeUrl: string | null
+  matchScore: number
+  skillMatch: number
+  experienceMatch: number
+  riskLevel: MatchRow["riskLevel"]
+  recommendation: MatchRow["recommendation"]
+  createdAt: string
+  missingSkills: string[]
   strengths: string[]
   gaps: string[]
   verdict: string
   reasoning: string
+  fullReportOpen: boolean
 }
 
 type ScreeningRun = {
@@ -2877,11 +2889,23 @@ export default function AiScreeningPage() {
                     const reasoning = match.insights?.short_reasoning ?? ""
                     const insightSummary = getCandidateInsightSummary(match, verdict)
                     const candidateInsight = {
+                      candidateId: match.candidateId,
                       candidateName: match.candidateName,
+                      email: match.email,
+                      phone: match.phone,
+                      resumeUrl: match.resumeUrl,
+                      matchScore: match.matchScore,
+                      skillMatch: match.skillMatch,
+                      experienceMatch: match.experienceMatch,
+                      riskLevel: match.riskLevel,
+                      recommendation: match.recommendation,
+                      createdAt: match.createdAt,
+                      missingSkills: Array.isArray(match.insights?.missing_skills) ? match.insights.missing_skills : [],
                       strengths,
                       gaps,
                       verdict,
                       reasoning,
+                      fullReportOpen: false,
                     }
                     const insightTooltipText = [
                       `Strengths: ${strengths.join("; ")}`,
@@ -3424,11 +3448,16 @@ export default function AiScreeningPage() {
 
       {selectedInsight ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-slate-950/80 px-4 py-5 backdrop-blur-sm sm:py-8" role="dialog" aria-modal="true" aria-labelledby="candidate-insight-title">
-          <div className="flex h-[calc(100vh-40px)] w-full max-w-[680px] flex-col rounded-2xl border border-slate-800 bg-[#0B1220] shadow-[0_24px_90px_rgba(2,6,23,0.7)] sm:h-[calc(100vh-64px)]">
+          <div className={`flex h-[calc(100vh-40px)] w-full flex-col rounded-2xl border border-slate-800 bg-[#0B1220] shadow-[0_24px_90px_rgba(2,6,23,0.7)] sm:h-[calc(100vh-64px)] ${selectedInsight.fullReportOpen ? "max-w-5xl" : "max-w-[680px]"}`}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">VERIS Insight</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">{selectedInsight.fullReportOpen ? "VERIS Full Report" : "VERIS Insight"}</p>
                 <h2 id="candidate-insight-title" className="mt-2 text-lg font-semibold text-white">{selectedInsight.candidateName}</h2>
+                {selectedInsight.fullReportOpen ? (
+                  <p className="mt-1 text-sm text-slate-400">
+                    {activeJob?.title ?? "Screening role"} {selectedInsight.createdAt ? `- ${formatDateTime(selectedInsight.createdAt)}` : ""}
+                  </p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -3440,7 +3469,70 @@ export default function AiScreeningPage() {
             </div>
 
             <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-6 py-5">
+              {selectedInsight.fullReportOpen ? (
+                <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    ["Match Score", `${selectedInsight.matchScore}%`, getScoreColor(selectedInsight.matchScore)],
+                    ["Skill Match", `${selectedInsight.skillMatch}%`, getScoreColor(selectedInsight.skillMatch)],
+                    ["Experience Match", `${selectedInsight.experienceMatch}%`, getScoreColor(selectedInsight.experienceMatch)],
+                    ["Risk Level", selectedInsight.riskLevel, getRiskTone(selectedInsight.riskLevel)],
+                  ].map(([label, value, tone]) => (
+                    <div key={label} className="rounded-xl border border-slate-800 bg-slate-950/45 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                      <p className={`mt-2 text-lg font-semibold ${tone}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
               <div className="space-y-5">
+                {selectedInsight.fullReportOpen ? (
+                  <section className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/45 p-4">
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Candidate</h3>
+                      <dl className="mt-3 space-y-2 text-sm leading-6 text-slate-200">
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-slate-500">Email</dt>
+                          <dd className="text-right">{selectedInsight.email || "Not available"}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-slate-500">Phone</dt>
+                          <dd className="text-right">{selectedInsight.phone || "Not available"}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-slate-500">Candidate ID</dt>
+                          <dd className="max-w-[220px] truncate text-right" title={selectedInsight.candidateId}>{selectedInsight.candidateId}</dd>
+                        </div>
+                        {selectedInsight.resumeUrl ? (
+                          <div className="flex justify-between gap-4">
+                            <dt className="text-slate-500">Resume</dt>
+                            <dd><a href={selectedInsight.resumeUrl} target="_blank" rel="noreferrer" className="font-semibold text-cyan-200 hover:text-cyan-100">Open resume</a></dd>
+                          </div>
+                        ) : null}
+                      </dl>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/45 p-4">
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Decision</h3>
+                      <dl className="mt-3 space-y-2 text-sm leading-6 text-slate-200">
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-slate-500">Recommendation</dt>
+                          <dd className={`text-right font-semibold ${getRecommendationTextTone(selectedInsight.recommendation)}`}>
+                            {getRecommendationDisplayLabel(selectedInsight.recommendation)}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-slate-500">Verdict</dt>
+                          <dd className="text-right">{selectedInsight.verdict}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-slate-500">Job</dt>
+                          <dd className="text-right">{activeJob?.title ?? "Current screening role"}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </section>
+                ) : null}
+
                 <section>
                   <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/80">Strengths</h3>
                   <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-200">
@@ -3470,12 +3562,29 @@ export default function AiScreeningPage() {
                     {selectedInsight.reasoning || "No additional reasoning provided."}
                   </p>
                 </section>
+
+                {selectedInsight.fullReportOpen && selectedInsight.missingSkills.length > 0 ? (
+                  <section>
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Missing Skill Evidence</h3>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedInsight.missingSkills.map((skill) => (
+                        <span key={skill} className="rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-100">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-slate-800 px-6 py-4">
-              <button type="button" className="text-sm font-semibold text-cyan-200 opacity-60" disabled>
-                Open Full Report -&gt;
+              <button
+                type="button"
+                onClick={() => setSelectedInsight((current) => current ? { ...current, fullReportOpen: !current.fullReportOpen } : current)}
+                className="text-sm font-semibold text-cyan-200 transition hover:text-cyan-100"
+              >
+                {selectedInsight.fullReportOpen ? "Hide Full Report" : "Open Full Report ->"}
               </button>
               <button
                 type="button"
