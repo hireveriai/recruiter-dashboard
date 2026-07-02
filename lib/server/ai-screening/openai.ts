@@ -1,4 +1,4 @@
-import { sanitizeSkillList } from "@/lib/server/ai/skills"
+import { deriveSkillsFromText, sanitizeSkillList } from "@/lib/server/ai/skills"
 import type { ParsedResume } from "@/lib/server/resumeParser"
 
 export type ParsedJobDescription = {
@@ -159,7 +159,7 @@ function fallbackParseJobDescription(description: string, titleHint?: string | n
   const trimmed = description.trim()
   const firstLine = trimmed.split(/\r?\n/).map((line) => line.trim()).find(Boolean)
   const experienceNeeded = extractExperienceNeeded(trimmed)
-  const requiredSkills = sanitizeSkillList([], {
+  const requiredSkills = sanitizeSkillList(deriveSkillsFromText(trimmed), {
     jobTitle: titleHint ?? firstLine ?? undefined,
     jobDescription: trimmed,
   }).slice(0, 24)
@@ -415,9 +415,277 @@ const GLOBAL_SKILL_ALIAS_GROUPS = [
   ["user interface", "ui"],
 ]
 
+const SERVICE_COORDINATION_ALIAS_GROUPS = [
+  [
+    "service operations management",
+    "service operations",
+    "service coordination",
+    "service administration",
+    "service administrator",
+    "service max operations",
+    "servicemax operations",
+    "open calls",
+    "ttr reporting",
+    "service camps",
+    "customer complaints",
+    "preventive maintenance",
+  ],
+  [
+    "invoice management",
+    "invoice",
+    "invoicing",
+    "invoiced",
+    "billing",
+    "service contract invoicing",
+    "erp invoicing",
+  ],
+  [
+    "billing",
+    "invoice",
+    "invoicing",
+    "renewal billing",
+    "contract billing",
+    "service contract invoicing",
+  ],
+  [
+    "engineer support",
+    "service engineer support",
+    "service engineers",
+    "engineers",
+    "coordinating with engineers",
+    "support engineers",
+    "fsr",
+    "fsrs",
+    "delivery challans",
+    "service trainings of engineers",
+  ],
+  [
+    "warranty management",
+    "warranty",
+    "warranty claims",
+    "contract type",
+    "service contracts",
+    "service contract",
+    "contract renewals",
+    "renewal management",
+  ],
+  [
+    "spare parts logistics coordination",
+    "spare parts",
+    "parts logistics",
+    "parts availability",
+    "parts coordination",
+    "supply of parts",
+    "planning of parts",
+    "parts utilized",
+    "inventory management",
+    "rop",
+    "warehouse",
+    "dispatch",
+  ],
+  [
+    "reporting mis",
+    "mis reporting",
+    "mis reports",
+    "reports",
+    "ppt",
+    "presentations",
+    "daily reports",
+    "weekly reports",
+    "monthly reports",
+  ],
+]
+
+const CROSS_INDUSTRY_ALIAS_GROUPS = [
+  [
+    "software development",
+    "application development",
+    "programming",
+    "coding",
+    "web development",
+    "full stack development",
+    "backend development",
+    "frontend development",
+  ],
+  [
+    "it support",
+    "technical support",
+    "desktop support",
+    "helpdesk",
+    "help desk",
+    "troubleshooting",
+    "ticket handling",
+    "incident management",
+  ],
+  [
+    "network administration",
+    "networking",
+    "lan",
+    "wan",
+    "router",
+    "switch",
+    "firewall",
+    "vpn",
+  ],
+  [
+    "medical industry",
+    "healthcare",
+    "hospital",
+    "clinical",
+    "patient coordination",
+    "patient care",
+    "medical equipment",
+    "diagnostics",
+    "laboratory",
+    "pharma",
+  ],
+  [
+    "banking operations",
+    "banking",
+    "financial services",
+    "branch operations",
+    "loan processing",
+    "credit evaluation",
+    "kyc",
+    "aml",
+    "account opening",
+    "cash handling",
+  ],
+  [
+    "corporate administration",
+    "administration",
+    "office administration",
+    "admin operations",
+    "back office",
+    "documentation",
+    "records management",
+    "data entry",
+    "filing",
+  ],
+  [
+    "front office",
+    "front desk",
+    "reception",
+    "receptionist",
+    "visitor management",
+    "call handling",
+    "appointment scheduling",
+    "guest handling",
+  ],
+  [
+    "executive assistant",
+    "personal assistant",
+    "ea",
+    "pa",
+    "calendar management",
+    "travel coordination",
+    "meeting coordination",
+    "minutes of meeting",
+  ],
+  [
+    "human resources",
+    "hr",
+    "recruitment",
+    "talent acquisition",
+    "candidate screening",
+    "interview coordination",
+    "onboarding",
+    "employee engagement",
+    "payroll",
+  ],
+  [
+    "sales",
+    "business development",
+    "lead generation",
+    "client acquisition",
+    "field sales",
+    "inside sales",
+    "channel sales",
+    "crm",
+    "pipeline management",
+  ],
+  [
+    "customer service",
+    "customer support",
+    "customer care",
+    "client servicing",
+    "query resolution",
+    "complaint handling",
+    "escalation handling",
+    "call center",
+    "bpo",
+  ],
+  [
+    "accounting",
+    "finance",
+    "accounts payable",
+    "accounts receivable",
+    "bookkeeping",
+    "gst",
+    "taxation",
+    "tally",
+    "reconciliation",
+  ],
+  [
+    "procurement",
+    "purchase",
+    "purchasing",
+    "vendor management",
+    "supplier management",
+    "purchase order",
+    "po",
+    "quotation",
+    "negotiation",
+  ],
+  [
+    "logistics",
+    "warehouse",
+    "dispatch",
+    "inventory",
+    "stock management",
+    "delivery coordination",
+    "shipment tracking",
+    "supply chain",
+  ],
+  [
+    "manufacturing",
+    "production",
+    "quality control",
+    "quality assurance",
+    "maintenance",
+    "process improvement",
+    "safety compliance",
+    "lean",
+  ],
+  [
+    "marketing",
+    "digital marketing",
+    "campaign management",
+    "social media",
+    "seo",
+    "sem",
+    "content marketing",
+    "brand management",
+  ],
+  [
+    "teaching",
+    "education",
+    "training",
+    "trainer",
+    "faculty",
+    "curriculum",
+    "student coordination",
+    "learning and development",
+  ],
+]
+
 function stemEvidenceToken(token: string) {
   if (token.length <= 4) {
     return token
+  }
+
+  if (/invoic(?:e|ing|ed|es)$/i.test(token)) {
+    return "invoice"
   }
 
   return token
@@ -462,6 +730,18 @@ function getSkillAliases(skill: string) {
     }
   }
 
+  for (const group of SERVICE_COORDINATION_ALIAS_GROUPS) {
+    if (group.some((alias) => normalized.includes(normalizeEvidenceText(alias)))) {
+      add(...group)
+    }
+  }
+
+  for (const group of CROSS_INDUSTRY_ALIAS_GROUPS) {
+    if (group.some((alias) => normalized.includes(normalizeEvidenceText(alias)))) {
+      add(...group)
+    }
+  }
+
   if (/\b(postgresql|postgres)\b/.test(normalized)) add("postgresql", "postgres")
   if (/\b(sql server|mssql|ms sql)\b/.test(normalized)) add("sql server", "mssql", "ms sql")
   if (/\bazure\b/.test(normalized)) add("azure", "azure sql", "azure database", "azure database for postgresql")
@@ -479,6 +759,21 @@ function getSkillAliases(skill: string) {
   if (/\bautomation|script|powershell|runbook\b/.test(normalized)) add("automation", "scripts", "powershell", "runbook")
   if (/\bdocumentation|procedure|report|cmdb\b/.test(normalized)) {
     add("documentation", "user manuals", "standard operating procedures", "reports")
+  }
+  if (/\bservice\b/.test(normalized) && /\b(operation|coordination|administration|management)\b/.test(normalized)) {
+    add("service operations", "service coordination", "service administration", "service administrator", "service max operations")
+  }
+  if (/\binvoice|invoicing|billing\b/.test(normalized)) {
+    add("invoice", "invoicing", "billing", "erp invoicing", "service contract invoicing")
+  }
+  if (/\bengineer\b/.test(normalized) && /\b(support|coordination|management)\b/.test(normalized)) {
+    add("service engineers", "coordinating with engineers", "support engineers", "engineer coordination")
+  }
+  if (/\bwarranty|contract renewal|service contract\b/.test(normalized)) {
+    add("warranty", "service contracts", "contract type", "contract renewals", "renewal management")
+  }
+  if (/\bspare|parts|logistics|warehouse|inventory\b/.test(normalized)) {
+    add("spare parts", "parts availability", "supply of parts", "planning of parts", "inventory management", "dispatch")
   }
   if (/\bdatabase administration|database administrator|dba|database operations\b/.test(normalized)) {
     add("database administrator", "database administration", "database management", "database operations", "dba")
