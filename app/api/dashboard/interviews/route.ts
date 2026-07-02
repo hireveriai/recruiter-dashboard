@@ -793,6 +793,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       jobTitle: interview.job.jobTitle,
       status,
       interviewStatus: interview.status ?? null,
+      finalStatus: interview.finalStatus ?? null,
       questionStatus,
       emailStatus,
       failureReason,

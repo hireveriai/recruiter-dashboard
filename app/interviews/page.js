@@ -17,11 +17,141 @@ import { CandidateActionModal } from "../../components/dashboard/CandidateAction
 import { DecisionPill } from "../../components/dashboard/DecisionPill"
 import { VerisGlobeLoader } from "../../components/system/loaders"
 
+const RECRUITER_STATUS_DEFINITIONS = {
+  COMPLETED: {
+    label: "Completed",
+    description: "Candidate completed the full interview and the result is ready for review.",
+  },
+  INTERRUPTED: {
+    label: "Interrupted",
+    description: "Interview was disrupted by a technical, network, camera, or timeout issue.",
+  },
+  INCOMPLETE: {
+    label: "Incomplete",
+    description: "Candidate left or stopped before the interview finished normally.",
+  },
+  EXITED_EARLY: {
+    label: "Exited Early",
+    description: "Candidate intentionally ended the interview before finishing.",
+  },
+  IN_PROGRESS: {
+    label: "In Progress",
+    description: "Candidate has started and the interview is still active.",
+  },
+  READY: {
+    label: "Ready",
+    description: "Interview link is ready and waiting for the candidate.",
+  },
+  PREPARING_INTERVIEW: {
+    label: "Preparing",
+    description: "Questions or delivery are still being prepared.",
+  },
+  SENDING_EMAIL: {
+    label: "Sending Email",
+    description: "Invite email is being sent to the candidate.",
+  },
+  EMAIL_FAILED: {
+    label: "Email Failed",
+    description: "Interview is ready, but the invite email could not be delivered.",
+  },
+  PREPARATION_FAILED: {
+    label: "Preparation Failed",
+    description: "Interview setup failed before the candidate could start.",
+  },
+  EXPIRED: {
+    label: "Expired",
+    description: "The invite window expired before the candidate used it.",
+  },
+  REVOKED: {
+    label: "Revoked",
+    description: "Recruiter access to this interview was revoked.",
+  },
+  USED: {
+    label: "Used",
+    description: "The interview invite has already been used.",
+  },
+  PENDING: {
+    label: "Pending",
+    description: "Interview is not ready yet.",
+  },
+}
+
+const STATUS_GUIDE_KEYS = ["COMPLETED", "INTERRUPTED", "INCOMPLETE", "EXITED_EARLY", "IN_PROGRESS", "READY"]
+
+function normalizeStatusKey(status) {
+  return String(status ?? "").trim().toUpperCase()
+}
+
+function getRecruiterStatusKey(interview) {
+  const status = normalizeStatusKey(interview?.status)
+  const interviewStatus = normalizeStatusKey(interview?.interviewStatus)
+  const finalStatus = normalizeStatusKey(interview?.finalStatus)
+  const attemptStatus = normalizeStatusKey(interview?.attemptStatus)
+  const terminationType = normalizeStatusKey(interview?.terminationType)
+  const disconnectReason = normalizeStatusKey(interview?.disconnectReason)
+  const terminationReason = normalizeStatusKey(interview?.terminationReason)
+  const isFinalized = status === "COMPLETED" || interviewStatus === "COMPLETED"
+
+  if (
+    Boolean(interview?.earlyExit) ||
+    ["MANUAL_EXIT", "EARLY_EXIT"].includes(attemptStatus) ||
+    ["MANUAL_EXIT", "EARLY_EXIT"].includes(terminationType) ||
+    ["MANUAL_EXIT", "EARLY_EXIT"].includes(finalStatus)
+  ) {
+    return "EXITED_EARLY"
+  }
+
+  if (
+    finalStatus === "INTERRUPTED" ||
+    ["INTERRUPTED", "TIME_EXPIRED", "NETWORK_DISCONNECT_TIMEOUT", "CAMERA_STREAM"].includes(terminationType) ||
+    disconnectReason ||
+    terminationReason.includes("INTERRUPT")
+  ) {
+    return "INTERRUPTED"
+  }
+
+  if (
+    attemptStatus === "ABANDONED" ||
+    finalStatus === "ABANDONED" ||
+    status === "ABANDONED"
+  ) {
+    return isFinalized ? "INCOMPLETE" : "INCOMPLETE"
+  }
+
+  if (isFinalized) {
+    return "COMPLETED"
+  }
+
+  if (status === "EARLY_EXIT") {
+    return "EXITED_EARLY"
+  }
+
+  if (status === "FLAGGED") {
+    return "INTERRUPTED"
+  }
+
+  return status || "PENDING"
+}
+
+function getRecruiterStatus(interview) {
+  const key = getRecruiterStatusKey(interview)
+  const fallback = RECRUITER_STATUS_DEFINITIONS.PENDING
+
+  return {
+    key,
+    ...(RECRUITER_STATUS_DEFINITIONS[key] ?? {
+      ...fallback,
+      label: formatStatusText(key),
+    }),
+  }
+}
+
 function getStatusBadge(status) {
   const normalized = String(status ?? "PENDING").toUpperCase()
   if (normalized === "COMPLETED") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-  if (normalized === "EARLY_EXIT") return "border-amber-400/25 bg-amber-400/10 text-amber-200"
-  if (normalized === "ABANDONED") return "border-orange-400/25 bg-orange-400/10 text-orange-200"
+  if (normalized === "EXITED_EARLY" || normalized === "EARLY_EXIT") return "border-amber-400/25 bg-amber-400/10 text-amber-200"
+  if (normalized === "INCOMPLETE" || normalized === "ABANDONED") return "border-orange-400/25 bg-orange-400/10 text-orange-200"
+  if (normalized === "INTERRUPTED") return "border-sky-400/25 bg-sky-400/10 text-sky-200"
   if (normalized === "READY") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
   if (normalized === "EMAIL_FAILED") return "border-amber-500/20 bg-amber-500/10 text-amber-300"
   if (normalized === "PREPARATION_FAILED") return "border-rose-500/20 bg-rose-500/10 text-rose-300"
@@ -525,8 +655,8 @@ export default function InterviewsPage() {
 
   const stats = useMemo(() => {
     const total = interviews.length
-    const active = interviews.filter((item) => ["PENDING", "READY", "EMAIL_FAILED", "IN_PROGRESS", "SENDING_EMAIL", "PREPARING_INTERVIEW"].includes(String(item.status).toUpperCase())).length
-    const completed = interviews.filter(isCompletedInterview).length
+    const active = interviews.filter((item) => ["PENDING", "READY", "EMAIL_FAILED", "IN_PROGRESS", "SENDING_EMAIL", "PREPARING_INTERVIEW"].includes(getRecruiterStatus(item).key)).length
+    const completed = interviews.filter((item) => getRecruiterStatus(item).key === "COMPLETED").length
     const pendingReview = interviews.filter((item) => isCompletedInterview(item) && !item.recruiterDecisionStatus).length
 
     return { total, active, completed, pendingReview }
@@ -551,7 +681,7 @@ export default function InterviewsPage() {
 
   const filterOptions = useMemo(() => {
     return {
-      statuses: uniqueSorted(interviews.map((interview) => interview.status)),
+      statuses: uniqueSorted(interviews.map((interview) => getRecruiterStatus(interview).key)),
       jobs: uniqueSorted(interviews.map((interview) => interview.jobTitle)),
     }
   }, [interviews])
@@ -560,7 +690,7 @@ export default function InterviewsPage() {
     const query = normalizeSearch(searchTerm)
 
     return interviews.filter((interview) => {
-      const status = String(interview.status ?? "").toUpperCase()
+      const recruiterStatus = getRecruiterStatus(interview)
       const jobTitle = String(interview.jobTitle ?? "")
       const accessType = String(interview.accessType ?? "FLEXIBLE").toUpperCase()
       const evaluationState = getEvaluationState(interview)
@@ -568,6 +698,8 @@ export default function InterviewsPage() {
         interview.candidateName,
         interview.jobTitle,
         interview.status,
+        recruiterStatus.label,
+        recruiterStatus.description,
         interview.decision,
         interview.interviewType,
         getAccessLabel(interview),
@@ -576,7 +708,7 @@ export default function InterviewsPage() {
         .join(" ")
 
       const matchesSearch = !query || searchable.includes(query)
-      const matchesStatus = statusFilter === "ALL" || status === statusFilter
+      const matchesStatus = statusFilter === "ALL" || recruiterStatus.key === statusFilter
       const matchesJob = jobFilter === "ALL" || jobTitle === jobFilter
       const matchesAccess = accessFilter === "ALL" || accessType === accessFilter
       const matchesEvaluation = evaluationFilter === "ALL" || evaluationState === evaluationFilter
@@ -713,6 +845,29 @@ export default function InterviewsPage() {
             <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
           </div>
 
+          <div className="border-b border-slate-800 bg-slate-950/30 px-6 py-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Status Guide</p>
+                <p className="mt-1 text-sm text-slate-400">Recruiter-facing labels describe what happened in the candidate session.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {STATUS_GUIDE_KEYS.map((key) => {
+                  const item = RECRUITER_STATUS_DEFINITIONS[key]
+
+                  return (
+                    <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3">
+                      <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em] ${getStatusBadge(key)}`}>
+                        {item.label}
+                      </span>
+                      <p className="mt-2 text-xs leading-5 text-slate-400">{item.description}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4 border-b border-slate-800 bg-slate-950/20 px-6 py-5 xl:grid-cols-[minmax(220px,1.2fr)_repeat(4,minmax(150px,0.7fr))_auto]">
             <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Search
@@ -804,7 +959,10 @@ export default function InterviewsPage() {
                     <td colSpan={10} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
                   </tr>
                 ) : (
-                  filteredInterviews.map((interview) => (
+                  filteredInterviews.map((interview) => {
+                    const recruiterStatus = getRecruiterStatus(interview)
+
+                    return (
                     <Fragment key={interview.interviewId}>
                     <tr className="border-t border-slate-800/80 text-slate-200">
                       <td className="px-4 py-5 font-medium text-white">
@@ -836,8 +994,11 @@ export default function InterviewsPage() {
                       </td>
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
                       <td className="px-4 py-5">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(interview.status)}`}>
-                          {formatStatusText(interview.status)}
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(recruiterStatus.key)}`}
+                          title={recruiterStatus.description}
+                        >
+                          {recruiterStatus.label}
                         </span>
                       </td>
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
@@ -952,7 +1113,8 @@ export default function InterviewsPage() {
                       </tr>
                     ) : null}
                     </Fragment>
-                  ))
+                    )
+                  })
                 )}
                 </tbody>
             </table>
