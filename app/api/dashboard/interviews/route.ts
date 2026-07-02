@@ -46,6 +46,19 @@ type AttemptScoreSummaryRow = {
   fallback_decision: string | null
 }
 
+type AttemptCompletionStats = {
+  requiredQuestionCount: number | null
+  askedQuestionCount: number
+  answeredQuestionCount: number
+}
+
+type AttemptCompletionStatsRow = {
+  attempt_id: string
+  required_question_count: number | null
+  asked_question_count: number | null
+  answered_question_count: number | null
+}
+
 type AttemptExitMetadata = {
   earlyExit: boolean
   terminationType: string | null
@@ -555,6 +568,49 @@ async function fetchAttemptScoreSummaries(attemptIds: string[]) {
   }, new Map<string, { score: number | null; decision: string | null }>())
 }
 
+async function fetchAttemptCompletionStats(attemptIds: string[]) {
+  if (attemptIds.length === 0) {
+    return new Map<string, AttemptCompletionStats>()
+  }
+
+  const rows = await prisma.$queryRawUnsafe<AttemptCompletionStatsRow[]>(
+    `
+      select
+        ia.attempt_id::text,
+        i.question_count::int as required_question_count,
+        count(distinct sq.session_question_id)::int as asked_question_count,
+        count(distinct ans.answer_id) filter (
+          where (
+              nullif(trim(coalesce(ans.answer_text, '')), '') is not null
+              and lower(trim(coalesce(ans.answer_text, ''))) <> 'no response provided.'
+            )
+            or nullif(trim(coalesce(cs.code_text, '')), '') is not null
+        )::int as answered_question_count
+      from public.interview_attempts ia
+      left join public.interviews i
+        on i.interview_id = ia.interview_id
+      left join public.session_questions sq
+        on sq.attempt_id = ia.attempt_id
+      left join public.interview_answers ans
+        on ans.attempt_id = ia.attempt_id
+      left join public.interview_code_submissions cs
+        on cs.answer_id = ans.answer_id
+      where ia.attempt_id = any($1::uuid[])
+      group by ia.attempt_id, i.question_count
+    `,
+    attemptIds
+  ).catch(() => [] as AttemptCompletionStatsRow[])
+
+  return rows.reduce((map, row) => {
+    map.set(row.attempt_id, {
+      requiredQuestionCount: toNumberOrNull(row.required_question_count),
+      askedQuestionCount: Number(row.asked_question_count ?? 0),
+      answeredQuestionCount: Number(row.answered_question_count ?? 0),
+    })
+    return map
+  }, new Map<string, AttemptCompletionStats>())
+}
+
 async function fetchAttemptExitMetadata(attemptIds: string[]) {
   if (attemptIds.length === 0) {
     return new Map<string, AttemptExitMetadata>()
@@ -749,6 +805,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
     options.includeAnswers === false
       ? await fetchAttemptScoreSummaries(attemptIds)
       : new Map<string, { score: number | null; decision: string | null }>()
+  const attemptCompletionStatsMap = await fetchAttemptCompletionStats(attemptIds)
   const attemptExitMetadataMap = await fetchAttemptExitMetadata(attemptIds)
   const recruiterDecisionMap = await getRecruiterDecisionsForInterviews(
     auth.organizationId,
@@ -767,6 +824,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
     const recording = recordingMap.get(interview.interviewId) ?? null
     const answerSummaries = latestAttempt?.attemptId ? answerSummaryMap.get(latestAttempt.attemptId) ?? [] : []
     const fallbackScoreSummary = latestAttempt?.attemptId ? attemptScoreSummaryMap.get(latestAttempt.attemptId) : null
+    const completionStats = latestAttempt?.attemptId ? attemptCompletionStatsMap.get(latestAttempt.attemptId) : null
     const exitMetadata = latestAttempt?.attemptId ? attemptExitMetadataMap.get(latestAttempt.attemptId) : null
     const calculatedResult = deriveResultFromAnswerSummaries(answerSummaries)
     const questionStatus = interview.questionStatus ?? null
@@ -811,6 +869,9 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       disconnectReason: exitMetadata?.disconnectReason ?? null,
       terminationDetectedAt: exitMetadata?.terminationDetectedAt ?? null,
       completionPercentage: exitMetadata?.completionPercentage ?? null,
+      requiredQuestionCount: completionStats?.requiredQuestionCount ?? interview.questionCount ?? null,
+      askedQuestionCount: completionStats?.askedQuestionCount ?? 0,
+      answeredQuestionCount: completionStats?.answeredQuestionCount ?? 0,
       accessType: latestInvite?.accessType ?? "FLEXIBLE",
       startTime: latestInvite?.startTime ?? null,
       endTime: latestInvite?.endTime ?? null,

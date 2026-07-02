@@ -91,6 +91,19 @@ function getRecruiterStatusKey(interview) {
   const disconnectReason = normalizeStatusKey(interview?.disconnectReason)
   const terminationReason = normalizeStatusKey(interview?.terminationReason)
   const isFinalized = status === "COMPLETED" || interviewStatus === "COMPLETED"
+  const requiredQuestionCount = Number(interview?.requiredQuestionCount ?? 0)
+  const answeredQuestionCount = Number(interview?.answeredQuestionCount ?? 0)
+  const completedAllQuestions =
+    requiredQuestionCount > 0 && answeredQuestionCount >= requiredQuestionCount
+
+  if (
+    ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(attemptStatus) ||
+    ["FINALIZED", "COMPLETED", "SUBMITTED", "EVALUATED"].includes(finalStatus) ||
+    terminationType === "COMPLETED" ||
+    completedAllQuestions
+  ) {
+    return "COMPLETED"
+  }
 
   if (
     Boolean(interview?.earlyExit) ||

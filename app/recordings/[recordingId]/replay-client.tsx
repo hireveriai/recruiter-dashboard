@@ -126,6 +126,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
   const [activeId, setActiveId] = useState("")
   const [currentTimeMs, setCurrentTimeMs] = useState(0)
   const [videoDurationMs, setVideoDurationMs] = useState(0)
+  const [correctMirror, setCorrectMirror] = useState(true)
 
   useEffect(() => {
     let isMounted = true
@@ -251,13 +252,35 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
 
       <section className="mx-auto grid max-w-[1500px] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(390px,0.75fr)] lg:px-8">
         <div className="min-w-0">
+          <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-slate-800 bg-[#0f172a] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white">Video orientation</p>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                Correct mirror makes virtual-camera text and whiteboards readable in replay.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCorrectMirror((current) => !current)}
+              aria-pressed={correctMirror}
+              className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
+                correctMirror
+                  ? "border-cyan-300/35 bg-cyan-400/12 text-cyan-100"
+                  : "border-slate-700 bg-slate-950/40 text-slate-300 hover:border-slate-500"
+              }`}
+            >
+              <Video className="h-4 w-4" />
+              {correctMirror ? "Mirror corrected" : "Raw video"}
+            </button>
+          </div>
+
           <div className="overflow-hidden rounded-2xl border border-slate-800 bg-black shadow-[0_22px_80px_rgba(2,6,23,0.42)]">
             <video
               ref={videoRef}
               src={mediaUrl}
               controls
               playsInline
-              className="aspect-video w-full bg-black object-contain"
+              className={`aspect-video w-full bg-black object-contain ${correctMirror ? "-scale-x-100" : ""}`}
               onTimeUpdate={(event) => setCurrentTimeMs(Math.round(event.currentTarget.currentTime * 1000))}
               onLoadedMetadata={(event) => {
                 setCurrentTimeMs(Math.round(event.currentTarget.currentTime * 1000))
