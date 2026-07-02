@@ -7,9 +7,63 @@ function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim()
 }
 
+function normalizeForComparison(value: string | null | undefined) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/\b(?:veris\s*q?|candidate|answer|question|q|a)\s*\d*\s*[:\-]\s*/gi, " ")
+    .replace(/[^a-z0-9+#.]+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function wordCount(value: string) {
+  return value.split(/\s+/).filter(Boolean).length
+}
+
 function isEmptyAnswer(value: string | null | undefined) {
   const normalized = normalizeWhitespace(String(value ?? ""))
   return !normalized || /^no (candidate )?(response|answer)( was)? (recorded|provided)\.?$/i.test(normalized)
+}
+
+function isLikelyInterviewerPrompt(value: string | null | undefined) {
+  const normalized = normalizeWhitespace(String(value ?? ""))
+  return /^(?:veris\s*q?|question|q)\s*\d*\s*[:\-]/i.test(normalized)
+}
+
+function isLikelyQuestionEcho(answer: string | null | undefined, question: string | null | undefined) {
+  const normalizedAnswer = normalizeForComparison(answer)
+  const normalizedQuestion = normalizeForComparison(question)
+
+  if (!normalizedAnswer || !normalizedQuestion) {
+    return false
+  }
+
+  if (normalizedAnswer === normalizedQuestion) {
+    return true
+  }
+
+  const answerWords = wordCount(normalizedAnswer)
+  const questionWords = wordCount(normalizedQuestion)
+
+  return (
+    questionWords >= 4 &&
+    answerWords <= questionWords + 2 &&
+    (normalizedAnswer.includes(normalizedQuestion) || normalizedQuestion.includes(normalizedAnswer))
+  )
+}
+
+export function cleanRecoveredCandidateAnswer(answer: string | null | undefined, question: string | null | undefined) {
+  const normalizedAnswer = normalizeWhitespace(String(answer ?? ""))
+
+  if (
+    !normalizedAnswer ||
+    isLikelyInterviewerPrompt(normalizedAnswer) ||
+    isLikelyQuestionEcho(normalizedAnswer, question)
+  ) {
+    return null
+  }
+
+  return normalizedAnswer
 }
 
 function splitLabeledTranscript(transcript: string) {
@@ -18,7 +72,7 @@ function splitLabeledTranscript(transcript: string) {
     return []
   }
 
-  const markerPattern = /(?:^|\n)\s*((?:candidate|answer|a)\s*\d*|(?:veris|question|q)\s*\d*)\s*[:\-]\s*/gi
+  const markerPattern = /(?:^|\n)\s*((?:candidate|answer|a)\s*\d*|veris\s*q?\s*\d*|(?:question|q)\s*\d*)\s*[:\-]\s*/gi
   const markers = [...normalized.matchAll(markerPattern)]
 
   if (markers.length === 0) {
@@ -43,22 +97,30 @@ export function extractCandidateAnswersFromTranscript(transcript: string | null 
   }
 
   const labeledSegments = splitLabeledTranscript(value)
+  const questionSegments = labeledSegments
+    .filter((segment) => /^(veris|question|q)\b/i.test(segment.label))
+    .map((segment) => segment.text)
   const candidateSegments = labeledSegments
     .filter((segment) => /^(candidate|answer|a)\b/i.test(segment.label))
-    .map((segment) => normalizeWhitespace(segment.text))
+    .map((segment) => cleanRecoveredCandidateAnswer(segment.text, null))
+    .filter((answer) => answer && !questionSegments.some((question) => isLikelyQuestionEcho(answer, question)))
     .filter(Boolean)
 
   if (candidateSegments.length > 0) {
     return candidateSegments
   }
 
+  if (labeledSegments.length > 0) {
+    return []
+  }
+
   return value
     .split(/\n{2,}/)
-    .map(normalizeWhitespace)
+    .map((answer) => cleanRecoveredCandidateAnswer(answer, null))
     .filter(Boolean)
 }
 
-export function fillMissingAnswersFromTranscript<T extends { answer?: string; answerText?: string | null }>(
+export function fillMissingAnswersFromTranscript<T extends { answer?: string; answerText?: string | null; question?: string | null }>(
   rows: T[],
   transcript: string | null | undefined
 ) {
@@ -79,13 +141,15 @@ export function fillMissingAnswersFromTranscript<T extends { answer?: string; an
     const fallbackAnswer = fallbackAnswers[fallbackIndex]
     fallbackIndex += 1
 
-    if (!fallbackAnswer) {
+    const cleanedFallbackAnswer = cleanRecoveredCandidateAnswer(fallbackAnswer, row.question)
+
+    if (!cleanedFallbackAnswer) {
       return row
     }
 
     return {
       ...row,
-      ...("answer" in row ? { answer: fallbackAnswer } : { answerText: fallbackAnswer }),
+      ...("answer" in row ? { answer: cleanedFallbackAnswer } : { answerText: cleanedFallbackAnswer }),
     }
   })
 }

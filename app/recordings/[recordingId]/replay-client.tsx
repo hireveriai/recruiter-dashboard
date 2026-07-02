@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { AlertTriangle, FileText, Gauge, Play, ShieldCheck, Video } from "lucide-react"
+import { AlertTriangle, FileText, Gauge, Pause, Play, ShieldCheck, Video } from "lucide-react"
 
 type RiskLevel = "low" | "medium" | "high"
 
@@ -126,7 +126,8 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
   const [activeId, setActiveId] = useState("")
   const [currentTimeMs, setCurrentTimeMs] = useState(0)
   const [videoDurationMs, setVideoDurationMs] = useState(0)
-  const [correctMirror, setCorrectMirror] = useState(true)
+  const [videoMode, setVideoMode] = useState<"raw" | "mirror">("raw")
+  const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -189,6 +190,31 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
       videoRef.current.currentTime = Math.max(0, ms / 1000)
       void videoRef.current.play().catch(() => undefined)
     }
+  }
+
+  function togglePlayback() {
+    const video = videoRef.current
+    if (!video) {
+      return
+    }
+
+    if (video.paused) {
+      void video.play().catch(() => undefined)
+    } else {
+      video.pause()
+    }
+  }
+
+  function seekFromRange(value: string) {
+    const video = videoRef.current
+    const nextMs = Number(value)
+
+    if (!video || !Number.isFinite(nextMs)) {
+      return
+    }
+
+    video.currentTime = Math.max(0, nextMs / 1000)
+    setCurrentTimeMs(Math.max(0, Math.round(nextMs)))
   }
 
   if (error) {
@@ -256,37 +282,69 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
             <div>
               <p className="text-sm font-semibold text-white">Video orientation</p>
               <p className="mt-1 text-xs leading-5 text-slate-400">
-                Correct mirror makes virtual-camera text and whiteboards readable in replay.
+                RAW is the original recording. Mirror flips only the video frame for review.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setCorrectMirror((current) => !current)}
-              aria-pressed={correctMirror}
-              className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
-                correctMirror
-                  ? "border-cyan-300/35 bg-cyan-400/12 text-cyan-100"
-                  : "border-slate-700 bg-slate-950/40 text-slate-300 hover:border-slate-500"
-              }`}
-            >
-              <Video className="h-4 w-4" />
-              {correctMirror ? "Mirror corrected" : "Raw video"}
-            </button>
+            <div className="inline-grid h-10 shrink-0 grid-cols-2 rounded-xl border border-slate-700 bg-slate-950/50 p-1">
+              {[
+                ["mirror", "Mirror"],
+                ["raw", "RAW"],
+              ].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setVideoMode(mode as "raw" | "mirror")}
+                  aria-pressed={videoMode === mode}
+                  className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition ${
+                    videoMode === mode
+                      ? "bg-cyan-400/15 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.12)]"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Video className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-slate-800 bg-black shadow-[0_22px_80px_rgba(2,6,23,0.42)]">
             <video
               ref={videoRef}
               src={mediaUrl}
-              controls
               playsInline
-              className={`aspect-video w-full bg-black object-contain ${correctMirror ? "-scale-x-100" : ""}`}
+              className={`aspect-video w-full bg-black object-contain ${videoMode === "mirror" ? "-scale-x-100" : ""}`}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
               onTimeUpdate={(event) => setCurrentTimeMs(Math.round(event.currentTarget.currentTime * 1000))}
               onLoadedMetadata={(event) => {
                 setCurrentTimeMs(Math.round(event.currentTarget.currentTime * 1000))
                 setVideoDurationMs(Math.round((event.currentTarget.duration || 0) * 1000))
               }}
             />
+            <div className="flex flex-col gap-3 border-t border-slate-800 bg-slate-950 px-4 py-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={togglePlayback}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-300/25 bg-cyan-400/10 text-cyan-100 transition hover:bg-cyan-400/20"
+                aria-label={isPlaying ? "Pause recording" : "Play recording"}
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={Math.max(videoDurationMs, currentTimeMs, 1)}
+                value={Math.min(currentTimeMs, Math.max(videoDurationMs, currentTimeMs, 1))}
+                onChange={(event) => seekFromRange(event.target.value)}
+                className="h-2 min-w-0 flex-1 accent-cyan-300"
+                aria-label="Recording playback position"
+              />
+              <p className="shrink-0 font-mono text-xs text-slate-400">
+                {formatTime(currentTimeMs)} / {formatTime(videoDurationMs)}
+              </p>
+            </div>
           </div>
 
           <div className="mt-4 rounded-2xl border border-slate-800 bg-[#0f172a] p-5">

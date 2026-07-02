@@ -1,6 +1,7 @@
 import { evaluateCandidateResponse } from "@/lib/server/ai/interview-flow"
 import { prisma } from "@/lib/server/prisma"
 import {
+  cleanRecoveredCandidateAnswer,
   extractCandidateAnswersFromTranscript,
   fillMissingAnswersFromTranscript,
 } from "@/lib/server/services/transcript-fallback"
@@ -91,13 +92,15 @@ function getJsonNumber(source: unknown, keys: string[]) {
 function mapAnswerSummaryRow(row: InterviewAnswerSummaryRow) {
   const primaryScore = toNumberOrNull(row.ai_score)
   const legacyScore = toNumberOrNull(row.legacy_score)
+  const questionText = row.question_text || "Question text was not recorded for this answer."
+  const answerText = cleanRecoveredCandidateAnswer(row.answer_text, questionText)
 
   return {
     answerId: row.answer_id,
-    question: row.question_text || "Question text was not recorded for this answer.",
+    question: questionText,
     answerText: row.code_text
       ? `[Coding submission in ${row.language || "code"}]\n${row.code_text}`
-      : row.answer_text || "No response provided.",
+      : answerText || "No response provided.",
     answerPayload: row.answer_payload ?? null,
     answeredAt: row.answered_at,
     questionOrder: row.question_order,

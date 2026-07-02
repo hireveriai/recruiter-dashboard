@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Fragment, useEffect, useMemo, useState } from "react"
-import { Download, FileText, Link2, RotateCw, Video } from "lucide-react"
+import { FileText, Link2, RotateCw, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -344,7 +344,7 @@ const tableProcessingChip =
 const recordingAction =
   "inline-flex max-w-full items-center justify-center gap-1.5 rounded-lg px-1.5 py-1 text-sm font-semibold leading-tight text-cyan-100 transition hover:bg-cyan-400/10 hover:text-white"
 
-function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
+function CompletedInterviewDetails({ interview, onClose, isLoadingDetails = false }) {
   if (!interview) {
     return null
   }
@@ -352,7 +352,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
   const answerSummaries = Array.isArray(interview.answerSummaries) ? interview.answerSummaries : []
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
+    <div className="relative max-h-[88vh] overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
         <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
 
         <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
@@ -364,14 +364,6 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={onDownload}
-              disabled={isDownloading}
-              className="self-start rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
-            >
-              {isDownloading ? "Generating PDF..." : "Download Report"}
-            </button>
             <button
               type="button"
               onClick={onClose}
@@ -503,13 +495,12 @@ export default function InterviewsPage() {
   const initialInterviews = readSessionJsonCache(cacheKey)
   const [interviews, setInterviews] = useState(() => initialInterviews ?? [])
   const [loading, setLoading] = useState(() => !initialInterviews)
-  const [expandedInterviewId, setExpandedInterviewId] = useState("")
+  const [summaryInterviewId, setSummaryInterviewId] = useState("")
   const [openSendInterview, setOpenSendInterview] = useState(false)
   const [actionBusyId, setActionBusyId] = useState("")
   const [copiedInterviewId, setCopiedInterviewId] = useState("")
   const [reviewInterview, setReviewInterview] = useState(null)
   const [detailLoadingId, setDetailLoadingId] = useState("")
-  const [reportDownloadId, setReportDownloadId] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [jobFilter, setJobFilter] = useState("ALL")
@@ -575,13 +566,8 @@ export default function InterviewsPage() {
     }
   }, [cacheKey, searchParams])
 
-  async function toggleInterviewDetails(interview) {
-    if (expandedInterviewId === interview.interviewId) {
-      setExpandedInterviewId("")
-      return
-    }
-
-    setExpandedInterviewId(interview.interviewId)
+  async function openInterviewSummary(interview) {
+    setSummaryInterviewId(interview.interviewId)
     if (interview.detailsLoaded) {
       return
     }
@@ -613,49 +599,10 @@ export default function InterviewsPage() {
     }
   }
 
-  async function downloadInterviewReport(interview) {
-    if (!interview?.interviewId || reportDownloadId) {
-      return
-    }
-
-    try {
-      setReportDownloadId(interview.interviewId)
-      const response = await fetch(buildAuthUrl(
-        `/api/interviews/${encodeURIComponent(interview.interviewId)}/report`,
-        searchParams
-      ), {
-        credentials: "include",
-        cache: "no-store",
-      })
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null)
-        throw new Error(payload?.error?.message || payload?.message || "Unable to generate report")
-      }
-
-      const blob = await response.blob()
-      const disposition = response.headers.get("content-disposition") || ""
-      const filenameMatch = disposition.match(/filename="([^"]+)"/i)
-      const filename = filenameMatch?.[1] || `${interview.candidateName || "candidate"}-report.pdf`
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Unable to generate report")
-    } finally {
-      setReportDownloadId("")
-    }
-  }
-
   useEffect(() => {
     function handleEscape(event) {
       if (event.key === "Escape") {
-        setExpandedInterviewId("")
+        setSummaryInterviewId("")
       }
     }
 
@@ -732,6 +679,9 @@ export default function InterviewsPage() {
 
   const hasActiveFilters =
     searchTerm || statusFilter !== "ALL" || jobFilter !== "ALL" || accessFilter !== "ALL" || evaluationFilter !== "ALL"
+  const summaryInterview = summaryInterviewId
+    ? interviews.find((interview) => interview.interviewId === summaryInterviewId) ?? null
+    : null
 
   function clearFilters() {
     setSearchTerm("")
@@ -1048,22 +998,12 @@ export default function InterviewsPage() {
                           <div className="flex flex-col items-start gap-1.5">
                             <button
                               type="button"
-                              onClick={() => toggleInterviewDetails(interview)}
+                              onClick={() => openInterviewSummary(interview)}
                               className={tableActionEmerald}
                               aria-label={`View completed summary for ${interview.candidateName}`}
                             >
                               <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              {expandedInterviewId === interview.interviewId ? "Hide Summary" : "View Summary"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => downloadInterviewReport(interview)}
-                              disabled={reportDownloadId === interview.interviewId}
-                              className={tableActionCyan}
-                              aria-label={`Download candidate report for ${interview.candidateName}`}
-                            >
-                              <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              {reportDownloadId === interview.interviewId ? "Generating..." : "Download"}
+                              View Summary
                             </button>
                           </div>
                         ) : String(interview.status).toUpperCase() === "PREPARATION_FAILED" ? (
@@ -1112,19 +1052,6 @@ export default function InterviewsPage() {
                         )}
                       </td>
                     </tr>
-                    {expandedInterviewId === interview.interviewId ? (
-                      <tr key={`${interview.interviewId}-details`} className="border-t border-emerald-400/10">
-                        <td colSpan={10} className="bg-slate-950/30 p-5">
-                          <CompletedInterviewDetails
-                            interview={interview}
-                            onClose={() => setExpandedInterviewId("")}
-                            onDownload={() => downloadInterviewReport(interview)}
-                            isDownloading={reportDownloadId === interview.interviewId}
-                            isLoadingDetails={detailLoadingId === interview.interviewId}
-                          />
-                        </td>
-                      </tr>
-                    ) : null}
                     </Fragment>
                     )
                   })
@@ -1146,6 +1073,27 @@ export default function InterviewsPage() {
           }
         }}
       />
+      {summaryInterview ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Completed interview summary for ${summaryInterview.candidateName || "candidate"}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSummaryInterviewId("")
+            }
+          }}
+        >
+          <div className="w-full max-w-6xl">
+            <CompletedInterviewDetails
+              interview={summaryInterview}
+              onClose={() => setSummaryInterviewId("")}
+              isLoadingDetails={detailLoadingId === summaryInterview.interviewId}
+            />
+          </div>
+        </div>
+      ) : null}
       <SendInterviewModal isOpen={openSendInterview} onClose={() => setOpenSendInterview(false)} />
     </div>
   )
