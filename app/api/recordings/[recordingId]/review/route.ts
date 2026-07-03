@@ -118,9 +118,9 @@ function isActionableSignal(type: string, value: unknown) {
     const maxLookAwayDuration = readObjectNumber(value, "maxLookAwayDuration") ?? 0
 
     return (
-      (focusRatio !== null && focusRatio < 0.8) ||
-      lookAwayEvents > 0 ||
-      maxLookAwayDuration >= 3_000
+      (focusRatio !== null && focusRatio < 0.5 && (lookAwayEvents >= 2 || maxLookAwayDuration >= 5_000)) ||
+      lookAwayEvents >= 3 ||
+      maxLookAwayDuration >= 8_000
     )
   }
 
@@ -143,11 +143,11 @@ function getSignalSeverity(type: string, value: unknown): "low" | "medium" | "hi
     const focusRatio = readObjectNumber(value, "focusRatio")
     const maxLookAwayDuration = readObjectNumber(value, "maxLookAwayDuration") ?? 0
 
-    if ((focusRatio !== null && focusRatio < 0.5) || maxLookAwayDuration >= 10_000) {
+    if ((focusRatio !== null && focusRatio < 0.35 && maxLookAwayDuration >= 8_000) || maxLookAwayDuration >= 15_000) {
       return "high"
     }
 
-    return "medium"
+    return "low"
   }
 
   if (/\b(long_gaze_away|attention_loss|focus_lost|audio_anomaly|network_reconnect)\b/i.test(type)) {
@@ -165,7 +165,7 @@ function getSignalLabel(type: string, value: unknown) {
     long_gaze_away: "Long gaze away",
     attention_loss: "Attention lost",
     focus_lost: "Focus lost",
-    focus_metrics: "Low focus window",
+    focus_metrics: "Attention review window",
     screen_share: "Screen sharing detected",
     window_blur: "Window focus lost",
     copy_paste: "Copy/paste activity",
@@ -181,7 +181,7 @@ function getSignalLabel(type: string, value: unknown) {
   if (type === "focus_metrics") {
     const focusRatio = readObjectNumber(value, "focusRatio")
     return focusRatio !== null
-      ? `Low focus window (${Math.round(focusRatio * 100)}% focused)`
+      ? `Attention review window (${Math.round(focusRatio * 100)}% camera focus)`
       : labels.focus_metrics
   }
 
