@@ -1395,7 +1395,7 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
       .slice(0, 6)
       .map(
         (row) =>
-          `${row.candidateName} (${row.jobTitle}) flagged with suspicious index ${row.suspicious_index}. Evidence: fraud ${toPercentUnit(row.avg_fraud_score) ?? 0}%, multi-face ${row.multi_face_count}, tab switches ${row.tab_switch_count}, focus ratio ${toPercentUnit(row.avg_focus_ratio) ?? "n/a"}%.`
+          `${row.candidateName} (${row.jobTitle}) flagged with suspicious index ${row.suspicious_index}. Evidence: review confidence ${toPercentUnit(row.avg_fraud_score) ?? 0}%, multi-face ${row.multi_face_count}, tab switches ${row.tab_switch_count}, focus ratio ${toPercentUnit(row.avg_focus_ratio) ?? "n/a"}%.`
       ),
   }
 

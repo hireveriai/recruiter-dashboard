@@ -399,7 +399,7 @@ export async function generateCandidateReportPdf(organizationId: string, intervi
         answer.clarityScore !== null && answer.clarityScore !== undefined ? `Clarity ${formatScore(toNumberOrNull(answer.clarityScore))}` : null,
         answer.depthScore !== null && answer.depthScore !== undefined ? `Depth ${formatScore(toNumberOrNull(answer.depthScore))}` : null,
         answer.confidenceScore !== null && answer.confidenceScore !== undefined ? `Confidence ${formatScore(toNumberOrNull(answer.confidenceScore))}` : null,
-        answer.fraudScore !== null && answer.fraudScore !== undefined ? `Fraud ${formatScore(toNumberOrNull(answer.fraudScore))}` : null,
+        answer.fraudScore !== null && answer.fraudScore !== undefined ? `Review Flag ${formatScore(toNumberOrNull(answer.fraudScore))}` : null,
       ].filter(Boolean).join(" | ")
       if (metrics) {
         drawTextBlock(ctx, metrics, { size: 8.5, color: ACCENT, lineHeight: 12 })

@@ -186,7 +186,7 @@ export default function ReportsPage() {
                 Hiring Decisions & Risk Intelligence
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300">
-                Real-time evaluation of candidate performance, behavioral signals, and fraud risk.
+                Real-time evaluation of candidate performance, behavioral signals, and integrity risk.
               </p>
             </div>
 
@@ -356,7 +356,7 @@ export default function ReportsPage() {
               </ExpandableSection>
 
               <ExpandableSection
-                title="Fraud Detection"
+                title="Integrity Review"
                 subtitle="Forensic visibility across suspicious patterns and signal-feed readiness."
               >
                 <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">

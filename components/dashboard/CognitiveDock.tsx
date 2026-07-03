@@ -69,7 +69,7 @@ type WorkspacePayload = Partial<WorkspaceData>;
 
 function getPanelTitle(panel: PanelMode) {
   if (panel === "search") return "Universal Search";
-  if (panel === "alerts") return "Fraud Alerts";
+  if (panel === "alerts") return "Review Flags";
   if (panel === "copilot") return "VERIS Copilot";
   return "";
 }
@@ -394,7 +394,7 @@ export default function CognitiveDock({
           }
         : {
             title: "Integrity posture is clear",
-            body: "No active fraud alerts are visible from dashboard signals. Continue monitoring interview evidence.",
+            body: "No active review flags are visible from dashboard signals. Continue monitoring interview evidence.",
             tone: "stable",
           },
       pending
@@ -451,7 +451,7 @@ export default function CognitiveDock({
         } : null,
         canViewCandidates ? { label: "Candidates Queue", icon: Users, href: pageHref("/candidates"), active: pathname.startsWith("/candidates") } : null,
         canViewAlerts ? {
-          label: "Fraud Alerts",
+          label: "Review Flags",
           icon: ShieldAlert,
           onClick: () => setPanel("alerts"),
           badge: flaggedCount,
@@ -639,7 +639,7 @@ export default function CognitiveDock({
                       ))
                     ) : (
                       <div className="rounded-2xl border border-cyan-300/10 bg-cyan-400/[0.06] p-4">
-                        <p className="text-sm font-semibold text-cyan-50">No active fraud alerts</p>
+                        <p className="text-sm font-semibold text-cyan-50">No active review flags</p>
                         <p className="mt-2 text-sm leading-6 text-slate-300">Interview telemetry is quiet. New risk signals will surface here.</p>
                       </div>
                     )}

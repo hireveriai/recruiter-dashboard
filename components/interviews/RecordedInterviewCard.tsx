@@ -85,7 +85,7 @@ export default function RecordedInterviewCard({ item, onOpenWarRoom, canOpenWarR
               <p className="mt-1 line-clamp-2 min-w-0 break-words font-semibold text-cyan-100">Calibrating</p>
             </div>
             <div>
-              <p className="line-clamp-2 min-w-0 break-words text-slate-500">Fraud Indicators</p>
+              <p className="line-clamp-2 min-w-0 break-words text-slate-500">Review Indicators</p>
               <p className="mt-1 line-clamp-2 min-w-0 break-words font-semibold text-emerald-200">Signal Ready</p>
             </div>
             <div>
