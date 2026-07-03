@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Fragment, useEffect, useMemo, useState } from "react"
-import { FileText, Link2, RotateCw, Video } from "lucide-react"
+import { Download, FileText, Link2, RotateCw, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -344,7 +344,7 @@ const tableProcessingChip =
 const recordingAction =
   "inline-flex max-w-full items-center justify-center gap-1.5 rounded-lg px-1.5 py-1 text-sm font-semibold leading-tight text-cyan-100 transition hover:bg-cyan-400/10 hover:text-white"
 
-function CompletedInterviewDetails({ interview, onClose, isLoadingDetails = false }) {
+function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
     return null
   }
@@ -364,6 +364,17 @@ function CompletedInterviewDetails({ interview, onClose, isLoadingDetails = fals
           </div>
 
           <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onDownload}
+              disabled={isDownloading}
+              className="self-start rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Download className="h-4 w-4" aria-hidden="true" />
+                {isDownloading ? "Generating PDF..." : "Download Report"}
+              </span>
+            </button>
             <button
               type="button"
               onClick={onClose}
@@ -501,6 +512,7 @@ export default function InterviewsPage() {
   const [copiedInterviewId, setCopiedInterviewId] = useState("")
   const [reviewInterview, setReviewInterview] = useState(null)
   const [detailLoadingId, setDetailLoadingId] = useState("")
+  const [reportDownloadId, setReportDownloadId] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [jobFilter, setJobFilter] = useState("ALL")
@@ -596,6 +608,45 @@ export default function InterviewsPage() {
       console.error("Failed to load interview details", error)
     } finally {
       setDetailLoadingId("")
+    }
+  }
+
+  async function downloadInterviewReport(interview) {
+    if (!interview?.interviewId || reportDownloadId) {
+      return
+    }
+
+    try {
+      setReportDownloadId(interview.interviewId)
+      const response = await fetch(buildAuthUrl(
+        `/api/interviews/${encodeURIComponent(interview.interviewId)}/report`,
+        searchParams
+      ), {
+        credentials: "include",
+        cache: "no-store",
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(payload?.error?.message || payload?.message || "Unable to generate report")
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get("content-disposition") || ""
+      const filenameMatch = disposition.match(/filename="([^"]+)"/i)
+      const filename = filenameMatch?.[1] || `${interview.candidateName || "candidate"}-report.pdf`
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to generate report")
+    } finally {
+      setReportDownloadId("")
     }
   }
 
@@ -1089,6 +1140,8 @@ export default function InterviewsPage() {
             <CompletedInterviewDetails
               interview={summaryInterview}
               onClose={() => setSummaryInterviewId("")}
+              onDownload={() => downloadInterviewReport(summaryInterview)}
+              isDownloading={reportDownloadId === summaryInterview.interviewId}
               isLoadingDetails={detailLoadingId === summaryInterview.interviewId}
             />
           </div>
