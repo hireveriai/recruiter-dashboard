@@ -411,7 +411,9 @@ async function fetchRecordingTranscriptsForAttempts(attemptIds: string[]) {
       where ir.attempt_id = any($1::uuid[])
         and ir.transcript is not null
         and btrim(ir.transcript) <> ''
-      order by ir.attempt_id, ir.created_at desc nulls last
+      order by ir.attempt_id,
+               char_length(ir.transcript) desc,
+               ir.created_at desc nulls last
     `,
     attemptIds
   ).catch(() => [] as AttemptTranscriptRow[])
