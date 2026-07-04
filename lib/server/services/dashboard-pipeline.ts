@@ -88,6 +88,8 @@ type PipelineRow = {
   recovery_attempt_number: number | null
   interruption_reason: string | null
   completion_percentage: string | number | null
+  required_question_count: number | null
+  answered_question_count: number | null
   timer_remaining_seconds: number | null
   recruiter_decision_status: string | null
 }
@@ -110,6 +112,13 @@ function ensureRecoverySchemaOnce() {
 
 function getRecovery(row: PipelineRow) {
   if (!row.latest_attempt_id || !["INTERRUPTED", "RECOVERY_ALLOWED"].includes(String(row.latest_attempt_status ?? "").toUpperCase())) {
+    return null
+  }
+
+  if (
+    Number(row.required_question_count ?? 0) > 0 &&
+    Number(row.answered_question_count ?? 0) >= Number(row.required_question_count)
+  ) {
     return null
   }
 
@@ -138,6 +147,9 @@ function getDisplayStatus(row: PipelineRow) {
           attemptId: row.latest_attempt_id,
           endedAt: row.latest_attempt_ended_at,
           status: row.latest_attempt_status,
+          requiredQuestionCount: row.required_question_count,
+          answeredQuestionCount: row.answered_question_count,
+          completionPercentage: row.completion_percentage === null ? null : Number(row.completion_percentage),
         }
       : null,
     latestInvite: row.latest_invite_id
@@ -247,6 +259,8 @@ export async function getDashboardPipelineData(
         ia.attempt_number as recovery_attempt_number,
         ia.interruption_reason,
         ia.completion_percentage,
+        completion_stats.required_question_count,
+        completion_stats.answered_question_count,
         ia.timer_remaining_seconds,
         rd.status as recruiter_decision_status
       from public.interviews i
@@ -266,6 +280,21 @@ export async function getDashboardPipelineData(
         order by latest.attempt_number desc, latest.started_at desc
         limit 1
       ) ia on true
+      left join lateral (
+        select
+          greatest(coalesce(i.question_count, 0), 1)::int as required_question_count,
+          count(distinct ans.answer_id) filter (
+            where (
+                nullif(trim(coalesce(ans.answer_text, '')), '') is not null
+                and lower(trim(coalesce(ans.answer_text, ''))) <> 'no response provided.'
+              )
+              or nullif(trim(coalesce(cs.code_text, '')), '') is not null
+          )::int as answered_question_count
+        from public.interview_answers ans
+        left join public.interview_code_submissions cs
+          on cs.answer_id = ans.answer_id
+        where ans.attempt_id = ia.attempt_id
+      ) completion_stats on true
       left join public.candidate_recruiter_decisions rd
         on rd.organization_id = i.organization_id
         and rd.candidate_id = i.candidate_id
@@ -276,13 +305,20 @@ export async function getDashboardPipelineData(
       select
         *,
         case
-          when upper(coalesce(latest_attempt_status, '')) in ('INTERRUPTED', 'RECOVERY_ALLOWED') then true
+          when upper(coalesce(latest_attempt_status, '')) in ('INTERRUPTED', 'RECOVERY_ALLOWED')
+            and not (
+              coalesce(answered_question_count, 0) >= greatest(coalesce(required_question_count, 0), 1)
+            ) then true
           else false
         end as has_recovery,
         case
           when upper(coalesce(interview_status, '')) = 'FAILED' or upper(coalesce(question_status, '')) = 'FAILED' then 'PREPARATION_FAILED'
           when upper(coalesce(interview_status, '')) = 'PREPARING' or upper(coalesce(question_status, '')) = 'GENERATING' then 'PREPARING_INTERVIEW'
-          when upper(coalesce(interview_status, '')) = 'COMPLETED' or upper(coalesce(latest_attempt_status, '')) = 'COMPLETED' or latest_attempt_ended_at is not null then 'COMPLETED'
+          when upper(coalesce(interview_status, '')) = 'COMPLETED'
+            or upper(coalesce(latest_attempt_status, '')) = 'COMPLETED'
+            or latest_attempt_ended_at is not null
+            or coalesce(answered_question_count, 0) >= greatest(coalesce(required_question_count, 0), 1)
+            then 'COMPLETED'
           when upper(coalesce(interview_status, '')) = 'FLAGGED' then 'FLAGGED'
           when attempt_id is not null then 'IN_PROGRESS'
           when upper(coalesce(interview_status, '')) = 'READY' and upper(coalesce(email_status, '')) = 'FAILED' then 'EMAIL_FAILED'
@@ -378,6 +414,8 @@ export async function getDashboardPipelineData(
       pending_rows.recovery_attempt_number,
       pending_rows.interruption_reason,
       pending_rows.completion_percentage,
+      pending_rows.required_question_count,
+      pending_rows.answered_question_count,
       pending_rows.timer_remaining_seconds,
       pending_rows.recruiter_decision_status
     from aggregate

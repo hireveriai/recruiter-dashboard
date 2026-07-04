@@ -28,3 +28,31 @@ test("abandoned attempt stays abandoned when the interview is not completed", ()
 
   assert.equal(status, "ABANDONED")
 })
+
+test("answered required questions win over interrupted attempt status", () => {
+  const status = deriveInterviewStatus({
+    interviewStatus: "READY",
+    latestAttempt: {
+      attemptId: "attempt-1",
+      status: "INTERRUPTED",
+      requiredQuestionCount: 10,
+      answeredQuestionCount: 10,
+    },
+  })
+
+  assert.equal(status, "COMPLETED")
+})
+
+test("answered required questions win over abandoned attempt status", () => {
+  const status = deriveInterviewStatus({
+    interviewStatus: "READY",
+    latestAttempt: {
+      attemptId: "attempt-1",
+      status: "ABANDONED",
+      requiredQuestionCount: 10,
+      answeredQuestionCount: 10,
+    },
+  })
+
+  assert.equal(status, "COMPLETED")
+})

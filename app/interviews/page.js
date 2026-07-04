@@ -295,7 +295,7 @@ function formatEvaluationText(evaluation) {
 }
 
 function isCompletedInterview(interview) {
-  return String(interview?.status ?? "").toUpperCase() === "COMPLETED"
+  return getRecruiterStatusKey(interview) === "COMPLETED"
 }
 
 function isEarlyExitInterview(interview) {

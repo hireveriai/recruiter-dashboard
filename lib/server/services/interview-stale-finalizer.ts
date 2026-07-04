@@ -44,18 +44,24 @@ export async function finalizeStaleInterviewAttempts(organizationId: string) {
         ia.attempt_id,
         ia.interview_id,
         case
+          when completion_stats.answered_question_count >= completion_stats.required_question_count
+            then 'COMPLETED'
           when ia.ends_at is not null
             and ia.ends_at < now() - ($2::int * interval '1 second')
             then 'TIME_EXPIRED'
           else 'ABANDONED'
         end as final_status,
         case
+          when completion_stats.answered_question_count >= completion_stats.required_question_count
+            then 'completed_all_questions'
           when ia.ends_at is not null
             and ia.ends_at < now() - ($2::int * interval '1 second')
             then 'timeout'
           else 'watchdog_timeout'
         end as termination_type,
         case
+          when completion_stats.answered_question_count >= completion_stats.required_question_count
+            then null
           when ia.ends_at is not null
             and ia.ends_at < now() - ($2::int * interval '1 second')
             then 'session_time_expired'
@@ -64,6 +70,21 @@ export async function finalizeStaleInterviewAttempts(organizationId: string) {
       from public.interview_attempts ia
       inner join public.interviews i
         on i.interview_id = ia.interview_id
+      left join lateral (
+        select
+          greatest(coalesce(i.question_count, 0), 1) as required_question_count,
+          count(distinct ans.answer_id) filter (
+            where (
+                nullif(trim(coalesce(ans.answer_text, '')), '') is not null
+                and lower(trim(coalesce(ans.answer_text, ''))) <> 'no response provided.'
+              )
+              or nullif(trim(coalesce(cs.code_text, '')), '') is not null
+          )::int as answered_question_count
+        from public.interview_answers ans
+        left join public.interview_code_submissions cs
+          on cs.answer_id = ans.answer_id
+        where ans.attempt_id = ia.attempt_id
+      ) completion_stats on true
       where i.organization_id = $1::uuid
         and upper(coalesce(ia.status, '')) in (${quotedStatuses()})
         and (
@@ -86,10 +107,16 @@ export async function finalizeStaleInterviewAttempts(organizationId: string) {
           termination_detected_at = coalesce(ia.termination_detected_at, now()),
           recovered_successfully = false,
           early_exit = case
+            when stale_attempts.final_status = 'COMPLETED' then false
             when stale_attempts.final_status = 'TIME_EXPIRED' then ia.early_exit
             else true
           end,
+          completion_percentage = case
+            when stale_attempts.final_status = 'COMPLETED' then 1
+            else ia.completion_percentage
+          end,
           inactivity_seconds = case
+            when stale_attempts.final_status = 'COMPLETED' then ia.inactivity_seconds
             when stale_attempts.final_status = 'TIME_EXPIRED' then
               greatest(extract(epoch from (now() - coalesce(ia.ends_at, now())))::int, 0)
             else greatest(extract(epoch from (now() - coalesce(ia.last_activity_at, ia.started_at)))::int, 0)
@@ -111,7 +138,10 @@ export async function finalizeStaleInterviewAttempts(organizationId: string) {
     )
     update public.interviews i
     set status = 'COMPLETED',
-        final_status = coalesce(i.final_status, closed_interviews.final_status)
+        final_status = case
+          when closed_interviews.final_status = 'COMPLETED' then 'COMPLETED'
+          else coalesce(i.final_status, closed_interviews.final_status)
+        end
     from closed_interviews
     where i.interview_id = closed_interviews.interview_id
     `,

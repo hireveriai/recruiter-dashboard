@@ -10,6 +10,9 @@ type AttemptStatusInput = {
   endedAt?: Date | string | null
   earlyExit?: boolean | null
   terminationType?: string | null
+  requiredQuestionCount?: number | null
+  answeredQuestionCount?: number | null
+  completionPercentage?: number | null
 }
 
 type DeriveInterviewStatusInput = {
@@ -38,7 +41,16 @@ export function isInviteUsable(invite: InviteStatusInput) {
 
 export function isAttemptCompleted(attempt: AttemptStatusInput) {
   const normalizedStatus = normalizeStatus(attempt.status)
-  return ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(normalizedStatus)
+  const requiredQuestionCount = Number(attempt.requiredQuestionCount ?? 0)
+  const answeredQuestionCount = Number(attempt.answeredQuestionCount ?? 0)
+  const completionPercentage = Number(attempt.completionPercentage ?? 0)
+
+  return (
+    ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(normalizedStatus) ||
+    (requiredQuestionCount > 0 && answeredQuestionCount >= requiredQuestionCount) ||
+    completionPercentage >= 1 ||
+    completionPercentage >= 100
+  )
 }
 
 export function isAttemptManualExit(attempt: AttemptStatusInput) {

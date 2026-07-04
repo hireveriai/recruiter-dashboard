@@ -842,7 +842,16 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       interviewStatus: interview.status,
       questionStatus,
       emailStatus,
-      latestAttempt: latestAttempt ? { ...latestAttempt, earlyExit: isManualExit, terminationType: exitMetadata?.terminationType ?? null } : null,
+      latestAttempt: latestAttempt
+        ? {
+            ...latestAttempt,
+            earlyExit: isManualExit,
+            terminationType: exitMetadata?.terminationType ?? null,
+            requiredQuestionCount: completionStats?.requiredQuestionCount ?? interview.questionCount ?? null,
+            answeredQuestionCount: completionStats?.answeredQuestionCount ?? 0,
+            completionPercentage: exitMetadata?.completionPercentage ?? null,
+          }
+        : null,
       latestInvite,
     })
 
