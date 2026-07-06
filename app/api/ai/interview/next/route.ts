@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     if (
       useAiFollowup &&
-      decision.intent === "followup" &&
+      (decision.intent === "followup" || decision.intent === "exploratory") &&
       decision.followUp &&
       (body.last_question ?? body.lastQuestion ?? state?.last_question) &&
       (body.last_answer ?? body.lastAnswer)

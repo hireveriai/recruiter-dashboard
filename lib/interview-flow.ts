@@ -100,6 +100,25 @@ function isCodingRequired(input: BaseGenerationInput) {
   return requirement === "YES" || (requirement === "AUTO" && input.codingRecommended === true)
 }
 
+export function resolveInterviewQuestionTarget(input: Pick<BaseGenerationInput, "interviewDurationMinutes" | "totalQuestions">, generatedCount = 0) {
+  const duration = Number(input.interviewDurationMinutes ?? 30)
+  const durationMinimum =
+    duration >= 60
+      ? 15
+      : duration >= 45
+        ? 12
+        : duration >= 30
+          ? 8
+          : 5
+  const requestedTotal = Number(input.totalQuestions)
+
+  if (Number.isFinite(requestedTotal) && requestedTotal > 0) {
+    return Math.max(Math.round(requestedTotal), durationMinimum)
+  }
+
+  return Math.max(durationMinimum, generatedCount || 0)
+}
+
 function buildCodingQuestion(input: BaseGenerationInput) {
   const assessmentType = String(input.codingAssessmentType ?? "").toUpperCase()
   const language = (input.codingLanguages ?? []).find((item) => item?.trim())?.trim()
@@ -216,7 +235,7 @@ export async function generateInterviewQuestions(
 ): Promise<InterviewQuestion[]> {
   const generated = await generateRoleAwareQuestionSet(input)
   const seniorityLevel = resolveSeniorityLevel(input.experienceLevel)
-  const totalQuestions = Math.max(5, Math.min(10, Number(input.totalQuestions ?? generated.length ?? 7) || 7))
+  const totalQuestions = resolveInterviewQuestionTarget(input, generated.length)
   const targetResumeCount = Math.min(
     2,
     Math.max(1, Math.round(totalQuestions * 0.3)),
