@@ -848,6 +848,7 @@ export default function AiScreeningPage() {
   const [sending, setSending] = useState(false)
   const [sendProgressOpen, setSendProgressOpen] = useState(false)
   const [sendProgressCount, setSendProgressCount] = useState(0)
+  const [sendProgressError, setSendProgressError] = useState("")
   const [notice, setNotice] = useState("")
   const [error, setError] = useState("")
   const [pipelineErrorStep, setPipelineErrorStep] = useState<PipelineErrorStep>(null)
@@ -1938,6 +1939,7 @@ export default function AiScreeningPage() {
     try {
       setSending(true)
       setSendProgressCount(explicitCandidateIds.length)
+      setSendProgressError("")
       setSendProgressOpen(true)
       setError("")
       setNotice("Preparing and sending interview invitations in the background...")
@@ -1963,11 +1965,16 @@ export default function AiScreeningPage() {
       if (payload?.warning) {
         setDuplicateInviteWarnings(payload.duplicates ?? [])
         setNotice("")
+        setSendProgressOpen(false)
         return "warning"
       }
 
       if (!response.ok || !payload?.success) {
-        throw new Error(payload?.error?.message || payload?.message || "Bulk interview send failed")
+        throw new ApiResponseError(
+          payload?.error?.message || payload?.message || "Bulk interview send failed",
+          payload?.error?.code || "INTERVIEW_SEND_FAILED",
+          response.status
+        )
       }
 
       if (payload.data?.trialCredits) {
@@ -1983,6 +1990,18 @@ export default function AiScreeningPage() {
         failedCount > 0 ? `${failedCount} failed.` : "",
         skippedCount > 0 ? `${skippedCount} skipped.` : "",
       ].filter(Boolean).join(" "))
+
+      if (sentCount === 0) {
+        const failureMessage = failedCount > 0
+          ? `No interview invitations were sent. ${failedCount} delivery attempt${failedCount === 1 ? "" : "s"} failed. Review the delivery results and try again.`
+          : "No interview invitations were sent because the selected candidates do not have valid email addresses."
+        setSendProgressError(failureMessage)
+        setError(failureMessage)
+        setSendProgressOpen(true)
+        return "failed"
+      }
+
+      setSendProgressOpen(false)
       return "sent"
     } catch (sendError) {
       const message = sendError instanceof Error ? sendError.message : "Bulk interview send failed"
@@ -1993,13 +2012,15 @@ export default function AiScreeningPage() {
       ) {
         setUpgradeLimitOpen(true)
         setError("")
+        setSendProgressOpen(false)
         return "failed"
       }
       setError(message)
+      setSendProgressError(message)
+      setSendProgressOpen(true)
       return "failed"
     } finally {
       setSending(false)
-      setSendProgressOpen(false)
     }
   }
 
@@ -2179,7 +2200,7 @@ export default function AiScreeningPage() {
 
     if (result === "warning") {
       setConfirmSendOpen(true)
-    } else {
+    } else if (result === "sent") {
       setPendingSendCandidateIds([])
       setDuplicateInviteWarnings([])
       resetSendScheduleState()
@@ -2196,9 +2217,12 @@ export default function AiScreeningPage() {
 
     setDuplicateInviteWarnings([])
     setConfirmSendOpen(false)
-    setPendingSendCandidateIds([])
-    await handleSendInterviews("SELECTED", candidateIds, candidates, { confirmedDuplicateInvites: true })
-    resetSendScheduleState()
+    const result = await handleSendInterviews("SELECTED", candidateIds, candidates, { confirmedDuplicateInvites: true })
+
+    if (result === "sent") {
+      setPendingSendCandidateIds([])
+      resetSendScheduleState()
+    }
   }
 
   async function handleSaveEmail(candidateId: string) {
@@ -3282,7 +3306,7 @@ export default function AiScreeningPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirm-send-title">
           <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
             <h2 id="confirm-send-title" className="text-lg font-semibold text-white">
-              Confirm Interview Send
+              {duplicateInviteWarnings.length > 0 ? "Review Existing Interview Invite" : "Confirm Interview Send"}
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               You are about to send interviews to {pendingSendMatches.length} candidate{pendingSendMatches.length === 1 ? "" : "s"}.
@@ -3295,13 +3319,16 @@ export default function AiScreeningPage() {
             {duplicateInviteWarnings.length > 0 ? (
               <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-3 text-sm text-amber-100">
                 <p>
-                  You already sent an interview to this candidate on {formatDateTime(duplicateInviteWarnings[0].lastSentAt)}. Send again?
+                  An interview was already sent to {duplicateInviteWarnings[0].candidateName} on {formatDateTime(duplicateInviteWarnings[0].lastSentAt)}.
                 </p>
                 {duplicateInviteWarnings.length > 1 ? (
                   <p className="mt-2 text-xs text-amber-100/80">
                     {duplicateInviteWarnings.length - 1} more selected candidate{duplicateInviteWarnings.length - 1 === 1 ? "" : "s"} also have previous invites.
                   </p>
                 ) : null}
+                <p className="mt-2 font-semibold text-amber-50">
+                  Nothing has been sent yet. Choose Send All Anyway to continue with the complete selected batch.
+                </p>
               </div>
             ) : null}
 
@@ -3453,38 +3480,51 @@ export default function AiScreeningPage() {
                 className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <SendIcon />
-                {duplicateInviteWarnings.length > 0 ? "Send Again" : "Send Interview"}
+                {duplicateInviteWarnings.length > 0 ? "Send All Anyway" : "Send Interview"}
               </button>
             </div>
           </div>
         </div>
       ) : null}
 
-      {sending && sendProgressOpen ? (
+      {sendProgressOpen && (sending || sendProgressError) ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="interview-send-progress-title">
           <div className="w-full max-w-lg rounded-[28px] border border-cyan-400/20 bg-[#0B1220] p-6 text-center shadow-[0_28px_100px_rgba(2,6,23,0.78)] sm:p-8">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-400/10 shadow-[0_0_50px_rgba(34,211,238,0.16)]">
-              <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-cyan-200/20 border-t-cyan-300" aria-hidden="true" />
+              {sending ? (
+                <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-cyan-200/20 border-t-cyan-300" aria-hidden="true" />
+              ) : (
+                <span className="text-3xl font-semibold text-rose-200" aria-hidden="true">!</span>
+              )}
             </div>
             <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/70">Secure Interview Delivery</p>
             <h2 id="interview-send-progress-title" className="mt-3 text-2xl font-semibold text-white">
-              Your invitations are being prepared
+              {sending ? "Your invitations are being prepared" : "Invitations were not sent"}
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              HireVeri is preparing and sending {sendProgressCount || "the selected"} interview invitation{sendProgressCount === 1 ? "" : "s"}. Larger batches may take a few minutes.
+              {sending
+                ? `HireVeri is preparing and sending ${sendProgressCount || "the selected"} interview invitation${sendProgressCount === 1 ? "" : "s"}. Larger batches may take a few minutes.`
+                : sendProgressError}
             </p>
-            <div className="mt-5 rounded-2xl border border-blue-400/15 bg-blue-500/[0.08] px-4 py-3 text-left">
-              <p className="text-sm font-semibold text-blue-100">You can continue working</p>
-              <p className="mt-1 text-xs leading-5 text-slate-400">
-                Keep this page open while sending continues. We will show the final delivery status as soon as the batch is complete.
-              </p>
-            </div>
+            {sending ? (
+              <div className="mt-5 rounded-2xl border border-blue-400/15 bg-blue-500/[0.08] px-4 py-3 text-left">
+                <p className="text-sm font-semibold text-blue-100">You can continue working</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">
+                  Keep this page open while sending continues. We will show the final delivery status as soon as the batch is complete.
+                </p>
+              </div>
+            ) : null}
             <button
               type="button"
-              onClick={() => setSendProgressOpen(false)}
+              onClick={() => {
+                setSendProgressOpen(false)
+                if (sendProgressError && pendingSendCandidateIds.length > 0) {
+                  setConfirmSendOpen(true)
+                }
+              }}
               className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(14,165,233,0.24)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
             >
-              Continue in Background
+              {sending ? "Continue in Background" : "Review & Try Again"}
             </button>
           </div>
         </div>
