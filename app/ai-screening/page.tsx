@@ -1926,6 +1926,13 @@ export default function AiScreeningPage() {
       return
     }
 
+    const explicitCandidateIds = [...new Set((candidateIds ?? []).filter(Boolean))]
+
+    if (mode === "SELECTED" && explicitCandidateIds.length === 0) {
+      setError("Select candidates before sending interview links.")
+      return
+    }
+
     try {
       setSending(true)
       setError("")
@@ -1938,11 +1945,11 @@ export default function AiScreeningPage() {
           job_id: activeJob.id,
           mode,
           topN,
-          candidateIds,
+          candidateIds: explicitCandidateIds,
           candidates,
           batchId: currentBatchId || undefined,
-          matchScope: getMatchScope(includeAllCandidates),
-          includeAllCandidates,
+          matchScope: mode === "SELECTED" ? "BATCH" : getMatchScope(includeAllCandidates),
+          includeAllCandidates: mode === "SELECTED" ? false : includeAllCandidates,
           runId: selectedRunId || undefined,
           confirmDuplicateInvites: options?.confirmedDuplicateInvites === true,
         }),

@@ -339,7 +339,11 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
 export async function getActiveBillingPlans() {
   const rows = await getPlanRows(
     prisma,
-    Prisma.sql`where "isActive" = true order by "planType" asc, "order" asc`
+    Prisma.sql`
+      where "isActive" = true
+        and "planType" in ('INTERVIEW', 'SCREENING')
+      order by "planType" asc, "order" asc
+    `
   )
 
   return rows.map(mapPlan)
@@ -349,7 +353,12 @@ export async function getActiveBillingPlanBySlug(slug: string, client: QueryClie
   const normalizedSlug = validatePlanSlug(slug)
   const rows = await getPlanRows(
     client,
-    Prisma.sql`where slug = ${normalizedSlug} and "isActive" = true limit 1`
+    Prisma.sql`
+      where slug = ${normalizedSlug}
+        and "isActive" = true
+        and "planType" in ('INTERVIEW', 'SCREENING')
+      limit 1
+    `
   )
 
   return rows[0] ? mapPlan(rows[0]) : null
@@ -395,7 +404,12 @@ function assertPlanBundleAllowed(
 async function getActiveBillingPlanById(planId: string, client: QueryClient = prisma) {
   const rows = await getPlanRows(
     client,
-    Prisma.sql`where id = ${planId} and "isActive" = true limit 1`
+    Prisma.sql`
+      where id = ${planId}
+        and "isActive" = true
+        and "planType" in ('INTERVIEW', 'SCREENING')
+      limit 1
+    `
   )
 
   return rows[0] ? mapPlan(rows[0]) : null

@@ -199,7 +199,7 @@ export default function VerisGlobeLoader({
               )
             })}
           </div>
-          <p className="absolute bottom-[7%] left-1/2 z-10 -translate-x-1/2 text-[8px] uppercase tracking-[0.18em] text-slate-500 sm:text-[9px]">
+          <p className="absolute bottom-[4.5%] left-1/2 z-10 -translate-x-1/2 text-[8px] uppercase tracking-[0.18em] text-slate-500 sm:text-[9px]">
             {safeIndex + 1} / {safeSteps.length}
           </p>
 

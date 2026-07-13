@@ -1466,6 +1466,14 @@ export async function getMatchesForInviteSelection(input: {
   const includeAllCandidates = input.includeAllCandidates === true
   const runId = normalizeUuid(input.runId ?? null)
 
+  if (input.mode === "SELECTED" && !hasCandidateIds) {
+    throw new ApiError(
+      400,
+      "SELECTED_CANDIDATES_REQUIRED",
+      "Selected interview send requires explicit candidate IDs."
+    )
+  }
+
   if (runId) {
     const rows = await prisma.$queryRaw<ScreeningRunInviteRow[]>(Prisma.sql`
       select

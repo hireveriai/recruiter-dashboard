@@ -99,6 +99,10 @@ function normalizeScheduleTime(value: unknown) {
   return date.toISOString()
 }
 
+function normalizeCandidateIds(values: string[] | undefined) {
+  return [...new Set((values ?? []).map((value) => String(value ?? "").trim()).filter(Boolean))]
+}
+
 function parseCandidateSchedules(value: unknown): CandidateInterviewSchedule[] {
   if (!Array.isArray(value)) {
     return []
@@ -316,6 +320,7 @@ export async function POST(request: Request) {
         : candidateSchedules.length > 0
           ? candidateSchedules.map((schedule) => schedule.candidateId)
           : undefined
+    const explicitCandidateIds = normalizeCandidateIds(candidateIds)
     const scheduleByCandidateId = new Map(candidateSchedules.map((schedule) => [schedule.candidateId, schedule]))
 
     if (!screeningJobId) {
@@ -324,6 +329,14 @@ export async function POST(request: Request) {
 
     if (mode !== "STRONG_FIT" && mode !== "TOP_N" && mode !== "SELECTED") {
       throw new ApiError(400, "INVALID_SELECTION_MODE", "Invalid interview selection mode")
+    }
+
+    if (mode === "SELECTED" && explicitCandidateIds.length === 0) {
+      throw new ApiError(
+        400,
+        "SELECTED_CANDIDATES_REQUIRED",
+        "Selected interview send requires explicit candidate IDs. No interview links were sent."
+      )
     }
 
     if (!includeAllCandidates && !batchId && mode !== "SELECTED") {
@@ -348,14 +361,34 @@ export async function POST(request: Request) {
       jobId: screeningJobId,
       mode,
       topN: Number.isFinite(topN) ? topN : 10,
-      candidateIds,
+      candidateIds: explicitCandidateIds,
       uploadBatchId: batchId || null,
-      includeAllCandidates,
+      includeAllCandidates: mode === "SELECTED" ? false : includeAllCandidates,
       runId: runId || null,
     })
 
     if (selected.length === 0) {
       throw new ApiError(400, "NO_MATCHES_SELECTED", "No matched candidates were selected")
+    }
+
+    if (mode === "SELECTED") {
+      const requestedCandidateIds = new Set(explicitCandidateIds)
+      const unexpectedCandidates = selected.filter((match) => !requestedCandidateIds.has(match.candidate_id))
+
+      if (unexpectedCandidates.length > 0 || selected.length > requestedCandidateIds.size) {
+        console.error("VERIS selected interview send returned candidates outside the requested selection", {
+          organizationId: auth.organizationId,
+          screeningJobId,
+          requestedCount: requestedCandidateIds.size,
+          selectedCount: selected.length,
+          unexpectedCandidateIds: unexpectedCandidates.map((match) => match.candidate_id),
+        })
+        throw new ApiError(
+          409,
+          "SELECTION_SCOPE_MISMATCH",
+          "Selected candidate scope changed unexpectedly. No interview links were sent. Please refresh VERIS Screening and try again."
+        )
+      }
     }
 
     const selectedWithEmailCount = selected.filter((match) => normalizeEmail(match.email)).length
