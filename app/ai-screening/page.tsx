@@ -846,6 +846,8 @@ export default function AiScreeningPage() {
   const [isMatching, setIsMatching] = useState(false)
   const [savingNewJob, setSavingNewJob] = useState(false)
   const [sending, setSending] = useState(false)
+  const [sendProgressOpen, setSendProgressOpen] = useState(false)
+  const [sendProgressCount, setSendProgressCount] = useState(0)
   const [notice, setNotice] = useState("")
   const [error, setError] = useState("")
   const [pipelineErrorStep, setPipelineErrorStep] = useState<PipelineErrorStep>(null)
@@ -1935,8 +1937,10 @@ export default function AiScreeningPage() {
 
     try {
       setSending(true)
+      setSendProgressCount(explicitCandidateIds.length)
+      setSendProgressOpen(true)
       setError("")
-      setNotice("Sending interview invitations...")
+      setNotice("Preparing and sending interview invitations in the background...")
       const response = await fetch(authUrl("/api/send-interviews"), {
         method: "POST",
         credentials: "include",
@@ -1995,6 +1999,7 @@ export default function AiScreeningPage() {
       return "failed"
     } finally {
       setSending(false)
+      setSendProgressOpen(false)
     }
   }
 
@@ -2169,10 +2174,12 @@ export default function AiScreeningPage() {
       return
     }
 
+    setConfirmSendOpen(false)
     const result = await handleSendInterviews("SELECTED", candidateIds, candidates)
 
-    if (result !== "warning") {
-      setConfirmSendOpen(false)
+    if (result === "warning") {
+      setConfirmSendOpen(true)
+    } else {
       setPendingSendCandidateIds([])
       setDuplicateInviteWarnings([])
       resetSendScheduleState()
@@ -3449,6 +3456,57 @@ export default function AiScreeningPage() {
                 {duplicateInviteWarnings.length > 0 ? "Send Again" : "Send Interview"}
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {sending && sendProgressOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="interview-send-progress-title">
+          <div className="w-full max-w-lg rounded-[28px] border border-cyan-400/20 bg-[#0B1220] p-6 text-center shadow-[0_28px_100px_rgba(2,6,23,0.78)] sm:p-8">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-400/10 shadow-[0_0_50px_rgba(34,211,238,0.16)]">
+              <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-cyan-200/20 border-t-cyan-300" aria-hidden="true" />
+            </div>
+            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/70">Secure Interview Delivery</p>
+            <h2 id="interview-send-progress-title" className="mt-3 text-2xl font-semibold text-white">
+              Your invitations are being prepared
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              HireVeri is preparing and sending {sendProgressCount || "the selected"} interview invitation{sendProgressCount === 1 ? "" : "s"}. Larger batches may take a few minutes.
+            </p>
+            <div className="mt-5 rounded-2xl border border-blue-400/15 bg-blue-500/[0.08] px-4 py-3 text-left">
+              <p className="text-sm font-semibold text-blue-100">You can continue working</p>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                Keep this page open while sending continues. We will show the final delivery status as soon as the batch is complete.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSendProgressOpen(false)}
+              className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(14,165,233,0.24)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
+            >
+              Continue in Background
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {sending && !sendProgressOpen ? (
+        <div className="fixed bottom-5 right-5 z-50 w-[min(calc(100vw-2.5rem),380px)] rounded-2xl border border-cyan-400/20 bg-[#0B1220]/95 p-4 shadow-[0_20px_70px_rgba(2,6,23,0.7)] backdrop-blur" role="status" aria-live="polite">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 h-6 w-6 shrink-0 animate-spin rounded-full border-2 border-cyan-200/20 border-t-cyan-300" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">Sending interviews in background</p>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                Preparing {sendProgressCount || "selected"} invitation{sendProgressCount === 1 ? "" : "s"}. You can keep reviewing this page.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSendProgressOpen(true)}
+              className="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-cyan-400/40 hover:text-cyan-100"
+            >
+              View
+            </button>
           </div>
         </div>
       ) : null}
