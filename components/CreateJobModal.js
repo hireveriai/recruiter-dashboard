@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Laptop, MonitorSmartphone, Smartphone } from "lucide-react";
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params";
 
 import { showActionFeedback } from "@/lib/client/action-feedback";
@@ -23,6 +24,30 @@ const CODING_ASSESSMENT_OPTIONS = [
 ];
 
 const INTERVIEW_DURATION_OPTIONS = [30, 45, 60];
+
+const DEVICE_REQUIREMENT_OPTIONS = [
+  {
+    value: "ANY_DEVICE",
+    label: "Laptop/Desktop or Mobile",
+    description: "Best for general screening and maximum completion.",
+    icon: MonitorSmartphone,
+    badge: "Default",
+  },
+  {
+    value: "DESKTOP_ONLY",
+    label: "Laptop/Desktop Only",
+    description: "Recommended for coding and technical interviews.",
+    icon: Laptop,
+    badge: "Recommended",
+  },
+  {
+    value: "MOBILE_ONLY",
+    label: "Mobile Only",
+    description: "Useful for field roles and quick video screens.",
+    icon: Smartphone,
+    badge: null,
+  },
+];
 
 const QUESTION_TYPE_OPTIONS = [
   { value: "AUTO", label: "Auto Detect" },
@@ -406,15 +431,40 @@ export default function CreateJobModal({
               <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
                 <p className="text-sm font-medium text-white">Allowed Devices</p>
                 <p className="mt-1 text-sm text-slate-400">Choose the devices candidates can use for this interview. General screening defaults to laptop, desktop, or mobile.</p>
-                <select
-                  value={form.device_requirement}
-                  onChange={(e) => handleChange("device_requirement", e.target.value)}
-                  className="mt-4 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
-                >
-                  <option value="ANY_DEVICE">Laptop/Desktop or Mobile (Default)</option>
-                  <option value="DESKTOP_ONLY">Laptop/Desktop Only (Recommended for technical roles)</option>
-                  <option value="MOBILE_ONLY">Mobile Only</option>
-                </select>
+                <div className="mt-4 grid gap-3 md:grid-cols-3" role="radiogroup" aria-label="Allowed devices">
+                  {DEVICE_REQUIREMENT_OPTIONS.map((option) => {
+                    const Icon = option.icon;
+                    const selected = form.device_requirement === option.value;
+
+                    return (
+                      <label
+                        key={option.value}
+                        className={`cursor-pointer rounded-2xl border p-4 transition ${
+                          selected
+                            ? "border-cyan-300/70 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(103,232,249,0.18)]"
+                            : "border-slate-700 bg-slate-900/50 hover:border-slate-500 hover:bg-slate-900/80"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="device_requirement"
+                          value={option.value}
+                          checked={selected}
+                          onChange={() => handleChange("device_requirement", option.value)}
+                          className="sr-only"
+                        />
+                        <div className="flex items-start justify-between gap-3">
+                          <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${selected ? "bg-cyan-300/20 text-cyan-100" : "bg-slate-800 text-slate-300"}`}>
+                            <Icon className="h-5 w-5" aria-hidden="true" />
+                          </span>
+                          {option.badge ? <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-cyan-100">{option.badge}</span> : null}
+                        </div>
+                        <p className="mt-4 text-sm font-semibold text-white">{option.label}</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-400">{option.description}</p>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
