@@ -212,7 +212,7 @@ function DashboardContent({ profile, overview, isLoading }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#08111f] text-white">
+      <div className="min-h-screen bg-slate-950 text-white">
         <Navbar onSendInterviewClick={() => setIsModalOpen(true)} initialProfile={displayProfile} initialAlerts={overview?.alerts} />
         <VerisGlobeLoader
           eyebrow="Dashboard"
@@ -230,7 +230,7 @@ function DashboardContent({ profile, overview, isLoading }) {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#08111f] text-white">
+    <div className="relative min-h-screen bg-slate-950 text-white">
       <Navbar onSendInterviewClick={() => setIsModalOpen(true)} initialProfile={displayProfile} initialAlerts={overview?.alerts} />
       <CognitiveDock
         profile={displayProfile}

@@ -23,7 +23,7 @@ export default function Pipeline({ initialPipeline, isLoading = false }) {
 
   useEffect(() => {
     if (initialPipeline) {
-      setPipeline(initialPipeline)
+      queueMicrotask(() => setPipeline(initialPipeline))
     }
   }, [initialPipeline])
 
@@ -104,7 +104,7 @@ export default function Pipeline({ initialPipeline, isLoading = false }) {
     { title: "Invited", count: displayPipeline.pending, color: "bg-blue-500" },
     { title: "Started", count: displayPipeline.inProgress, color: "bg-indigo-500" },
     { title: "Completed", count: displayPipeline.completed, color: "bg-green-500" },
-    { title: "Reviewed", count: displayPipeline.reviewed, color: "bg-cyan-400" },
+    { title: "Reviewed", count: displayPipeline.reviewed, color: "bg-sky-400" },
     { title: "Review Required", count: displayPipeline.reviewRequired, color: "bg-amber-400" },
     { title: "Flagged", count: displayPipeline.flagged, color: "bg-red-500" },
   ]
@@ -122,7 +122,7 @@ export default function Pipeline({ initialPipeline, isLoading = false }) {
           {cards.map((item) => (
           <div
             key={item.title}
-            className="bg-[#111a2e] rounded-lg p-5 shadow-md"
+            className="rounded-xl border border-slate-800 bg-slate-900/75 p-5 shadow-sm"
           >
             <div className="flex justify-between items-center">
               <span className="text-gray-400 text-sm">

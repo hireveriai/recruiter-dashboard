@@ -62,7 +62,7 @@ function ExpandableSection({ title, subtitle, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(8,17,31,0.98))] shadow-[0_18px_60px_rgba(2,6,23,0.3)]">
+    <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -155,7 +155,7 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#08111f] text-white">
+      <div className="min-h-screen bg-slate-950 text-white">
         <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
         <VerisGlobeLoader
           eyebrow="Reports"
@@ -173,7 +173,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="hv-page-enter min-h-screen bg-[#08111f] text-white">
+    <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
       <main className="mx-auto max-w-[1680px] px-4 py-7 sm:px-6 lg:px-8">
@@ -191,14 +191,14 @@ export default function ReportsPage() {
             </div>
 
             <div className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2">
-              <div className="flex min-h-[136px] min-w-0 flex-col justify-center rounded-2xl border border-cyan-400/15 bg-slate-950/40 p-4 shadow-[0_0_28px_rgba(34,211,238,0.06)]">
+              <div className="flex min-h-[136px] min-w-0 flex-col justify-center rounded-xl border border-slate-700 bg-slate-950/35 p-4 shadow-sm">
                 <p className="text-sm text-slate-500">Generated</p>
                 <div className="mt-3 min-w-0">
                   <p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{generatedDate}</p>
                   <p className="mt-1 truncate text-xl font-semibold tracking-normal text-cyan-50 sm:text-2xl">{generatedTime}</p>
                 </div>
               </div>
-              <div className="flex min-h-[136px] min-w-0 flex-col justify-center rounded-2xl border border-cyan-400/15 bg-slate-950/40 p-4 shadow-[0_0_28px_rgba(34,211,238,0.06)]">
+              <div className="flex min-h-[136px] min-w-0 flex-col justify-center rounded-xl border border-slate-700 bg-slate-950/35 p-4 shadow-sm">
                 <p className="text-sm text-slate-500">Module State</p>
                 <p className="mt-3 truncate text-xl font-semibold text-cyan-200 sm:text-2xl">Live Aggregation</p>
               </div>

@@ -352,14 +352,14 @@ export default function JobsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#08111f] text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
       <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(8,17,31,0.98))] p-8 shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
           <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Role Portfolio</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Role Portfolio</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">All Jobs</h1>
               <p className="mt-4 text-base leading-7 text-slate-400">
                 Live role inventory for your hiring organization, including experience band, evaluation depth, and current interview activity.
@@ -387,7 +387,7 @@ export default function JobsPage() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-[28px] border border-slate-800 bg-[#0f172a] shadow-[0_16px_60px_rgba(2,6,23,0.3)]">
+        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
           <div className="flex flex-col gap-4 border-b border-slate-800 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">Created Job Roles</h2>

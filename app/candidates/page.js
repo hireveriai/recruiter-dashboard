@@ -506,7 +506,7 @@ export default function CandidatesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#08111f] text-white">
+      <div className="min-h-screen bg-slate-950 text-white">
         <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
         <VerisGlobeLoader
           eyebrow="Candidates"
@@ -525,14 +525,14 @@ export default function CandidatesPage() {
 
   return (
     <>
-      <div className="hv-page-enter min-h-screen bg-[#08111f] text-white">
+      <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
         <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
         <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-          <section className="rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(8,17,31,0.98))] p-8 shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+          <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
             <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-3xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Candidate Registry</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Candidate Registry</p>
                 <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">All Candidates</h1>
                 <p className="mt-4 text-base leading-7 text-slate-400">
                   Unified candidate view across pending and completed interview journeys, with evaluation signals and recruiter-facing insight.
@@ -540,15 +540,15 @@ export default function CandidatesPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[520px]">
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+                <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
                   <p className="text-sm text-slate-500">Total Candidates</p>
                   <p className="mt-3 text-3xl font-semibold text-white">{stats.total}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+                <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
                   <p className="text-sm text-slate-500">Completed</p>
                   <p className="mt-3 text-3xl font-semibold text-white">{stats.completed}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+                <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
                   <p className="text-sm text-slate-500">Pending</p>
                   <p className="mt-3 text-3xl font-semibold text-white">{stats.pending}</p>
                 </div>
@@ -556,7 +556,7 @@ export default function CandidatesPage() {
             </div>
           </section>
 
-          <section className="mt-8 overflow-hidden rounded-[28px] border border-slate-800 bg-[#0f172a] shadow-[0_16px_60px_rgba(2,6,23,0.3)]">
+          <section className="mt-8 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
             <div className="flex flex-col gap-4 border-b border-slate-800 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-white">Candidate Pipeline View</h2>

@@ -118,7 +118,7 @@ function getAlertToneClass(tone) {
   if (tone === "success") return "border-emerald-400/25 bg-emerald-500/10"
   if (tone === "warning") return "border-amber-400/25 bg-amber-500/10"
   if (tone === "danger") return "border-rose-400/25 bg-rose-500/10"
-  return "border-cyan-400/25 bg-cyan-500/10"
+  return "border-sky-400/20 bg-sky-500/10"
 }
 
 function getFeedbackToneClass(tone) {
@@ -530,8 +530,8 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-cyan-300/10 bg-[linear-gradient(180deg,rgba(12,20,36,0.96),rgba(8,15,29,0.92))] text-white shadow-[0_10px_34px_rgba(2,6,23,0.18)] backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgba(34,211,238,0.22),transparent)]" />
+      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/92 text-white shadow-[0_8px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-slate-800/80" />
         <div className="relative mx-auto flex w-full max-w-[1840px] flex-nowrap items-center justify-between gap-3 px-3 py-4 sm:px-4 xl:px-6">
           <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 xl:gap-3">
             <Link
@@ -540,21 +540,21 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               className="group flex w-[108px] shrink-0 items-center gap-3 leading-none sm:w-[220px] xl:w-[244px]"
               aria-label="HireVeri home"
             >
-              <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/14 bg-cyan-400/[0.045] shadow-[0_0_24px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200 group-hover:-translate-y-px group-hover:border-cyan-300/25 group-hover:bg-cyan-400/[0.07]">
+              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm transition-all duration-200 group-hover:border-slate-500">
                 <Image
                   src="/hireveri_logo.png"
                   alt=""
                   width={88}
                   height={88}
                   priority
-                  className="h-[5.5rem] w-[5.5rem] max-w-none object-contain drop-shadow-[0_0_10px_rgba(125,211,252,0.42)]"
+                  className="h-[5.1rem] w-[5.1rem] max-w-none object-contain"
                   sizes="48px"
                 />
               </span>
               <span className="min-w-0">
                 <span className="block text-lg font-semibold tracking-tight text-white xl:text-xl">HireVeri</span>
-                <span className="mt-1 hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.14em] text-blue-300/80 sm:block xl:tracking-[0.18em]">
-                  Cognitive Hiring System
+                <span className="mt-1 hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 sm:block">
+                  Hiring Workspace
                 </span>
               </span>
             </Link>
@@ -569,19 +569,19 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                     href={item.href}
                     onClick={() => handleNavigationClick(item.href)}
                     className={[
-                      "group relative inline-flex transform-gpu whitespace-nowrap rounded-xl border px-2.5 py-2 text-[13px] tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
+                      "group relative inline-flex transform-gpu whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
                       active
-                        ? "border-cyan-300/15 bg-white/[0.055] font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.08),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl"
-                        : "border-transparent text-slate-300/90 hover:-translate-y-px hover:border-cyan-300/10 hover:bg-white/[0.035] hover:text-white",
+                        ? "border-slate-700 bg-slate-900 font-semibold text-white shadow-sm"
+                        : "border-transparent text-slate-300/90 hover:border-slate-700 hover:bg-slate-900/70 hover:text-white",
                     ].join(" ")}
                   >
                     <span className="relative z-10">{item.label}</span>
                     <span
                       className={[
-                        "pointer-events-none absolute inset-x-2 -bottom-px h-px rounded-full bg-cyan-300 transition-all duration-200",
+                        "pointer-events-none absolute inset-x-2 -bottom-px h-px rounded-full bg-sky-400 transition-all duration-200",
                         active
-                          ? "opacity-100 shadow-[0_0_12px_rgba(34,211,238,0.72)]"
-                          : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-60 group-hover:shadow-[0_0_10px_rgba(34,211,238,0.34)]",
+                          ? "opacity-100"
+                          : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-60",
                       ].join(" ")}
                     />
                   </Link>
@@ -594,24 +594,23 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                   type="button"
                   onClick={() => setAlertsOpen((value) => !value)}
                   className={[
-                    "group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border px-2.5 py-2 text-[13px] font-medium tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
+                    "group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] font-medium tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
                     alertsOpen
-                      ? "border-cyan-300/20 bg-cyan-400/10 text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,0.08)]"
-                      : "border-transparent text-slate-300/90 hover:-translate-y-px hover:border-cyan-300/10 hover:bg-white/[0.035] hover:text-white",
+                      ? "border-slate-700 bg-slate-900 text-white shadow-sm"
+                      : "border-transparent text-slate-300/90 hover:border-slate-700 hover:bg-slate-900/70 hover:text-white",
                   ].join(" ")}
                 >
                   Alerts
                   {unreadAlerts.length > 0 ? (
-                    <span className="relative inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-cyan-300/35 bg-cyan-400/18 px-1 text-[10px] font-semibold leading-none text-cyan-50 shadow-[0_0_14px_rgba(34,211,238,0.18)]">
-                      <span className="absolute inset-0 rounded-full border border-cyan-300/20 motion-safe:animate-[hv-alert-badge-pulse_2.8s_ease-in-out_infinite]" />
+                    <span className="relative inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-sky-300/30 bg-sky-500/15 px-1 text-[10px] font-semibold leading-none text-sky-50">
                       {unreadAlerts.length}
                     </span>
                   ) : null}
-                  <span className={["pointer-events-none absolute inset-x-2 -bottom-px h-px rounded-full bg-cyan-300 transition-all duration-200", alertsOpen ? "opacity-100 shadow-[0_0_12px_rgba(34,211,238,0.62)]" : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-55"].join(" ")} />
+                  <span className={["pointer-events-none absolute inset-x-2 -bottom-px h-px rounded-full bg-sky-400 transition-all duration-200", alertsOpen ? "opacity-100" : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-55"].join(" ")} />
                 </button>
 
                 {alertsOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+14px)] z-50 w-[360px] overflow-hidden rounded-2xl border border-slate-800 bg-[#10192c]/98 p-4 shadow-[0_24px_70px_rgba(2,6,23,0.55)]">
+                  <div className="absolute right-0 top-[calc(100%+14px)] z-50 w-[360px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/98 p-4 shadow-[0_24px_70px_rgba(2,6,23,0.42)]">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h2 className="text-lg font-semibold text-white">Alerts</h2>
@@ -668,9 +667,9 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               <button
                 type="button"
                 onClick={() => setProfileOpen((value) => !value)}
-                className="flex transform-gpu items-center gap-2 rounded-2xl border border-cyan-300/10 bg-white/[0.035] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-200 hover:-translate-y-px hover:border-cyan-300/20 hover:bg-white/[0.055] lg:gap-3 lg:px-3"
+                className="flex transform-gpu items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-2.5 py-2 shadow-sm transition-all duration-200 hover:border-slate-500 lg:gap-3 lg:px-3"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 text-sm font-semibold text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.08)] lg:h-10 lg:w-10">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-sm font-semibold text-slate-100 lg:h-10 lg:w-10">
                   {initials}
                 </div>
                 <div className="hidden min-w-0 text-left 2xl:block">
@@ -680,7 +679,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               </button>
 
               {profileOpen ? (
-                <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-[260px] overflow-hidden rounded-2xl border border-slate-800 bg-[#10192c]/98 p-2 shadow-[0_20px_60px_rgba(2,6,23,0.45)]">
+                <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-[260px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/98 p-2 shadow-[0_20px_60px_rgba(2,6,23,0.38)]">
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-3">
                     <div className="text-sm font-semibold text-white">{displayProfile?.name || "Recruiter"}</div>
                     <div className="mt-1 text-xs text-slate-400">{displayProfile?.organization || "Authenticated workspace"}</div>

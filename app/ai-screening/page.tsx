@@ -2357,16 +2357,16 @@ export default function AiScreeningPage() {
   }
 
   return (
-    <div className="hv-page-enter min-h-screen bg-[#08111f] text-white">
+    <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
       <ScreeningAnalysisOverlay phase={screeningLoaderPhase} />
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
       <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(8,17,31,0.98))] p-8 shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
           <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
               <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-400/40 hover:bg-slate-900 hover:text-white" />
-              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">VERIS Screening</p>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">VERIS Screening</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">Pre-Interview Intelligence Layer</h1>
               <p className="mt-4 text-base leading-7 text-slate-400">
                 Bulk resume parsing, JD intelligence, candidate ranking, email capture, and interview invitation dispatch in one recruiter workflow.
@@ -2378,9 +2378,9 @@ export default function AiScreeningPage() {
                 <p className="text-sm text-slate-500">Matched</p>
                 <p className="mt-3 text-3xl font-semibold text-white">{stats.candidates}</p>
               </div>
-              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
-                <p className="text-sm text-cyan-200/70">Strong Fit</p>
-                <p className="mt-3 text-3xl font-semibold text-cyan-100">{stats.strongFit}</p>
+              <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
+                <p className="text-sm text-slate-400">Strong Fit</p>
+                <p className="mt-3 text-3xl font-semibold text-white">{stats.strongFit}</p>
               </div>
               <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
                 <p className="text-sm text-slate-500">Avg Score</p>
@@ -2415,7 +2415,7 @@ export default function AiScreeningPage() {
         </div>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <section className="rounded-[28px] border border-slate-800 bg-[#0f172a] p-6 shadow-[0_16px_60px_rgba(2,6,23,0.3)]">
+          <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-white">Resume Intake</h2>
@@ -2491,7 +2491,7 @@ export default function AiScreeningPage() {
             ) : null}
           </section>
 
-          <section className="rounded-[28px] border border-slate-800 bg-[#0f172a] p-6 shadow-[0_16px_60px_rgba(2,6,23,0.3)]">
+          <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-white">Job Intelligence</h2>
@@ -2604,7 +2604,7 @@ export default function AiScreeningPage() {
           </section>
         </div>
 
-        <section ref={resultsSectionRef} className="mt-8 overflow-visible rounded-[28px] border border-slate-800 bg-[#0f172a] shadow-[0_16px_60px_rgba(2,6,23,0.3)]">
+        <section ref={resultsSectionRef} className="mt-8 overflow-visible rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
           <div className="border-b border-slate-800 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -3120,7 +3120,7 @@ export default function AiScreeningPage() {
         ) : null}
 
         {sendResults.length > 0 ? (
-          <section className="mt-8 rounded-[28px] border border-slate-800 bg-[#0f172a] p-6 shadow-[0_16px_60px_rgba(2,6,23,0.3)]">
+        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Interview Dispatch</h2>
               <button type="button" onClick={() => setSendResults([])} className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white">

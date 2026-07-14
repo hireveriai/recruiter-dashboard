@@ -141,9 +141,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#08111f] px-6 py-12 text-white sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-slate-950 px-6 py-12 text-white sm:px-8 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        <div className="rounded-[28px] border border-slate-800 bg-[#0f172a] p-8 shadow-[0_24px_80px_rgba(2,6,23,0.35)]">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
           <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-blue-400/40 hover:bg-slate-900 hover:text-white" />
           <p className="mt-6 text-xs uppercase tracking-[0.35em] text-blue-300/80">Organization Settings</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">Timezone</h1>

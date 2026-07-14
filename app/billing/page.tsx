@@ -337,7 +337,7 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#08111f] text-white">
+      <main className="min-h-screen bg-slate-950 text-white">
         <Navbar onSendInterviewClick={() => undefined} />
         <VerisGlobeLoader
           eyebrow="Billing"
@@ -355,13 +355,13 @@ export default function BillingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#08111f] text-white">
+    <main className="min-h-screen bg-slate-950 text-white">
       <Navbar onSendInterviewClick={() => undefined} />
       <div className="px-6 py-12 sm:px-8 md:pl-28 lg:px-10 lg:pl-32">
       <div className="mx-auto max-w-[1400px]">
         <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-blue-400/40 hover:bg-slate-900 hover:text-white" />
 
-        <div className="mt-6 rounded-2xl border border-slate-800 bg-[#0f172a] p-8 shadow-[0_24px_80px_rgba(2,6,23,0.35)]">
+        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
           <p className="text-xs uppercase tracking-[0.3em] text-blue-300/80">Organization Billing</p>
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -402,23 +402,23 @@ export default function BillingPage() {
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[420px]">
-                <div className="rounded-xl border border-slate-800 bg-[#0f172a] p-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Status</p>
                   <div className="mt-3">{activeSubscription ? <StatusBadge status={activeSubscription.status} /> : "-"}</div>
                 </div>
-                <div className="rounded-xl border border-slate-800 bg-[#0f172a] p-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Last Payment</p>
                   <p className="mt-3 text-lg font-semibold text-white">
                     {formatPaise(lastSuccessfulPayment?.amount ?? activeSubscription?.amountPaid ?? 0, lastSuccessfulPayment?.currency ?? activeSubscription?.currency ?? "INR")}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-800 bg-[#0f172a] p-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Current Period</p>
                   <p className="mt-3 text-sm font-semibold text-white">
                     Until {formatDate(activeSubscription?.expiresAt ?? null)}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-800 bg-[#0f172a] p-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Razorpay</p>
                   <p className="mt-3 truncate text-xs font-semibold text-slate-300">
                     {lastSuccessfulPayment?.razorpayPaymentId || lastSuccessfulPayment?.razorpayOrderId || "-"}

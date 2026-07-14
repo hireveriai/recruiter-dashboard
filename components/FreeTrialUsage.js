@@ -9,8 +9,8 @@ const UPGRADE_MESSAGE =
 
 function Stat({ label, value, depleted }) {
   return (
-    <div className={`rounded-2xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-cyan-400/15 bg-cyan-400/[0.06]"}`}>
-      <p className={`text-xs font-medium uppercase tracking-[0.2em] ${depleted ? "text-amber-200/75" : "text-cyan-200/70"}`}>
+    <div className={`rounded-xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
+      <p className={`text-xs font-medium uppercase tracking-[0.12em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
         {label}
       </p>
       <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
@@ -36,10 +36,10 @@ export default function FreeTrialUsage({ credits }) {
   const screeningLabel = !hasCreditSource || isSubscription ? "VERIS Screening Credits" : "AI Screenings Left"
 
   return (
-    <section className="mb-5 rounded-[28px] border border-slate-800 bg-[#0f172a] p-5 shadow-[0_16px_54px_rgba(2,6,23,0.24)]">
+    <section className="mb-5 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-[0_14px_40px_rgba(2,6,23,0.18)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{eyebrow}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{eyebrow}</p>
           <h2 className="mt-2 text-xl font-semibold text-white">{title}</h2>
         </div>
         {hasReachedLimit ? (
@@ -55,7 +55,7 @@ export default function FreeTrialUsage({ credits }) {
           </div>
         ) : null}
         {!hasCreditSnapshot ? (
-          <div className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] px-4 py-3 text-sm text-cyan-100">
+          <div className="rounded-xl border border-slate-700 bg-slate-950/35 px-4 py-3 text-sm text-slate-300">
             {syncLabel}
           </div>
         ) : null}

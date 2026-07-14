@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #08111f;
+  --background: #0b1220;
   --foreground: #f8fafc;
   --hv-loader-shimmer-duration: 3.4s;
   --hv-loader-scan-duration: 5.8s;
   --hv-loader-pulse-duration: 2.8s;
   --hv-loader-transition-duration: 320ms;
-  --hv-loader-glow-opacity: 0.14;
+  --hv-loader-glow-opacity: 0.06;
 }
 
 @theme inline {
@@ -19,19 +19,18 @@
 
 * {
   box-sizing: border-box;
-  scrollbar-color: rgba(14, 165, 233, 0.38) rgba(15, 23, 42, 0.55);
+  scrollbar-color: rgba(100, 116, 139, 0.6) rgba(15, 23, 42, 0.5);
   scrollbar-width: thin;
 }
 
 html {
-  background: #08111f;
+  background: #0b1220;
 }
 
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 24%),
-    linear-gradient(180deg, #08111f 0%, #0b1322 100%);
+    linear-gradient(180deg, #0b1220 0%, #0f172a 42%, #111827 100%);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
@@ -53,13 +52,13 @@ a {
 *::-webkit-scrollbar-thumb {
   min-height: 44px;
   min-width: 44px;
-  border: 2px solid rgba(15, 23, 42, 0.7);
+  border: 2px solid rgba(15, 23, 42, 0.64);
   border-radius: 999px;
-  background: rgba(14, 165, 233, 0.46);
+  background: rgba(100, 116, 139, 0.7);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.62);
+  background: rgba(148, 163, 184, 0.82);
 }
 
 *::-webkit-scrollbar-corner {
@@ -146,7 +145,7 @@ a {
 
 .hireveri-skeleton {
   animation: hireveri-skeleton-pulse 2.4s ease-in-out infinite;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 0 28px rgba(14, 165, 233, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .hireveri-skeleton::after {
@@ -154,7 +153,7 @@ a {
   position: absolute;
   inset: 0;
   transform: translateX(-120%);
-  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.16), transparent);
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.12), transparent);
   animation: hireveri-skeleton-shimmer 2.6s ease-in-out infinite;
 }
 
