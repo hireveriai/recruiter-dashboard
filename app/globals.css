@@ -7,7 +7,7 @@
   --hv-loader-scan-duration: 5.8s;
   --hv-loader-pulse-duration: 2.8s;
   --hv-loader-transition-duration: 320ms;
-  --hv-loader-glow-opacity: 0.06;
+  --hv-loader-glow-opacity: 0.14;
 }
 
 @theme inline {
