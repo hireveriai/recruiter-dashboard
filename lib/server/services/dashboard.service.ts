@@ -290,7 +290,10 @@ export async function getCandidatesDashboard(
         : row.final_score === null || row.final_score === undefined
           ? calculatedResult.score
         : Number(row.final_score)
-    const aiSummaryFull = hasEvaluation ? row.ai_summary ?? buildAnswerFallbackSummary(answerSummaries) : null
+    const generatedRecruiterBrief = buildAnswerFallbackSummary(answerSummaries)
+    const aiSummaryFull = hasEvaluation
+      ? [row.ai_summary, generatedRecruiterBrief].filter(Boolean).join("\n\n") || null
+      : null
 
     return {
       candidateId: row.candidate_id,

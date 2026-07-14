@@ -904,7 +904,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       recordingUrl: recording?.recordingId ? `/recordings/${encodeURIComponent(recording.recordingId)}` : null,
       recordingStatus: recording?.recordingStatus ?? null,
       hasRecording: Boolean(recording?.recordingId && recording?.mediaUrl),
-      aiSummary: evaluation?.aiSummary ?? buildAnswerFallbackSummary(answerSummaries),
+      aiSummary: [evaluation?.aiSummary, buildAnswerFallbackSummary(answerSummaries)].filter(Boolean).join("\n\n") || null,
       answerSummaries,
       detailsLoaded: options.includeAnswers !== false,
       createdAt: interview.createdAt,

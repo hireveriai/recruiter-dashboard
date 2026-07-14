@@ -258,23 +258,32 @@ export function buildAnswerFallbackSummary(rows: InterviewAnswerSummary[]) {
     return null
   }
 
-  const scoredRows = rows
-    .map((row) => row.score)
-    .filter((score) => score !== null && score !== undefined)
-    .map((score) => toPercentScore(Number(score)))
-  const averageScore =
-    scoredRows.length > 0
-      ? Math.round(scoredRows.reduce((total, score) => total + Number(score), 0) / scoredRows.length)
-      : null
   const answeredCount = rows.filter((row) => row.answerText && row.answerText !== "No response provided.").length
   const result = deriveResultFromAnswerSummaries(rows)
+  const metrics = ["skill", "clarity", "depth", "confidence"] as const
+  const averageMetrics = metrics.map((metric) => ({
+    metric,
+    score: Math.round(rows.reduce((total, row) => total + getAnswerMetricPercent(row, metric), 0) / rows.length),
+  }))
+  const strengths = averageMetrics.filter((item) => item.score >= 70).sort((left, right) => right.score - left.score)
+  const gaps = averageMetrics.filter((item) => item.score < 65).sort((left, right) => left.score - right.score)
+  const highestFraudScore = Math.round(Math.max(...rows.map((row) => getAnswerMetricPercent(row, "fraud"))))
+  const label = (metric: (typeof metrics)[number]) => ({ skill: "role knowledge", clarity: "communication clarity", depth: "depth of reasoning", confidence: "confidence" })[metric]
+  const recruiterNextStep = highestFraudScore >= 70
+    ? "Pause the hiring decision and validate flagged responses against the recording and follow-up questions."
+    : result.decision === "HIRE"
+      ? "Proceed to the next hiring stage while validating role-specific examples in the final discussion."
+      : result.decision === "REVIEW"
+        ? "Use a focused follow-up round to test the identified gaps before making a hiring decision."
+        : "Do not progress without a targeted reassessment of the identified skill and reasoning gaps."
 
   return [
-    `Transcript captured ${rows.length} question${rows.length === 1 ? "" : "s"} with ${answeredCount} substantive answer${answeredCount === 1 ? "" : "s"}.`,
-    averageScore !== null ? `Average raw answer score from AI evaluation rows: ${averageScore}%.` : null,
-    result.score !== null ? `Final calculated result: ${result.score}% (${result.decision}).` : null,
-    "Review the transcript and per-answer AI feedback below for the detailed result.",
-  ].filter(Boolean).join("\n")
+    `AI assessment covered ${rows.length} question${rows.length === 1 ? "" : "s"}, with ${answeredCount} substantive answer${answeredCount === 1 ? "" : "s"}. Overall result: ${result.score ?? "not available"}${result.score !== null ? `% (${result.decision})` : ""}.`,
+    strengths.length > 0 ? `Candidate strengths: ${strengths.map((item) => `${label(item.metric)} (${item.score}%)`).join(", ")}.` : "Candidate strengths: no consistently strong dimension was identified across the recorded answers.",
+    gaps.length > 0 ? `Development gaps: ${gaps.map((item) => `${label(item.metric)} (${item.score}%)`).join(", ")}.` : "Development gaps: no material gap was identified from the available answer-level AI results.",
+    `Integrity signal: ${highestFraudScore >= 70 ? "high review flag" : highestFraudScore >= 45 ? "moderate review flag" : "low review flag"} (${highestFraudScore}%).`,
+    `Recruiter suggestion: ${recruiterNextStep}`,
+  ].join("\n\n")
 }
 
 export async function fetchAnswerSummaries(attemptIds: string[]) {
