@@ -247,13 +247,6 @@ function CompletedCandidateDetails({ candidate, onClose }) {
             </div>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Summary</p>
-            <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-300">
-              {candidate.aiSummaryFull || "No VERIS summary has been recorded for this completed interview yet. Review the transcript below for recorded answers and evaluation details."}
-            </div>
-          </div>
-
           <div className="mt-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -336,6 +329,14 @@ function CompletedCandidateDetails({ candidate, onClose }) {
                 })}
               </div>
             )}
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5">
+            <p className="text-xs uppercase tracking-[0.24em] text-emerald-200/80">Overall Interview Summary</p>
+            <p className="mt-2 text-sm text-slate-400">Final VERIS assessment across all recorded answers.</p>
+            <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-200">
+              {candidate.aiSummaryFull || "No overall VERIS summary has been recorded for this completed interview yet. Review the question-by-question transcript and evaluations above."}
+            </div>
           </div>
         </div>
     </div>
