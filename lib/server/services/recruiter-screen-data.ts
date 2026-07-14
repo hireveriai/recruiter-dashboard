@@ -33,6 +33,7 @@ type JobRow = {
   difficultyProfile: string
   interviewDurationMinutes: number | null
   questionTypeDefault: string | null
+  deviceRequirement: string | null
   coreSkills: string[] | null
   codingRequired: string | null
   codingAssessmentType: string | null
@@ -121,6 +122,7 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
       jp.difficulty_profile::text as "difficultyProfile",
       jp.interview_duration_minutes as "interviewDurationMinutes",
       ${hasQuestionTypeDefault ? Prisma.sql`jp.question_type_default::text` : Prisma.sql`'AUTO'`} as "questionTypeDefault",
+      coalesce(jp.device_requirement, 'ANY_DEVICE') as "deviceRequirement",
       jp.core_skills as "coreSkills",
       ${hasCodingConfig ? Prisma.sql`jp.coding_required::text` : Prisma.sql`null`} as "codingRequired",
       ${hasCodingConfig ? Prisma.sql`jp.coding_assessment_type::text` : Prisma.sql`null`} as "codingAssessmentType",
@@ -157,6 +159,7 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
       difficultyProfile: row.difficultyProfile,
       interviewDurationMinutes: row.interviewDurationMinutes,
       questionTypeDefault: row.questionTypeDefault ?? "AUTO",
+      deviceRequirement: row.deviceRequirement ?? "ANY_DEVICE",
       coreSkills: row.coreSkills ?? [],
       codingRequired: row.codingRequired,
       codingAssessmentType: row.codingAssessmentType,

@@ -15,6 +15,8 @@ const questionTypeControl = z
   ])
   .default("AUTO")
 
+const deviceRequirement = z.enum(["DESKTOP_ONLY", "MOBILE_ONLY", "ANY_DEVICE"]).default("ANY_DEVICE")
+
 export const createJobSchema = z.object({
   organization_id: uuidField.optional(),
   job_title: z.string().trim().min(1),
@@ -24,6 +26,7 @@ export const createJobSchema = z.object({
   difficulty_profile: z.enum(["JUNIOR", "MID", "SENIOR"]).default("MID"),
   interview_duration_minutes: z.union([z.literal(30), z.literal(45), z.literal(60)]).default(30),
   question_type_default: questionTypeControl,
+  device_requirement: deviceRequirement,
   coding_required: z.enum(["NO", "YES", "AUTO"]).default("AUTO"),
   coding_assessment_type: z
     .enum(["LIVE_CODING", "DEBUGGING", "SQL", "BACKEND_LOGIC", "DSA"])
@@ -50,6 +53,7 @@ export const updateJobSchema = z.object({
   difficulty_profile: z.enum(["JUNIOR", "MID", "SENIOR"]).default("MID"),
   interview_duration_minutes: z.union([z.literal(30), z.literal(45), z.literal(60)]).default(30),
   question_type_default: questionTypeControl,
+  device_requirement: deviceRequirement,
   coding_required: z.enum(["NO", "YES", "AUTO"]).default("AUTO"),
   coding_assessment_type: z
     .enum(["LIVE_CODING", "DEBUGGING", "SQL", "BACKEND_LOGIC", "DSA"])

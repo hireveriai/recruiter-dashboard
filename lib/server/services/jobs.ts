@@ -62,6 +62,12 @@ export async function createJob(input: CreateJobInput) {
       `)
     }
 
+    await prisma.$executeRaw(Prisma.sql`
+      update public.job_positions
+      set device_requirement = ${input.device_requirement}
+      where job_id = ${job.job_id}::uuid
+    `)
+
     return { job_id: job.job_id }
   } catch (error) {
     throw toFunctionApiError(error, {
@@ -201,6 +207,13 @@ export async function updateJob(input: UpdateJobInput) {
           and organization_id = ${input.organization_id}::uuid
       `)
     }
+
+    await prisma.$executeRaw(Prisma.sql`
+      update public.job_positions
+      set device_requirement = ${input.device_requirement}
+      where job_id = ${input.job_id}::uuid
+        and organization_id = ${input.organization_id}::uuid
+    `)
 
     if (await jobPositionsSupportIsActive()) {
       await prisma.$executeRaw(Prisma.sql`

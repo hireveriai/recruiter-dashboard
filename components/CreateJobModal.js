@@ -45,6 +45,7 @@ function createDefaultForm() {
     core_skills: "",
     interview_duration_minutes: 30,
     question_type_default: "AUTO",
+    device_requirement: "ANY_DEVICE",
     coding_required: "NO",
     coding_assessment_type: "",
     coding_difficulty: "MEDIUM",
@@ -72,6 +73,7 @@ function mapJobToForm(job) {
     ),
     question_type_default:
       job.questionTypeDefault ?? job.question_type_default ?? "AUTO",
+    device_requirement: job.deviceRequirement ?? job.device_requirement ?? "ANY_DEVICE",
     coding_required: job.codingRequired ?? job.coding_required ?? "NO",
     coding_assessment_type: job.codingAssessmentType ?? job.coding_assessment_type ?? "",
     coding_difficulty: job.codingDifficulty ?? job.coding_difficulty ?? "MEDIUM",
@@ -209,6 +211,7 @@ export default function CreateJobModal({
         ...form,
         experience_level_id: Number(form.experience_level_id),
         interview_duration_minutes: Number(form.interview_duration_minutes),
+        device_requirement: form.device_requirement,
         coding_assessment_type: form.coding_assessment_type || null,
         coding_difficulty: form.coding_difficulty || null,
         coding_duration_minutes:
@@ -398,6 +401,20 @@ export default function CreateJobModal({
 
               <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100">
                 Every interview link created for this job will inherit the same interview duration.
+              </div>
+
+              <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
+                <p className="text-sm font-medium text-white">Allowed Devices</p>
+                <p className="mt-1 text-sm text-slate-400">Choose the devices candidates can use for this interview. General screening defaults to laptop, desktop, or mobile.</p>
+                <select
+                  value={form.device_requirement}
+                  onChange={(e) => handleChange("device_requirement", e.target.value)}
+                  className="mt-4 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                >
+                  <option value="ANY_DEVICE">Laptop/Desktop or Mobile (Default)</option>
+                  <option value="DESKTOP_ONLY">Laptop/Desktop Only (Recommended for technical roles)</option>
+                  <option value="MOBILE_ONLY">Mobile Only</option>
+                </select>
               </div>
 
               <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
