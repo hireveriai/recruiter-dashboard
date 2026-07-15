@@ -451,7 +451,7 @@ export default function CandidatesPage() {
       const status = String(candidate.status ?? "").toUpperCase()
       const jobTitle = String(candidate.jobTitle ?? "")
       const hiringAction = getHiringActionValue(candidate)
-      const scoreBand = getScoreBand(candidate.score)
+      const scoreBand = getScoreBand(candidate.verisScreeningScore)
       const searchable = [
         candidate.candidateName,
         candidate.jobTitle,
@@ -597,11 +597,11 @@ export default function CandidatesPage() {
                 options={[{ value: "ALL", label: "All Actions" }, ...filterOptions.decisions.map((value) => ({ value, label: formatHiringActionText(value) }))]}
               />
               <FilterSelect
-                label="VERIS Score"
+                label="VERIS Screening Score"
                 value={scoreFilter}
                 onChange={setScoreFilter}
                 options={[
-                  { value: "ALL", label: "All VERIS Scores" },
+                  { value: "ALL", label: "All VERIS Screening Scores" },
                   { value: "HIGH", label: "80%+" },
                   { value: "MEDIUM", label: "60-79%" },
                   { value: "LOW", label: "Below 60%" },
@@ -632,7 +632,7 @@ export default function CandidatesPage() {
                     <th className="p-5 text-left font-medium">Candidate</th>
                     <th className="p-5 text-left font-medium">Job</th>
                     <th className="p-5 text-left font-medium">Status</th>
-                    <th className="whitespace-nowrap p-5 text-left font-medium">VERIS Score</th>
+                    <th className="whitespace-nowrap p-5 text-left font-medium">VERIS Screening Score</th>
                     <th className="p-5 text-left font-medium">Hiring Action</th>
                   </tr>
                 </thead>
@@ -684,7 +684,7 @@ export default function CandidatesPage() {
                             {formatStatusText(candidate.status)}
                           </span>
                         </td>
-                        <td className={`p-5 font-medium ${getScoreColor(candidate.score ?? candidate.verisScreeningScore)}`}>{formatScore(candidate.score ?? candidate.verisScreeningScore)}</td>
+                        <td className={`p-5 font-medium ${getScoreColor(candidate.verisScreeningScore)}`}>{formatScore(candidate.verisScreeningScore)}</td>
                         <td className="p-5">
                           <div className="flex flex-wrap items-center gap-2">
                             {isDecisionReady(candidate) ? (

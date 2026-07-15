@@ -46,7 +46,9 @@ type ReviewPayload = {
     endedAt: string | null
     createdAt: string | null
     transcript: string | null
+    transcriptStatus: string | null
     mediaUrl: string
+    durationMs: number | null
   }
   timeline: TimelineItem[]
   signals: SignalItem[]
@@ -59,7 +61,7 @@ type ReviewPayload = {
 }
 
 function formatTime(ms: number) {
-  const safeMs = Math.max(0, Math.round(ms || 0))
+  const safeMs = Number.isFinite(ms) ? Math.max(0, Math.round(ms)) : 0
   const totalSeconds = Math.floor(safeMs / 1000)
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
@@ -169,14 +171,19 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
     return data.timeline.find((item) => item.id === activeId) ?? data.timeline[0] ?? null
   }, [activeId, data])
 
+  const fallbackDurationMs = data?.recording.durationMs ?? 0
   const durationMs = Math.max(
     1,
     videoDurationMs,
+    fallbackDurationMs,
     ...(data?.timeline.map((item) => item.offsetMs) ?? [0]),
     ...(data?.signals.map((item) => item.offsetMs) ?? [0]),
   )
 
   const mergedTranscript = data ? getMergedTranscript(data.timeline, data.recording.transcript) : ""
+  const transcriptNeedsReview = !data?.recording.transcript?.trim() &&
+    data?.timeline.every((item) => !item.answer.trim()) &&
+    ["PARTIAL", "PENDING", "FAILED"].includes(data?.recording.transcriptStatus?.toUpperCase() ?? "PENDING")
   const mediaUrl = data
     ? `${data.recording.mediaUrl}${typeof window !== "undefined" ? window.location.search : ""}`
     : ""
@@ -215,6 +222,14 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
 
     video.currentTime = Math.max(0, nextMs / 1000)
     setCurrentTimeMs(Math.max(0, Math.round(nextMs)))
+  }
+
+  function updateVideoDuration(video: HTMLVideoElement) {
+    const durationSeconds = video.duration
+
+    if (Number.isFinite(durationSeconds) && durationSeconds > 0) {
+      setVideoDurationMs(Math.round(durationSeconds * 1000))
+    }
   }
 
   if (error) {
@@ -276,6 +291,20 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
         </div>
       </section>
 
+      {transcriptNeedsReview ? (
+        <section className="mx-auto max-w-[1500px] px-4 pt-5 sm:px-6 lg:px-8">
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-amber-100">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-semibold">Transcript recovery required</p>
+              <p className="mt-1 text-sm leading-6 text-amber-100/75">
+                The video is available, but no candidate speech was captured by live transcription. This interview has been flagged for recording-based recovery.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="mx-auto grid max-w-[1500px] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(390px,0.75fr)] lg:px-8">
         <div className="min-w-0">
           <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-slate-800 bg-[#0f172a] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -320,8 +349,9 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
               onTimeUpdate={(event) => setCurrentTimeMs(Math.round(event.currentTarget.currentTime * 1000))}
               onLoadedMetadata={(event) => {
                 setCurrentTimeMs(Math.round(event.currentTarget.currentTime * 1000))
-                setVideoDurationMs(Math.round((event.currentTarget.duration || 0) * 1000))
+                updateVideoDuration(event.currentTarget)
               }}
+              onDurationChange={(event) => updateVideoDuration(event.currentTarget)}
             />
             <div className="flex flex-col gap-3 border-t border-slate-800 bg-slate-950 px-4 py-3 sm:flex-row sm:items-center">
               <button
@@ -335,14 +365,14 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
               <input
                 type="range"
                 min={0}
-                max={Math.max(videoDurationMs, currentTimeMs, 1)}
-                value={Math.min(currentTimeMs, Math.max(videoDurationMs, currentTimeMs, 1))}
+                max={Math.max(videoDurationMs, fallbackDurationMs, currentTimeMs, 1)}
+                value={Math.min(currentTimeMs, Math.max(videoDurationMs, fallbackDurationMs, currentTimeMs, 1))}
                 onChange={(event) => seekFromRange(event.target.value)}
                 className="h-2 min-w-0 flex-1 accent-cyan-300"
                 aria-label="Recording playback position"
               />
               <p className="shrink-0 font-mono text-xs text-slate-400">
-                {formatTime(currentTimeMs)} / {formatTime(videoDurationMs)}
+                {formatTime(currentTimeMs)} / {formatTime(videoDurationMs || fallbackDurationMs)}
               </p>
             </div>
           </div>

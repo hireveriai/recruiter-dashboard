@@ -25,6 +25,10 @@ type CandidateScreenOptions = {
   includeAnswerSummaries?: boolean
 }
 
+type CandidateScreenItem = {
+  status?: string | null
+}
+
 type JobRow = {
   jobId: string
   jobTitle: string
@@ -59,14 +63,21 @@ export async function getCandidatesScreenData(
   await finalizeStaleInterviewAttempts(auth.organizationId)
 
   if (options.includeAnswerSummaries) {
-    return getCandidatesDashboard({
+    const candidates = await getCandidatesDashboard({
       organizationId: auth.organizationId,
       limit,
       includeAnswerSummaries: true,
     })
+
+    return candidates.filter((candidate) => !isExpiredCandidateInvite(candidate))
   }
 
-  return getFastDashboardCandidates(auth.organizationId, limit === "all" ? 20 : limit)
+  const candidates = await getFastDashboardCandidates(auth.organizationId, limit)
+  return candidates.filter((candidate) => !isExpiredCandidateInvite(candidate))
+}
+
+function isExpiredCandidateInvite(candidate: CandidateScreenItem) {
+  return String(candidate.status ?? "").trim().toUpperCase() === "EXPIRED"
 }
 
 export async function getReportsScreenData(auth: RecruiterRequestContext) {

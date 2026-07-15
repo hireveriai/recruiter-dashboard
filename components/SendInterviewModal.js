@@ -893,7 +893,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
               ) : null}
 
               <div className="space-y-4">
-                <div className="w-full sm:w-4/5 md:w-3/5 lg:max-w-[420px]">
+                <div className="w-full">
                   <label className="text-sm text-gray-400">Select Job *</label>
                   <select
                     className="mt-1.5 w-full truncate rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"

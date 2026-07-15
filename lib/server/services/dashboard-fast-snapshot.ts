@@ -109,8 +109,8 @@ function deriveRiskLevel(row: FastVerisRow, score: number | null) {
   return "LOW"
 }
 
-export async function getFastDashboardCandidates(organizationId: string, limit = 5) {
-  const safeLimit = Math.max(1, Math.min(Math.trunc(limit) || 5, 20))
+export async function getFastDashboardCandidates(organizationId: string, limit: number | "all" = 5) {
+  const safeLimit = limit === "all" ? null : Math.max(1, Math.min(Math.trunc(limit) || 5, 20))
   const rows = await prisma.$queryRaw<FastCandidateRow[]>(Prisma.sql`
     select
       c.candidate_id::text as candidate_id,
@@ -122,6 +122,7 @@ export async function getFastDashboardCandidates(organizationId: string, limit =
         when i.interview_id is null and sm.id is not null then 'SCREENED'
         when upper(coalesce(i.status, la.status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED') or la.ended_at is not null then 'COMPLETED'
         when la.attempt_id is not null and la.ended_at is null then 'IN_PROGRESS'
+        when li.invite_id is not null and li.used_at is null and li.expires_at is not null and li.expires_at <= now() then 'EXPIRED'
         when li.invite_id is not null then 'INVITED'
         else coalesce(nullif(upper(c.status), ''), 'PENDING')
       end as status,
@@ -218,38 +219,40 @@ export async function getFastDashboardCandidates(organizationId: string, limit =
       and (rd.interview_id = i.interview_id or (rd.interview_id is null and i.interview_id is null))
     where c.organization_id = ${organizationId}::uuid
     order by coalesce(i.created_at, sm.created_at, c.created_at) desc
-    limit ${safeLimit}
+    ${safeLimit ? Prisma.sql`limit ${safeLimit}` : Prisma.empty}
   `).catch(() => [] as FastCandidateRow[])
 
-  return rows.map((row) => {
-    const status = normalizeStatus(row.status)
-    const interviewCompleted = Boolean(row.ended_at || ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(status))
+  return rows
+    .map((row) => {
+      const status = normalizeStatus(row.status)
+      const interviewCompleted = Boolean(row.ended_at || ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(status))
 
-    return {
-      candidateId: row.candidate_id,
-      interviewId: row.interview_id,
-      attemptId: row.attempt_id,
-      candidateName: row.candidate_name || "Candidate",
-      jobTitle: row.job_title || "-",
-      status,
-      score: toNumberOrNull(row.score ?? row.fallback_score),
-      verisScreeningScore: toNumberOrNull(row.veris_screening_score),
-      aiSummaryShort: interviewCompleted ? shortText(row.ai_summary) : "-",
-      aiSummaryFull: interviewCompleted ? row.ai_summary : null,
-      decision: interviewCompleted ? row.decision : null,
-      recruiterDecisionStatus: row.recruiter_decision_status,
-      recruiterDecisionAt: row.recruiter_decision_at,
-      recruiterDecisionNotes: row.recruiter_decision_notes,
-      accessType: row.access_type ?? "FLEXIBLE",
-      startTime: row.start_time,
-      endTime: row.end_time,
-      expiresAt: row.expires_at,
-      startedAt: row.started_at,
-      endedAt: row.ended_at,
-      createdAt: row.created_at,
-      answerSummaries: [],
-    }
-  })
+      return {
+        candidateId: row.candidate_id,
+        interviewId: row.interview_id,
+        attemptId: row.attempt_id,
+        candidateName: row.candidate_name || "Candidate",
+        jobTitle: row.job_title || "-",
+        status,
+        score: toNumberOrNull(row.score ?? row.fallback_score),
+        verisScreeningScore: toNumberOrNull(row.veris_screening_score),
+        aiSummaryShort: interviewCompleted ? shortText(row.ai_summary) : "-",
+        aiSummaryFull: interviewCompleted ? row.ai_summary : null,
+        decision: interviewCompleted ? row.decision : null,
+        recruiterDecisionStatus: row.recruiter_decision_status,
+        recruiterDecisionAt: row.recruiter_decision_at,
+        recruiterDecisionNotes: row.recruiter_decision_notes,
+        accessType: row.access_type ?? "FLEXIBLE",
+        startTime: row.start_time,
+        endTime: row.end_time,
+        expiresAt: row.expires_at,
+        startedAt: row.started_at,
+        endedAt: row.ended_at,
+        createdAt: row.created_at,
+        answerSummaries: [],
+      }
+    })
+    .filter((candidate) => normalizeStatus(candidate.status) !== "EXPIRED")
 }
 
 export async function getFastVerisSummaryCards(organizationId: string, limit = 4) {

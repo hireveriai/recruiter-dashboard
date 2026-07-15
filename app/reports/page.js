@@ -58,6 +58,54 @@ function getRecommendationClass(recommendation) {
   return "border-rose-500/30 bg-rose-500/12 text-rose-200"
 }
 
+function getStageAccent(stageKey) {
+  const normalized = String(stageKey ?? "").toLowerCase()
+
+  if (normalized.includes("started")) {
+    return { color: "#38bdf8", text: "text-sky-200", glow: "rgba(56,189,248,0.28)" }
+  }
+
+  if (normalized.includes("completed")) {
+    return { color: "#34d399", text: "text-emerald-200", glow: "rgba(52,211,153,0.26)" }
+  }
+
+  if (normalized.includes("flagged")) {
+    return { color: "#fb7185", text: "text-rose-200", glow: "rgba(251,113,133,0.25)" }
+  }
+
+  if (normalized.includes("selected")) {
+    return { color: "#a78bfa", text: "text-violet-200", glow: "rgba(167,139,250,0.26)" }
+  }
+
+  return { color: "#22d3ee", text: "text-cyan-200", glow: "rgba(34,211,238,0.28)" }
+}
+
+function StageConversionDonut({ stage }) {
+  const conversion = Math.max(0, Math.min(100, Number(stage.conversionRate || 0)))
+  const accent = getStageAccent(stage.key || stage.label)
+  const degrees = conversion * 3.6
+  const centerLabel = `${Math.round(conversion)}%`
+
+  return (
+    <div
+      aria-label={`${stage.label} conversion ${formatPercent(conversion)}`}
+      className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-slate-700/70"
+      role="img"
+      style={{
+        background: `conic-gradient(${accent.color} 0deg ${degrees}deg, rgba(30,41,59,0.95) ${degrees}deg 360deg)`,
+        boxShadow: `0 0 26px ${accent.glow}, inset 0 0 20px rgba(2,6,23,0.72)`,
+      }}
+    >
+      <div className="absolute inset-2.5 rounded-full border border-slate-800 bg-slate-950" />
+      <div className="absolute inset-5 rounded-full border border-slate-800/80 bg-[#08111f]" />
+      <div className="relative text-center">
+        <p className="text-lg font-semibold text-white">{centerLabel}</p>
+        <p className={`mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] ${accent.text}`}>Conv.</p>
+      </div>
+    </div>
+  )
+}
+
 function ExpandableSection({ title, subtitle, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen)
 
@@ -252,23 +300,15 @@ export default function ReportsPage() {
                   <div className="grid gap-4">
                     {report.interviewFunnel.stages.map((stage) => (
                       <div key={stage.key} className="rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
                           <div>
                             <p className="text-sm font-medium text-white">{stage.label}</p>
                             <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">Stage Count</p>
+                            <p className="mt-3 text-3xl font-semibold text-white">{stage.count}</p>
+                            <p className="mt-2 text-xs text-slate-400">Drop-off at this stage: {formatPercent(stage.dropOffRate)}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-semibold text-white">{stage.count}</p>
-                            <p className="text-xs text-slate-400">Conversion {formatPercent(stage.conversionRate)}</p>
-                          </div>
+                          <StageConversionDonut stage={stage} />
                         </div>
-                        <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-900">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500"
-                            style={{ width: `${Math.max(stage.conversionRate, 6)}%` }}
-                          />
-                        </div>
-                        <p className="mt-3 text-xs text-slate-400">Drop-off at this stage: {formatPercent(stage.dropOffRate)}</p>
                       </div>
                     ))}
                   </div>

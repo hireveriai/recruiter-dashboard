@@ -127,42 +127,80 @@ function CreditUsageCard({
   title,
   total,
   used,
+  accent = "blue",
 }: {
   title: string
   total: number
   used: number
+  accent?: "blue" | "cyan"
 }) {
   const safeTotal = Math.max(0, Number(total || 0))
   const safeUsed = Math.min(safeTotal, Math.max(0, Number(used || 0)))
   const remaining = Math.max(0, safeTotal - safeUsed)
   const percentage = safeTotal > 0 ? Math.round((safeUsed / safeTotal) * 100) : 0
+  const usedDegrees = percentage * 3.6
+  const accentColor = accent === "cyan" ? "#22d3ee" : "#3b82f6"
+  const accentGlow = accent === "cyan" ? "rgba(34,211,238,0.28)" : "rgba(59,130,246,0.28)"
+  const accentText = accent === "cyan" ? "text-cyan-200" : "text-blue-200"
+  const accentBorder = accent === "cyan" ? "border-cyan-300/20" : "border-blue-300/20"
+  const accentBg = accent === "cyan" ? "bg-cyan-400/10" : "bg-blue-500/10"
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
-      <div className="flex items-start justify-between gap-4">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
+      <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.08),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.08),transparent_38%)]" />
+      <div className="relative flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-white">{title}</p>
           <p className="mt-1 text-xs text-slate-500">Purchased, used, and remaining credits</p>
         </div>
-        <span className="rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-semibold text-slate-300">
+        <span className={`rounded-full border ${accentBorder} ${accentBg} px-2.5 py-1 text-xs font-semibold ${accentText}`}>
           {percentage}% used
         </span>
       </div>
-      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full rounded-full bg-blue-500" style={{ width: `${percentage}%` }} />
-      </div>
-      <div className="mt-5 grid grid-cols-3 gap-3 text-sm">
-        <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Purchased</p>
-          <p className="mt-2 text-xl font-semibold text-white">{safeTotal}</p>
+
+      <div className="relative mt-5 grid gap-5 sm:grid-cols-[148px_1fr] sm:items-center">
+        <div
+          aria-label={`${title}: ${percentage}% used`}
+          className="relative mx-auto flex h-36 w-36 items-center justify-center rounded-full border border-slate-700/80 shadow-[0_0_34px_rgba(15,23,42,0.7)] sm:mx-0"
+          role="img"
+          style={{
+            background: `conic-gradient(${accentColor} 0deg ${usedDegrees}deg, rgba(30,41,59,0.95) ${usedDegrees}deg 360deg)`,
+            boxShadow: `0 0 34px ${accentGlow}, inset 0 0 24px rgba(2,6,23,0.7)`,
+          }}
+        >
+          <div className="absolute inset-3 rounded-full border border-slate-800 bg-slate-950" />
+          <div className="absolute inset-6 rounded-full border border-slate-800/80 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.08),transparent_42%),#08111f]" />
+          <div className="relative text-center">
+            <p className="text-3xl font-semibold tracking-tight text-white">{percentage}%</p>
+            <p className={`mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${accentText}`}>Used</p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Used</p>
-          <p className="mt-2 text-xl font-semibold text-white">{safeUsed}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Remaining</p>
-          <p className="mt-2 text-xl font-semibold text-white">{remaining}</p>
+
+        <div className="min-w-0">
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            <div>
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Purchased</p>
+              <p className="mt-2 text-xl font-semibold text-white">{safeTotal}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Used</p>
+              <p className="mt-2 text-xl font-semibold text-white">{safeUsed}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Remaining</p>
+              <p className="mt-2 text-xl font-semibold text-white">{remaining}</p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: accentColor }} />
+              <span>Used credits</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-700" />
+              <span>Remaining credits</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -433,11 +471,13 @@ export default function BillingPage() {
               title="Interview Credits"
               total={activeSubscription?.totalCredits ?? 0}
               used={activeSubscription?.usedCredits ?? 0}
+              accent="blue"
             />
             <CreditUsageCard
               title="VERIS Screening Credits"
               total={activeSubscription?.screeningCredits ?? 0}
               used={activeSubscription?.usedScreeningCredits ?? 0}
+              accent="cyan"
             />
           </section>
 

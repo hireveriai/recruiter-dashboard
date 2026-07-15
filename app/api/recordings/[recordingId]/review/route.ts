@@ -16,6 +16,7 @@ type RecordingRow = {
   ended_at: string | null
   created_at: string | null
   transcript: string | null
+  transcript_status: string | null
 }
 
 type TimelineRow = {
@@ -207,7 +208,8 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
         ir.started_at::text,
         ir.ended_at::text,
         ir.created_at::text,
-        ir.transcript
+        ir.transcript,
+        ia.transcript_status
       from public.interview_recordings ir
       left join public.interview_attempts ia
         on ia.attempt_id = ir.attempt_id
@@ -328,7 +330,15 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
         endedAt: recording.ended_at,
         createdAt: recording.created_at,
         transcript: recording.transcript,
+        transcriptStatus: recording.transcript_status,
         mediaUrl: `/api/recordings/${encodeURIComponent(recording.recording_id)}`,
+        durationMs: (() => {
+          const startedAt = recording.started_at ? new Date(recording.started_at).getTime() : Number.NaN
+          const endedAt = recording.ended_at ? new Date(recording.ended_at).getTime() : Number.NaN
+          return Number.isFinite(startedAt) && Number.isFinite(endedAt) && endedAt > startedAt
+            ? endedAt - startedAt
+            : null
+        })(),
       },
       timeline,
       signals,

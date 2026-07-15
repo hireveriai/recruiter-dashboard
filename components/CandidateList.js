@@ -223,7 +223,7 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
                 <th className="px-4 py-4 text-left align-middle">Candidate</th>
                 <th className="px-4 py-4 text-left align-middle">Job</th>
                 <th className="px-4 py-4 text-left align-middle">Status</th>
-                <th className="whitespace-nowrap px-4 py-4 text-left align-middle">VERIS Score</th>
+                <th className="whitespace-nowrap px-4 py-4 text-left align-middle">VERIS Screening Score</th>
                 <th className="px-4 py-4 text-left align-middle">Action</th>
               </tr>
             </thead>
@@ -256,8 +256,8 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
                     </td>
                     <td className="px-4 py-4 align-middle text-gray-300"><span className="block truncate">{candidate.jobTitle}</span></td>
                     <td className={`px-4 py-4 align-middle ${getStatusColor(candidate.status)}`}><span className="block truncate">{formatStatusLabel(candidate.status)}</span></td>
-                    <td className={`px-4 py-4 align-middle ${getScoreColor(candidate.score ?? candidate.verisScreeningScore)}`}>
-                      {formatScore(candidate.score ?? candidate.verisScreeningScore)}
+                    <td className={`px-4 py-4 align-middle ${getScoreColor(candidate.verisScreeningScore)}`}>
+                      {formatScore(candidate.verisScreeningScore)}
                     </td>
                     <td className="px-4 py-4 align-middle">
                       {candidate.interviewId && isDecisionReady(candidate) ? (
