@@ -302,7 +302,7 @@ export default function CognitiveDock({
         id: "report-overview",
         type: "Report",
         title: "Reports Snapshot",
-        meta: "Open forensic analytics and decision trends",
+        meta: "Open evidence analytics and decision trends",
         href: pageHref("/reports"),
         icon: BarChart3,
       } as SearchItem] : []),
@@ -477,7 +477,7 @@ export default function CognitiveDock({
         animate={{ opacity: 1, x: 0, scale: 1 }}
         transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
         className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 md:bottom-auto md:left-4 md:top-[calc(50%+44px)] md:-translate-x-0 md:-translate-y-1/2 lg:left-5 xl:left-6"
-        aria-label="Cognitive Operations Dock"
+        aria-label="Interview Operations Dock"
       >
         <div className="relative rounded-[32px] border border-white/5 bg-[#081120]/55 p-1.5 shadow-[0_18px_60px_rgba(2,6,23,0.36),0_0_34px_rgba(34,211,238,0.055)] backdrop-blur-2xl">
           <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.01)_38%,transparent),radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.105),transparent_46%)]" />
@@ -531,7 +531,7 @@ export default function CognitiveDock({
               <div className="relative">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/70">Cognitive Operations</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/70">Interview Operations</p>
                     <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
                   </div>
                   <button

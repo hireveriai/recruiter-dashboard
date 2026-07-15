@@ -312,7 +312,7 @@ export async function sendInterviewEmail({
       "Please complete the interview in a quiet environment with a stable internet connection.",
       "This session may include integrity and behavioral verification monitoring.",
       "",
-      "This interview is conducted through HireVeri's secure cognitive interview infrastructure.",
+      "This interview is conducted through HireVeri's secure structured interview platform.",
     ].filter(Boolean).join("\n"),
     html: `
       <div style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
@@ -387,7 +387,7 @@ export async function sendInterviewEmail({
                         </div>
 
                         <p style="margin:0;font-size:13px;line-height:21px;color:#64748b;">
-                          This interview is conducted through HireVeri's secure cognitive interview infrastructure.
+                          This interview is conducted through HireVeri's secure structured interview platform.
                         </p>
                       </div>
                     </div>

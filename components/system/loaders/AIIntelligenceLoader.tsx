@@ -12,7 +12,7 @@ type AIIntelligenceLoaderProps = {
 const variantCopy: Record<NonNullable<AIIntelligenceLoaderProps["variant"]>, string> = {
   dashboard: "Synchronizing hiring intelligence",
   candidates: "Loading candidate cognition matrix",
-  veris: "Running forensic resume correlation",
+  veris: "Correlating resume and interview evidence",
   interviews: "Building behavioral timeline",
   reports: "Preparing recruiter intelligence analytics",
   default: "Initializing Candidate Intelligence",
@@ -41,7 +41,7 @@ export default function AIIntelligenceLoader({
             {variantCopy[variant]}
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
-            Preparing recruiter telemetry, workflow signals, and cognitive analysis layers.
+            Preparing recruiter telemetry, workflow signals, and competency evidence.
           </p>
           <div className="mt-6 flex max-w-xl items-center gap-2">
             {[0, 1, 2, 3].map((bar) => (

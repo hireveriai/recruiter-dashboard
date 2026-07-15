@@ -26,7 +26,7 @@ export default function IntelligenceStatus({
       pendingText: "Transcript Processing",
     },
     {
-      label: hasRecording ? "Cognitive Timeline Available" : "Cognitive Timeline Pending",
+      label: hasRecording ? "Evidence Timeline Available" : "Evidence Timeline Pending",
       ready: hasRecording,
       pendingText: "Timeline waits for replay evidence",
     },

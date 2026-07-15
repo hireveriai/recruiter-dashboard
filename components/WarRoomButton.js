@@ -26,7 +26,7 @@ export default function WarRoomButton({ organizationId = "" }) {
             <span className="block text-base font-semibold tracking-tight text-white">Open War Room</span>
             <span className="mt-1 flex items-center gap-1.5 text-xs font-medium text-cyan-100/70">
               <Activity className="h-3.5 w-3.5" strokeWidth={1.8} />
-              Deep forensic interview analysis
+              Reviewable interview evidence
             </span>
           </span>
         </span>

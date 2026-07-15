@@ -392,7 +392,7 @@ function PendingInterviewsModal({ isOpen, onClose, interviews, onCopy, onEdit, o
                         ) : null}
                         {canViewWarRoom ? (
                         <button type="button" onClick={() => onViewRecoveryAudit(item)} className="shrink-0 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1.5 text-fuchsia-100 transition hover:bg-fuchsia-500/20">
-                          Forensic Logs
+                          Evidence Logs
                         </button>
                         ) : null}
                       </>
@@ -720,15 +720,15 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
         open: true,
         title: "Interruption Timeline",
         message: events.length
-          ? events.map((event) => `${formatDateTime(event.occurredAt)} - ${event.eventType}: ${event.reason || event.classifier || "Forensic event"}`).join("\n")
+          ? events.map((event) => `${formatDateTime(event.occurredAt)} - ${event.eventType}: ${event.reason || event.classifier || "Review event"}`).join("\n")
           : "No recovery events recorded yet.",
         tone: "success",
       })
     } catch (error) {
       setNotice({
         open: true,
-        title: "Unable to load forensic logs",
-        message: error instanceof Error ? error.message : "Failed to load forensic logs",
+        title: "Unable to load evidence logs",
+        message: error instanceof Error ? error.message : "Failed to load evidence logs",
         tone: "error",
       })
     }
@@ -931,7 +931,7 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
                             ) : null}
                             {canViewWarRoom ? (
                             <button className="shrink-0 text-fuchsia-300" onClick={() => handleViewRecoveryAudit(item)}>
-                              Forensic Logs
+                              Evidence Logs
                             </button>
                             ) : null}
                           </>

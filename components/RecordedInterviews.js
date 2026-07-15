@@ -31,7 +31,7 @@ function RecordedInterviewsModal({ isOpen, onClose, interviews, organizationId, 
 
         <div className="flex items-center justify-between border-b border-white/10 px-8 py-6">
           <div>
-            <h3 className="text-2xl font-semibold text-white">Cognitive Evidence Archive</h3>
+            <h3 className="text-2xl font-semibold text-white">Interview Evidence Archive</h3>
             <p className="mt-2 text-sm text-slate-400">
               Interview replay evidence, audit trail, and behavioral review entry points.
             </p>

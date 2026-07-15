@@ -23,7 +23,7 @@ const defaultStepsByMode = {
     { label: "Records ready", detail: "The table is ready for review." },
   ],
   reports: [
-    { label: "Loading reports", detail: "Fetching hiring analytics and forensic signals." },
+    { label: "Loading reports", detail: "Fetching hiring analytics and review signals." },
     { label: "Reading metrics", detail: "Preparing interview, candidate, and workflow trends." },
     { label: "Building analysis", detail: "Assembling report cards and charts." },
     { label: "Reports ready", detail: "Analytics are ready for review." },

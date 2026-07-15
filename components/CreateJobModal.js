@@ -337,7 +337,7 @@ export default function CreateJobModal({
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm text-slate-300">
                   Define the role, experience band, and evaluation context used to
-                  generate forensic interview workflows.
+                  generate structured interview workflows.
                 </p>
               </div>
               <button

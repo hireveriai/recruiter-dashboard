@@ -10,7 +10,7 @@ import AmbientLoadingProvider from "@/components/system/loading/AmbientLoadingPr
 export const metadata = {
   title: "HireVeri Recruiter Workspace",
   description:
-    "Recruiter control layer for secure interview orchestration, candidate review, and forensic hiring workflows.",
+    "Recruiter workspace for secure interview orchestration, reviewable candidate evidence, and human-controlled hiring decisions.",
   applicationName: "HireVeri Recruiter",
   icons: {
     icon: "/icon.svg",

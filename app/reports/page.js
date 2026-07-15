@@ -209,7 +209,7 @@ export default function ReportsPage() {
           eyebrow="Reports"
           viewportOffset="navbar"
           steps={[
-            { label: "Loading reports", detail: "Fetching hiring analytics and forensic signals." },
+            { label: "Loading reports", detail: "Fetching hiring analytics and review signals." },
             { label: "Reading metrics", detail: "Preparing funnel and risk data." },
             { label: "Building report", detail: "Assembling executive insight sections." },
             { label: "Reports ready", detail: "Recruiter analytics are ready for review." },
@@ -256,7 +256,7 @@ export default function ReportsPage() {
 
         <div className="mt-6 flex items-center justify-between gap-4">
           <p className="text-sm text-slate-400">
-            Enterprise reporting focused on forensic hiring signals and recruiter traceability.
+            Interview reporting focused on reviewable hiring evidence and recruiter traceability.
           </p>
           <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
         </div>
@@ -335,7 +335,7 @@ export default function ReportsPage() {
               </ExpandableSection>
 
               <ExpandableSection
-                title="Cognitive Risk Report"
+                title="Interview Evidence Report"
                 subtitle="A compact readout of confidence, experimental vocal pressure, clarity, suspicion, and behavioral anomaly load."
               >
                 <div className="grid gap-4 lg:grid-cols-5">
@@ -397,7 +397,7 @@ export default function ReportsPage() {
 
               <ExpandableSection
                 title="Integrity Review"
-                subtitle="Forensic visibility across suspicious patterns and signal-feed readiness."
+                subtitle="Evidence visibility across review patterns and signal-feed readiness."
               >
                 <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                   <div className="grid gap-4 md:grid-cols-2">

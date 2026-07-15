@@ -148,7 +148,7 @@ export default function SettingsPage() {
           <p className="mt-6 text-xs uppercase tracking-[0.35em] text-blue-300/80">Organization Settings</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">Timezone</h1>
           <p className="mt-4 max-w-3xl text-base text-slate-300">
-            Every audit trail, interview schedule, report, and forensic timeline should render in one organization timezone.
+            Every audit trail, interview schedule, report, and evidence timeline should render in one organization timezone.
           </p>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">

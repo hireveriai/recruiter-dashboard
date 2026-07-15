@@ -353,8 +353,8 @@ export default function VerisSummary({ initialSummaries, isLoading = false }) {
           <TimelineSkeleton
             messages={[
               "Loading behavioral telemetry...",
-              "Preparing cognitive analysis...",
-              "Building forensic timeline...",
+              "Preparing competency analysis...",
+              "Building evidence timeline...",
             ]}
           />
           <CardSkeleton count={2} className="grid-cols-1" />

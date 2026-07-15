@@ -7,10 +7,10 @@ export default function CognitiveStreamLoader({ steps, compact = false }: Cognit
   const visibleSteps = compact ? steps.slice(0, 4) : steps
 
   return (
-    <div className="relative z-10 space-y-2" aria-label="Cognitive engine progress">
+    <div className="relative z-10 space-y-2" aria-label="Interview intelligence progress">
       <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-100">
         <span className="hv-ai-node h-1.5 w-1.5 rounded-full bg-cyan-300" />
-        Cognitive Engine Active
+        Interview Intelligence Active
       </div>
       {visibleSteps.map((step, index) => {
         const complete = index < 2

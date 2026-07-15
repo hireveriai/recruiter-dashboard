@@ -300,7 +300,7 @@ function buildNarrative(params: {
   const confidenceLabel =
     confidenceScore >= 0.75 ? "high-confidence responses" : confidenceScore >= 0.55 ? "mixed confidence" : "fragile confidence"
   const suspicionLabel =
-    suspicionIndex >= 60 ? "elevated forensic scrutiny" : suspicionIndex >= 35 ? "moderate scrutiny" : "low observed suspicion"
+    suspicionIndex >= 60 ? "elevated evidence review" : suspicionIndex >= 35 ? "moderate evidence review" : "low review priority"
 
   return `Current interviews show ${confidenceLabel}, ${suspicionLabel}, and a clarity index of ${Math.round(clarityIndex * 100)}/100. ${params.behavioralAnomalies} anomaly signal${params.behavioralAnomalies === 1 ? "" : "s"} and ${params.flaggedCandidates} flagged candidate${params.flaggedCandidates === 1 ? "" : "s"} are currently visible from calm-room telemetry.`
 }
@@ -1392,7 +1392,7 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
       {
         label: "Voice Mismatch",
         value: 0,
-        helper: "Coming soon. Voice forensic scoring is not yet wired into recruiter reporting.",
+        helper: "Coming soon. Voice matching is not yet wired into recruiter reporting.",
       },
       {
         label: "Tab Switching",

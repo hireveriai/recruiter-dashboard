@@ -94,7 +94,7 @@ const workflowSteps = [
     id: "review-reports",
     number: 5,
     title: "Review Reports",
-    description: "Review confidence signals, risk indicators, cognitive signals, and recommendations.",
+    description: "Review competency evidence, integrity indicators, and recommendations.",
     cta: "Open Reports",
     theme: "amber",
     href: "/reports",

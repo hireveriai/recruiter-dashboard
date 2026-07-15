@@ -129,7 +129,7 @@ function buildAlert(row: AlertRow): DashboardAlert {
       id: row.alert_id,
       type,
       title: "Interview interrupted",
-      message: `${candidateName} has an interrupted interview. Check recovery and forensic logs.`,
+      message: `${candidateName} has an interrupted interview. Check recovery and evidence logs.`,
       tone: "warning",
       candidateName,
       jobTitle,

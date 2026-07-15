@@ -16,7 +16,7 @@ export default function WarRoomAction({ onOpen, candidateName = "candidate", com
       className={`group/war relative inline-flex w-full min-w-0 transform-gpu items-center justify-between gap-3 overflow-hidden rounded-2xl border border-cyan-300/16 bg-[linear-gradient(135deg,rgba(8,47,73,0.42),rgba(15,23,42,0.72))] text-left text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] transition-all duration-200 hover:-translate-y-px hover:border-cyan-300/30 hover:bg-cyan-500/10 hover:text-white hover:shadow-[0_18px_42px_rgba(2,6,23,0.26),0_0_28px_rgba(34,211,238,0.08)] focus:outline-none focus:ring-2 focus:ring-cyan-300/25 ${
         compact ? "px-4 py-3" : "px-4 py-3.5"
       }`}
-      aria-label={`Open War Room forensic review for ${candidateName}`}
+      aria-label={`Open War Room evidence review for ${candidateName}`}
     >
       <span className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/55 to-transparent opacity-80" />
       <span className="relative z-10 flex min-w-0 items-center gap-3">
