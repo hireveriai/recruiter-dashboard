@@ -5,6 +5,7 @@ import { deriveInterviewStatus } from "@/lib/server/services/interview-status"
 import {
   deriveResultFromAnswerSummaries,
   fetchAnswerSummaries,
+  type InterviewAnswerSummary,
 } from "@/lib/server/services/interview-summary"
 
 type CacheEntry = {
@@ -54,7 +55,7 @@ type RankingRow = {
 type RoleInsightRow = {
   jobId: string
   jobTitle: string
-  averageScore: number
+  averageScore: number | null
   completedInterviews: number
   flaggedInterviews: number
   selectedCandidates: number
@@ -762,6 +763,39 @@ function buildResponseMetricAverages(row: SkillStateRow | undefined) {
   }
 }
 
+function buildAnswerMetricAverages(answers: InterviewAnswerSummary[]) {
+  const metricAverage = (selector: (answer: InterviewAnswerSummary) => number | null) => {
+    const values = answers
+      .map(selector)
+      .filter((value): value is number => value !== null && Number.isFinite(value))
+      .map((value) => Math.max(0, Math.min(1, value > 1 ? value / 100 : value)))
+
+    return averageNullable(values)
+  }
+
+  return {
+    avg_confidence_score: metricAverage((answer) => answer.confidenceScore),
+    avg_clarity_score: metricAverage((answer) => answer.clarityScore),
+    avg_depth_score: metricAverage((answer) => answer.depthScore),
+    avg_fraud_score: metricAverage((answer) => answer.fraudScore),
+  }
+}
+
+function mergeResponseMetricAverages(
+  skillState: SkillStateRow | undefined,
+  answers: InterviewAnswerSummary[]
+) {
+  const current = buildResponseMetricAverages(skillState)
+  const historical = buildAnswerMetricAverages(answers)
+
+  return {
+    avg_confidence_score: current.avg_confidence_score ?? historical.avg_confidence_score,
+    avg_clarity_score: current.avg_clarity_score ?? historical.avg_clarity_score,
+    avg_depth_score: current.avg_depth_score ?? historical.avg_depth_score,
+    avg_fraud_score: current.avg_fraud_score ?? historical.avg_fraud_score,
+  }
+}
+
 async function fetchSkillProfiles(attemptIds: string[]) {
   if (attemptIds.length === 0 || !(await tableExists("interview_skill_profiles"))) {
     return new Map<string, SkillProfileRow>()
@@ -1187,7 +1221,7 @@ export async function getNormalizedReportRows(organizationId: string): Promise<N
       const calculatedResult = deriveResultFromAnswerSummaries(answerSummaries)
       const signal = (attemptId ? signalMap.byAttempt.get(attemptId) : undefined) ?? signalMap.byInterview.get(interview.interviewId)
       const recording = (attemptId ? recordingMap.byAttempt.get(attemptId) : undefined) ?? recordingMap.byInterview.get(interview.interviewId)
-      const responseAverages = buildResponseMetricAverages(skillState)
+      const responseAverages = mergeResponseMetricAverages(skillState, answerSummaries)
 
       const requiredSkills = normalizeStringArray(interview.job.coreSkills)
       const skillScores = skillProfile?.skill_scores ?? {}
@@ -1390,9 +1424,9 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
         helper: "Actual calm-room multi-face events from interview signal telemetry.",
       },
       {
-        label: "Voice Mismatch",
-        value: 0,
-        helper: "Coming soon. Voice matching is not yet wired into recruiter reporting.",
+        label: "Vocal Pressure Observations",
+        value: rows.reduce((sum, row) => sum + row.vocal_pressure_count, 0),
+        helper: "Experimental vocal-pressure observations captured from available interview audio; not a medical or deception finding.",
       },
       {
         label: "Tab Switching",
@@ -1476,7 +1510,7 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
     .map((item) => ({
       jobId: item.jobId,
       jobTitle: item.jobTitle,
-      averageScore: average(item.scores),
+      averageScore: averageNullable(item.scores),
       completedInterviews: item.completed,
       flaggedInterviews: item.flagged,
       selectedCandidates: item.selected,
@@ -1710,7 +1744,7 @@ export async function getVerisSummaryCards(organizationId: string, limit: number
       const answerSummaries = answerSummaryMap.get(attempt.attempt_id) ?? []
       const calculatedResult = deriveResultFromAnswerSummaries(answerSummaries)
       const signal = signalMap.byAttempt.get(attempt.attempt_id) ?? signalMap.byInterview.get(attempt.interview_id)
-      const responseAverages = buildResponseMetricAverages(skillState)
+      const responseAverages = mergeResponseMetricAverages(skillState, answerSummaries)
       const requiredSkills = normalizeStringArray(attempt.core_skills)
       const skillScores = skillProfile?.skill_scores ?? {}
       const weakSkills =

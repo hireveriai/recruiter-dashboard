@@ -340,10 +340,10 @@ export default function ReportsPage() {
               >
                 <div className="grid gap-4 lg:grid-cols-5">
                   {[
-                    ["Confidence", report.cognitiveRisk.confidenceScore, "text-cyan-200", true, "-"],
+                    ["Confidence", report.cognitiveRisk.confidenceScore, "text-cyan-200", true, "Not available"],
                     ["Vocal pressure (experimental)", report.cognitiveRisk.stressIndex, "text-amber-200", true, "Not available"],
-                    ["Clarity", report.cognitiveRisk.clarityIndex, "text-emerald-200", true, "-"],
-                    ["Suspicion", report.cognitiveRisk.suspicionIndex, "text-rose-200", false, "-"],
+                    ["Clarity", report.cognitiveRisk.clarityIndex, "text-emerald-200", true, "Not available"],
+                    ["Suspicion", report.cognitiveRisk.suspicionIndex, "text-rose-200", false, "Not available"],
                     ["Anomalies", report.cognitiveRisk.behavioralAnomalies, "text-violet-200", false, "0"],
                   ].map(([label, value, tone, percent, fallback]) => (
                     <div key={label} className="rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
@@ -392,6 +392,11 @@ export default function ReportsPage() {
                       )}
                     </div>
                   ))}
+                  {report.interviewTimeline.length === 0 ? (
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-5 text-sm text-slate-400">
+                      No interview activity is available for this organization yet.
+                    </div>
+                  ) : null}
                 </div>
               </ExpandableSection>
 
@@ -458,6 +463,9 @@ export default function ReportsPage() {
                           <td className="px-4 py-4 text-slate-300">{candidate.riskLevel}</td>
                         </tr>
                       ))}
+                      {report.candidateRanking.length === 0 ? (
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No scored interview attempts are available yet.</td></tr>
+                      ) : null}
                     </tbody>
                   </table>
                 </div>
@@ -484,7 +492,7 @@ export default function ReportsPage() {
                       {report.roleInsights.map((role) => (
                         <tr key={role.jobId} className="border-b border-slate-800/70 text-slate-200">
                           <td className="px-4 py-4 font-medium text-white">{role.jobTitle}</td>
-                          <td className="px-4 py-4 text-cyan-200">{role.averageScore}</td>
+                          <td className="px-4 py-4 text-cyan-200">{role.averageScore ?? "Not available"}</td>
                           <td className="px-4 py-4">{role.completedInterviews}</td>
                           <td className="px-4 py-4">{role.flaggedInterviews}</td>
                           <td className="px-4 py-4">{role.selectedCandidates}</td>
@@ -494,6 +502,9 @@ export default function ReportsPage() {
                           </td>
                         </tr>
                       ))}
+                      {report.roleInsights.length === 0 ? (
+                        <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">No role-level interview data is available yet.</td></tr>
+                      ) : null}
                     </tbody>
                   </table>
                 </div>
@@ -516,6 +527,11 @@ export default function ReportsPage() {
                       </div>
                     </div>
                   ))}
+                  {report.auditLogs.length === 0 ? (
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-5 text-sm text-slate-400">
+                      No reportable interview events are available yet.
+                    </div>
+                  ) : null}
                 </div>
               </ExpandableSection>
             </div>
