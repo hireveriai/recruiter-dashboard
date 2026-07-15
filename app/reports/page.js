@@ -336,12 +336,12 @@ export default function ReportsPage() {
 
               <ExpandableSection
                 title="Cognitive Risk Report"
-                subtitle="A compact readout of confidence, stress, clarity, suspicion, and behavioral anomaly load."
+                subtitle="A compact readout of confidence, experimental vocal pressure, clarity, suspicion, and behavioral anomaly load."
               >
                 <div className="grid gap-4 lg:grid-cols-5">
                   {[
                     ["Confidence", report.cognitiveRisk.confidenceScore, "text-cyan-200", true, "-"],
-                    ["Stress (coming soon)", report.cognitiveRisk.stressIndex, "text-amber-200", false, "Partial"],
+                    ["Vocal pressure (experimental)", report.cognitiveRisk.stressIndex, "text-amber-200", true, "Not available"],
                     ["Clarity", report.cognitiveRisk.clarityIndex, "text-emerald-200", true, "-"],
                     ["Suspicion", report.cognitiveRisk.suspicionIndex, "text-rose-200", false, "-"],
                     ["Anomalies", report.cognitiveRisk.behavioralAnomalies, "text-violet-200", false, "0"],
