@@ -90,6 +90,7 @@ function getRecruiterStatusKey(interview) {
   const terminationType = normalizeStatusKey(interview?.terminationType)
   const disconnectReason = normalizeStatusKey(interview?.disconnectReason)
   const terminationReason = normalizeStatusKey(interview?.terminationReason)
+  const interruptionReason = normalizeStatusKey(interview?.interruptionReason)
   const isFinalized = status === "COMPLETED" || interviewStatus === "COMPLETED"
   const requiredQuestionCount = Number(interview?.requiredQuestionCount ?? 0)
   const answeredQuestionCount = Number(interview?.answeredQuestionCount ?? 0)
@@ -117,6 +118,7 @@ function getRecruiterStatusKey(interview) {
   if (
     finalStatus === "INTERRUPTED" ||
     ["INTERRUPTED", "TIME_EXPIRED", "NETWORK_DISCONNECT_TIMEOUT", "CAMERA_STREAM"].includes(terminationType) ||
+    interruptionReason ||
     disconnectReason ||
     terminationReason.includes("INTERRUPT")
   ) {
@@ -157,6 +159,46 @@ function getRecruiterStatus(interview) {
       label: formatStatusText(key),
     }),
   }
+}
+
+const INTERRUPTION_REASON_LABELS = {
+  NETWORK_DISCONNECT_TIMEOUT: "Network connection was lost and could not recover in time.",
+  HEARTBEAT_TIMEOUT: "The candidate session stopped responding.",
+  WATCHDOG_TIMEOUT: "The candidate session stopped responding and was closed automatically.",
+  SESSION_TIME_EXPIRED: "The interview time expired before finalization completed.",
+  TIMEOUT: "The interview timed out before it could finish.",
+  TIME_EXPIRED: "The interview time expired before it could finish.",
+  CAMERA_STREAM: "The camera stream was interrupted.",
+  CAMERA_FAILURE: "The camera became unavailable during the interview.",
+  MICROPHONE_FAILURE: "The microphone became unavailable during the interview.",
+  BROWSER_CLOSE: "The browser or interview tab was closed unexpectedly.",
+  TAB_CLOSE: "The interview tab was closed unexpectedly.",
+  DISCONNECT: "The candidate lost connection during the interview.",
+}
+
+function getInterruptionReason(interview) {
+  if (getRecruiterStatusKey(interview) !== "INTERRUPTED") return null
+
+  const rawReason = [
+    interview?.interruptionReason,
+    interview?.disconnectReason,
+    interview?.terminationReason,
+    interview?.terminationType,
+  ].find((value) => String(value ?? "").trim())
+
+  if (!rawReason) {
+    return "Technical interruption detected; no detailed reason was recorded."
+  }
+
+  const normalized = normalizeStatusKey(rawReason)
+  if (INTERRUPTION_REASON_LABELS[normalized]) {
+    return INTERRUPTION_REASON_LABELS[normalized]
+  }
+
+  const reason = String(rawReason).trim()
+  return reason.includes("_") || reason === reason.toUpperCase()
+    ? formatStatusText(reason)
+    : reason
 }
 
 function getStatusBadge(status) {
@@ -714,6 +756,7 @@ export default function InterviewsPage() {
         recruiterStatus.description,
         interview.decision,
         interview.interviewType,
+        getInterruptionReason(interview),
         getAccessLabel(interview),
       ]
         .map((value) => String(value ?? "").toLowerCase())
@@ -1009,12 +1052,22 @@ export default function InterviewsPage() {
                       </td>
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
                       <td className="px-4 py-5">
-                        <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(recruiterStatus.key)}`}
-                          title={recruiterStatus.description}
-                        >
-                          {recruiterStatus.label}
-                        </span>
+                        <div className="flex min-w-0 flex-col items-start gap-1.5">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(recruiterStatus.key)}`}
+                            title={recruiterStatus.description}
+                          >
+                            {recruiterStatus.label}
+                          </span>
+                          {recruiterStatus.key === "INTERRUPTED" ? (
+                            <span
+                              className="line-clamp-2 max-w-[15rem] text-xs leading-4 text-sky-200/75"
+                              title={getInterruptionReason(interview) ?? undefined}
+                            >
+                              {getInterruptionReason(interview)}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
                       <td className="px-4 py-5 text-slate-300">{formatScore(interview.score)}</td>

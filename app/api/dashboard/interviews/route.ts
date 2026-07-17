@@ -64,6 +64,7 @@ type AttemptExitMetadata = {
   earlyExit: boolean
   terminationType: string | null
   terminationReason: string | null
+  interruptionReason: string | null
   disconnectReason: string | null
   terminationDetectedAt: string | null
   completionPercentage: number | null
@@ -74,6 +75,7 @@ type AttemptExitMetadataRow = {
   early_exit: boolean | null
   termination_type: string | null
   termination_reason: string | null
+  interruption_reason: string | null
   disconnect_reason: string | null
   termination_detected_at: string | null
   completion_percentage: unknown | null
@@ -633,6 +635,7 @@ async function fetchAttemptExitMetadata(attemptIds: string[]) {
         ${selectColumn("early_exit", "false")} as early_exit,
         ${selectColumn("termination_type", "null::text")} as termination_type,
         ${selectColumn("termination_reason", "null::text")} as termination_reason,
+        ${selectColumn("interruption_reason", "null::text")} as interruption_reason,
         ${selectColumn("disconnect_reason", "null::text")} as disconnect_reason,
         ${selectColumn("termination_detected_at", "null::timestamptz")}::text as termination_detected_at,
         ${selectColumn("completion_percentage", "null::numeric")} as completion_percentage
@@ -649,6 +652,7 @@ async function fetchAttemptExitMetadata(attemptIds: string[]) {
         earlyExit: Boolean(row.early_exit),
         terminationType: row.termination_type,
         terminationReason: row.termination_reason,
+        interruptionReason: row.interruption_reason,
         disconnectReason: row.disconnect_reason,
         terminationDetectedAt: row.termination_detected_at,
         completionPercentage: toNumberOrNull(row.completion_percentage),
@@ -880,6 +884,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       earlyExitRecorded: exitMetadata?.earlyExit ?? false,
       terminationType: exitMetadata?.terminationType ?? null,
       terminationReason: exitMetadata?.terminationReason ?? null,
+      interruptionReason: exitMetadata?.interruptionReason ?? null,
       disconnectReason: exitMetadata?.disconnectReason ?? null,
       terminationDetectedAt: exitMetadata?.terminationDetectedAt ?? null,
       completionPercentage: exitMetadata?.completionPercentage ?? null,
