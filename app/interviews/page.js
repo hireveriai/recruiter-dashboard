@@ -163,7 +163,9 @@ function getRecruiterStatus(interview) {
 
 const INTERRUPTION_REASON_LABELS = {
   NETWORK_DISCONNECT_TIMEOUT: "Network connection was lost and could not recover in time.",
-  HEARTBEAT_TIMEOUT: "The candidate session stopped responding.",
+  HEARTBEAT_TIMEOUT: "Legacy heartbeat signal; this may have been caused by a temporary service or database delay.",
+  HEARTBEAT_FAILURE: "Legacy heartbeat signal; this may have been caused by a temporary service or database delay.",
+  "HEARTBEAT TIMED OUT": "Legacy heartbeat signal; this may have been caused by a temporary service or database delay.",
   WATCHDOG_TIMEOUT: "The candidate session stopped responding and was closed automatically.",
   SESSION_TIME_EXPIRED: "The interview time expired before finalization completed.",
   TIMEOUT: "The interview timed out before it could finish.",
