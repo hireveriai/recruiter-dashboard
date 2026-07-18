@@ -992,8 +992,8 @@ export default function InterviewsPage() {
               <colgroup>
                 <col className="w-[9%]" />
                 <col className="w-[11%]" />
-                <col className="w-[15%]" />
-                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+                <col className="w-[13%]" />
                 <col className="w-[10%]" />
                 <col className="w-[6%]" />
                 <col className="w-[7%]" />
@@ -1060,8 +1060,8 @@ export default function InterviewsPage() {
                         )}
                       </td>
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
-                      <td className="px-4 py-5">
-                        <div className="flex min-w-0 items-center gap-2">
+                      <td className="overflow-hidden px-4 py-5">
+                        <div className="flex min-w-0 items-center gap-1.5">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(recruiterStatus.key)}`}
                             title={recruiterStatus.description}
@@ -1071,7 +1071,7 @@ export default function InterviewsPage() {
                           {recruiterStatus.key === "INTERRUPTED" && interruptionReason ? (
                             <span
                               tabIndex={0}
-                              className="inline-flex h-6 w-6 shrink-0 cursor-help items-center justify-center rounded-full text-sky-200/75 outline-none transition hover:bg-sky-400/10 hover:text-sky-100 focus-visible:bg-sky-400/10 focus-visible:text-sky-100 focus-visible:ring-2 focus-visible:ring-sky-300/60"
+                              className="inline-flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-sky-200/75 outline-none transition hover:bg-sky-400/10 hover:text-sky-100 focus-visible:bg-sky-400/10 focus-visible:text-sky-100 focus-visible:ring-2 focus-visible:ring-sky-300/60"
                               title={interruptionReason}
                               aria-label={`Interruption details: ${interruptionReason}`}
                             >
