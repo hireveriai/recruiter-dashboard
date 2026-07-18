@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Fragment, useEffect, useMemo, useState } from "react"
-import { Download, FileText, Link2, RotateCw, Video } from "lucide-react"
+import { Download, FileText, Info, Link2, RotateCw, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -1027,6 +1027,7 @@ export default function InterviewsPage() {
                 ) : (
                   filteredInterviews.map((interview) => {
                     const recruiterStatus = getRecruiterStatus(interview)
+                    const interruptionReason = getInterruptionReason(interview)
 
                     return (
                     <Fragment key={interview.interviewId}>
@@ -1060,19 +1061,21 @@ export default function InterviewsPage() {
                       </td>
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
                       <td className="px-4 py-5">
-                        <div className="flex min-w-0 flex-col items-start gap-1.5">
+                        <div className="flex min-w-0 items-center gap-2">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(recruiterStatus.key)}`}
                             title={recruiterStatus.description}
                           >
                             {recruiterStatus.label}
                           </span>
-                          {recruiterStatus.key === "INTERRUPTED" ? (
+                          {recruiterStatus.key === "INTERRUPTED" && interruptionReason ? (
                             <span
-                              className="line-clamp-2 max-w-[15rem] text-xs leading-4 text-sky-200/75"
-                              title={getInterruptionReason(interview) ?? undefined}
+                              tabIndex={0}
+                              className="inline-flex h-6 w-6 shrink-0 cursor-help items-center justify-center rounded-full text-sky-200/75 outline-none transition hover:bg-sky-400/10 hover:text-sky-100 focus-visible:bg-sky-400/10 focus-visible:text-sky-100 focus-visible:ring-2 focus-visible:ring-sky-300/60"
+                              title={interruptionReason}
+                              aria-label={`Interruption details: ${interruptionReason}`}
                             >
-                              {getInterruptionReason(interview)}
+                              <Info className="h-4 w-4" aria-hidden="true" />
                             </span>
                           ) : null}
                         </div>

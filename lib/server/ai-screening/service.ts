@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client"
 
 import { prisma } from "@/lib/server/prisma"
 import { ApiError } from "@/lib/server/errors"
-import type { ParsedResume } from "@/lib/server/resumeParser"
+import { normalizeCandidateName, type ParsedResume } from "@/lib/server/resumeParser"
 import type { CandidateMatchResult, ParsedJobDescription } from "@/lib/server/ai-screening/openai"
 
 const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
@@ -208,8 +208,14 @@ export function normalizeEmail(value: unknown) {
 
 export function getDisplayNameFromFile(fileName: string) {
   const withoutExtension = fileName.replace(/\.(pdf|docx)$/i, "")
-  const normalized = withoutExtension.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim()
-  return normalized || "Unnamed Candidate"
+  const normalized = withoutExtension
+    .replace(/^(?:cv|resume|curriculum[\s_-]*vitae)[\s_-]*/i, "")
+    .replace(/[\s_-]*(?:cv|resume|curriculum[\s_-]*vitae)$/i, "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  return normalizeCandidateName(normalized) ?? "Unnamed Candidate"
 }
 
 export async function saveParsedCandidate(input: {
@@ -226,9 +232,10 @@ export async function saveParsedCandidate(input: {
   }
 }) {
   const email = normalizeEmail(input.parsed.email)
-  const fullName = input.parsed.name?.trim() || getDisplayNameFromFile(input.fileName)
+  const fullName = normalizeCandidateName(input.parsed.name) ?? getDisplayNameFromFile(input.fileName)
   const extractedJson = {
     ...input.parsed,
+    name: fullName,
     email,
     sourceFileName: input.fileName,
     storage: input.storage ?? null,

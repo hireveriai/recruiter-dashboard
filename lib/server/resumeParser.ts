@@ -87,6 +87,23 @@ function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, " ").trim()
 }
 
+export function normalizeCandidateName(value: unknown) {
+  if (typeof value !== "string") return null
+
+  const name = normalizeWhitespace(value)
+  if (
+    !name ||
+    name.length > 80 ||
+    !/[A-Za-z]/.test(name) ||
+    /@|https?:\/\//i.test(name) ||
+    /^(?:(?:candidate|applicant)\s+)?(?:cv|resume|curriculum\s+vitae|profile)(?:\s+(?:of|for)\s+(?:candidate|applicant))?$/i.test(name)
+  ) {
+    return null
+  }
+
+  return name
+}
+
 function extractEmail(text: string) {
   const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
   return match?.[0] ?? null
@@ -146,7 +163,7 @@ function extractName(text: string, email: string | null) {
       continue
     }
 
-    if (/resume|curriculum vitae|cv|profile|summary|experience|education/i.test(line)) {
+    if (/\b(?:resume|curriculum vitae|cv|profile|summary|experience|education)\b/i.test(line)) {
       continue
     }
 
@@ -305,7 +322,10 @@ export async function parseResumeWithAI(text: string): Promise<ParsedResume> {
       throw new Error("OpenAI returned invalid resume JSON")
     }
 
-    return parsed
+    return {
+      ...parsed,
+      name: normalizeCandidateName(parsed.name) ?? normalizeCandidateName(fallback.name),
+    }
   } catch (error) {
     console.error("Failed to parse resume with OpenAI", error)
     return fallback
