@@ -97,6 +97,10 @@ function getRecruiterStatusKey(interview) {
   const completedAllQuestions =
     requiredQuestionCount > 0 && answeredQuestionCount >= requiredQuestionCount
 
+  if (isFinalized) {
+    return "COMPLETED"
+  }
+
   if (
     ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(attemptStatus) ||
     ["FINALIZED", "COMPLETED", "SUBMITTED", "EVALUATED"].includes(finalStatus) ||
@@ -131,10 +135,6 @@ function getRecruiterStatusKey(interview) {
     status === "ABANDONED"
   ) {
     return isFinalized ? "INCOMPLETE" : "INCOMPLETE"
-  }
-
-  if (isFinalized) {
-    return "COMPLETED"
   }
 
   if (status === "EARLY_EXIT") {
