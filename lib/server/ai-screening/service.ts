@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client"
+import { sanitizeExtractedResumeText } from "./resume-file"
 
 import { prisma } from "@/lib/server/prisma"
 import { ApiError } from "@/lib/server/errors"
@@ -231,6 +232,12 @@ export async function saveParsedCandidate(input: {
     key: string
   }
 }) {
+  const resumeText = sanitizeExtractedResumeText(input.resumeText)
+
+  if (!resumeText) {
+    throw new ApiError(400, "RESUME_TEXT_EMPTY", "Resume text could not be extracted from this file")
+  }
+
   const email = normalizeEmail(input.parsed.email)
   const fullName = normalizeCandidateName(input.parsed.name) ?? getDisplayNameFromFile(input.fileName)
   const extractedJson = {
@@ -262,7 +269,7 @@ export async function saveParsedCandidate(input: {
           email = ${email},
           phone = ${input.parsed.phone ?? null},
           resume_url = ${input.resumeUrl},
-          resume_text = ${input.resumeText},
+          resume_text = ${resumeText},
           extracted_json = ${JSON.stringify(extractedJson)}::jsonb,
           upload_batch_id = ${input.uploadBatchId}::uuid,
           ai_screening_status = 'READY',
@@ -301,7 +308,7 @@ export async function saveParsedCandidate(input: {
       ${email},
       ${input.parsed.phone ?? null},
       ${input.resumeUrl},
-      ${input.resumeText},
+      ${resumeText},
       ${JSON.stringify(extractedJson)}::jsonb,
       ${input.uploadBatchId}::uuid,
       'READY',

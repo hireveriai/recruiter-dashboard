@@ -36,6 +36,27 @@ const OCR_MODEL = process.env.OPENAI_RESUME_OCR_MODEL || "gpt-4o-mini"
 const MIN_TEXT_LENGTH_FOR_RESUME = 40
 const MAX_OCR_IMAGES = 3
 
+/**
+ * PostgreSQL text values cannot contain NUL bytes. Some otherwise valid PDFs
+ * expose embedded font/control objects as standalone \u0000 text items, so clean
+ * all parser and OCR output before it reaches AI parsing or persistence.
+ */
+export function sanitizeExtractedResumeText(text: string | null | undefined) {
+  if (!text) {
+    return null
+  }
+
+  const sanitized = text
+    .replace(/\u0000/g, "")
+    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+
+  return sanitized || null
+}
+
 export function isSupportedResumeFile(file: File) {
   return isPdfFile(file) || isDocxFile(file)
 }
@@ -153,7 +174,7 @@ async function extractPdfTextWithPdfJs(resumeBuffer: Buffer) {
       }
     }
 
-    return pages.join("\n").trim() || null
+    return sanitizeExtractedResumeText(pages.join("\n"))
   } finally {
     await pdfDocument.destroy?.()
     await loadingTask.destroy?.()
@@ -161,7 +182,8 @@ async function extractPdfTextWithPdfJs(resumeBuffer: Buffer) {
 }
 
 function hasMeaningfulResumeText(text: string | null | undefined) {
-  return Boolean(text && text.replace(/\s+/g, " ").trim().length >= MIN_TEXT_LENGTH_FOR_RESUME)
+  const sanitized = sanitizeExtractedResumeText(text)
+  return Boolean(sanitized && sanitized.replace(/\s+/g, " ").length >= MIN_TEXT_LENGTH_FOR_RESUME)
 }
 
 function extractStructuredOutputText(response: OpenAIResponsesOutputText) {
@@ -179,7 +201,7 @@ function extractStructuredOutputText(response: OpenAIResponsesOutputText) {
     }
   }
 
-  return fragments.join("\n").trim()
+  return sanitizeExtractedResumeText(fragments.join("\n")) ?? ""
 }
 
 async function extractTextWithVisionOcr(imageDataUrls: string[], sourceLabel: string) {
@@ -293,7 +315,7 @@ async function extractDocxText(resumeBuffer: Buffer) {
   const mammothModule = await import("mammoth")
   const mammoth = "default" in mammothModule ? mammothModule.default : mammothModule
   const parsed = await mammoth.extractRawText({ buffer: resumeBuffer })
-  const text = parsed.value?.trim()
+  const text = sanitizeExtractedResumeText(parsed.value)
 
   return hasMeaningfulResumeText(text) ? text : null
 }
