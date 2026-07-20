@@ -884,7 +884,7 @@ export default function CognitiveDock({
 
                 {panel === "copilot" ? (
                   <div className="mt-5 grid min-h-0 flex-1 overflow-hidden rounded-3xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[260px_minmax(0,1fr)]">
-                    <aside className="hidden border-r border-white/8 bg-white/[0.025] p-4 lg:block">
+                    <aside className="hidden min-h-0 overflow-y-auto border-r border-white/8 bg-white/[0.025] p-4 lg:block">
                       <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><Sparkles className="h-5 w-5" /></span>
                         <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 truncate text-[11px] text-slate-400">Live workspace intelligence</p></div>
@@ -909,7 +909,7 @@ export default function CognitiveDock({
                       </div>
                     </aside>
 
-                    <div className="flex min-w-0 flex-col overflow-hidden">
+                    <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                       {aiMessages.length === 0 ? (
                         <div className="flex flex-1 flex-col overflow-y-auto px-5 py-6 sm:px-7">
                           <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center">
@@ -956,22 +956,22 @@ export default function CognitiveDock({
                         </Conversation>
                       )}
 
-                      <div className="border-t border-white/8 bg-[#071226]/95 p-3 sm:p-4">
-                        <Suggestions className="mb-3">
+                      <div className="shrink-0 border-t border-white/8 bg-[#071226]/95 p-3 sm:px-4 sm:py-3">
+                        <Suggestions className="mb-2">
                           {["How interviews work", "Add users and access", "Interrupted interviews", "Top candidates"].map((suggestion) => (
                             <Suggestion key={suggestion} suggestion={suggestion} onClick={askVerisAi} className="border-white/10 bg-white/[0.035] text-slate-300 hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white" />
                           ))}
                         </Suggestions>
                         <PromptInput onSubmit={(message) => askVerisAi(message.text)} className="rounded-2xl border border-cyan-300/20 bg-white/[0.04] shadow-[0_0_24px_rgba(34,211,238,0.06)]">
                           <PromptInputBody>
-                            <PromptInputTextarea value={aiInput} onChange={(event) => setAiInput(event.target.value)} placeholder="Ask VERIS AI about your hiring workspace..." className="min-h-12 text-slate-100 placeholder:text-slate-500" />
+                            <PromptInputTextarea value={aiInput} onChange={(event) => setAiInput(event.target.value)} placeholder="Ask VERIS AI about your hiring workspace..." className="min-h-10 text-slate-100 placeholder:text-slate-500" />
                           </PromptInputBody>
                           <PromptInputFooter>
                             <span className="inline-flex items-center gap-1.5 px-2 text-[10px] text-slate-500"><MessageSquareText className="h-3 w-3" /> Enter to send · Shift + Enter for new line</span>
                             <PromptInputSubmit status={aiBusy ? "submitted" : "ready"} disabled={!aiInput.trim() || aiBusy} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200" />
                           </PromptInputFooter>
                         </PromptInput>
-                        <p className="mt-2 text-center text-[10px] text-slate-600">VERIS AI summarizes visible workspace data. Recruiters remain responsible for hiring decisions.</p>
+                        <p className="mt-1.5 text-center text-[10px] text-slate-600">VERIS AI summarizes visible workspace data. Recruiters remain responsible for hiring decisions.</p>
                       </div>
                     </div>
                   </div>
