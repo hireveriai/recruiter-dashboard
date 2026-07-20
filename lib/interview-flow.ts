@@ -265,7 +265,8 @@ export async function generateInterviewQuestions(
     .slice(0, Math.max(0, totalQuestions - selectedResumeSkills.length))
 
   const injectedResumeQuestions = selectedResumeSkills.map((skill, index) => {
-    const questionText = buildResumeQuestion(skill, index, seniorityLevel)
+    const retakeVariantOffset = (input.previousQuestions?.length ?? 0) % 3
+    const questionText = buildResumeQuestion(skill, index + retakeVariantOffset, seniorityLevel)
     const safeQuestion = validateQuestionStrict(questionText).valid
       ? questionText
       : seniorityLevel === "senior"

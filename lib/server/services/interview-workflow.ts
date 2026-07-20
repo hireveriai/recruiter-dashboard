@@ -184,6 +184,47 @@ function buildEmergencyInterviewQuestions(
     })
   }
 
+  const resumeSkills = context.resume_text
+    ? (parseResumeText(context.resume_text).skills ?? [])
+        .map(normalizeSkill)
+        .filter(Boolean)
+        .filter((skill, index, all) =>
+          all.findIndex((candidate) => candidate.toLowerCase() === skill.toLowerCase()) === index
+        )
+        .slice(0, Math.min(2, Math.max(1, Math.round(targetCount * 0.3))))
+    : []
+  const resumeTemplates = [
+    (skill: string) => `Walk me through a resume project where you used ${skill} to solve a difficult problem.`,
+    (skill: string) => `What trade-off did you personally make while applying ${skill} in work shown on your resume?`,
+    (skill: string) => `How did you validate the outcome of a resume project involving ${skill}?`,
+  ]
+  const retakeVariantOffset = (input.previousQuestions?.length ?? 0) % resumeTemplates.length
+
+  resumeSkills.forEach((skill, index) => {
+    const insertionIndex = Math.max(1, questions.length - resumeSkills.length - 1 + index)
+    const question = resumeTemplates[(retakeVariantOffset + index) % resumeTemplates.length](skill)
+
+    questions.splice(insertionIndex, 1, {
+      id: `emergency-resume-${index}`,
+      question,
+      skill,
+      skill_type: "technical",
+      skill_bucket: skill,
+      source_type: "resume",
+      reference_context: {
+        anchor: skill,
+        source: "emergency_resume_fallback",
+      },
+      is_dynamic: true,
+      allow_followups: true,
+      question_type: InterviewQuestionType.TECHNICAL_DISCUSSION,
+      classifier_confidence: 0.82,
+      recruiter_override: false,
+      rendering_mode: "discussion",
+      phase_hint: "core",
+    })
+  })
+
   const codingRequired = String(context.coding_required ?? "").toUpperCase() === "YES" ||
     (String(context.coding_required ?? "").toUpperCase() === "AUTO" && context.coding_recommended === true)
 
