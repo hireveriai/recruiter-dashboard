@@ -6,20 +6,34 @@ import {
   BarChart3,
   BrainCircuit,
   BriefcaseBusiness,
+  CheckCircle2,
   ClipboardList,
+  FileSearch,
   Link2,
   Loader2,
+  MessageSquareText,
+  RefreshCw,
   Search,
   ShieldAlert,
   Sparkles,
   SquarePlus,
-  TriangleAlert,
   Users,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
+import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputSubmit,
+  PromptInputTextarea,
+} from "@/components/ai-elements/prompt-input";
+import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 
 import { buildAuthUrl } from "@/lib/client/auth-query";
 import { DEFAULT_RECRUITER_PERMISSION_PROFILE, canAccessFeature } from "@/lib/client/permissions";
@@ -67,10 +81,26 @@ type WorkspaceData = {
 
 type WorkspacePayload = Partial<WorkspaceData>;
 
+type VerisAiCard = {
+  title: string;
+  body: string;
+  meta?: string;
+  href?: string;
+  tone?: "cyan" | "emerald" | "amber" | "rose";
+};
+
+type VerisAiMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  cards?: VerisAiCard[];
+  sources?: string[];
+};
+
 function getPanelTitle(panel: PanelMode) {
   if (panel === "search") return "Universal Search";
   if (panel === "alerts") return "Review Flags";
-  if (panel === "copilot") return "VERIS Copilot";
+  if (panel === "copilot") return "VERIS AI";
   return "";
 }
 
@@ -85,13 +115,6 @@ function readNumber(value: unknown) {
 
 function normalizeSearch(value: unknown) {
   return String(value ?? "").toLowerCase();
-}
-
-function getDecisionTone(decision: unknown) {
-  const normalized = normalizeSearch(decision);
-  if (normalized.includes("hire") || normalized.includes("select")) return "text-emerald-200";
-  if (normalized.includes("flag") || normalized.includes("reject")) return "text-rose-200";
-  return "text-cyan-200";
 }
 
 function getPanelLoadingLabel(panel: PanelMode) {
@@ -148,6 +171,10 @@ export default function CognitiveDock({
   const [workspace, setWorkspace] = useState<WorkspaceData>({ jobs: [], candidates: [], interviews: [], reports: null });
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [workspaceError, setWorkspaceError] = useState("");
+  const [aiInput, setAiInput] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMessages, setAiMessages] = useState<VerisAiMessage[]>([]);
+  const workspaceRef = useRef(workspace);
 
   const apiHref = useCallback((path: string) => buildAuthUrl(path, searchParams), [searchParams]);
   const pageHref = useCallback((path: string) => path, []);
@@ -163,6 +190,10 @@ export default function CognitiveDock({
   const canViewReports = canAccessFeature(permissionProfile, "reports");
   const canViewAlerts = canAccessFeature(permissionProfile, "alerts");
   const canUseCopilot = canAccessFeature(permissionProfile, "copilot");
+
+  useEffect(() => {
+    workspaceRef.current = workspace;
+  }, [workspace]);
 
   const openCreateJob = useCallback(() => {
     window.dispatchEvent(new CustomEvent("hireveri:open-create-job"));
@@ -204,11 +235,11 @@ export default function CognitiveDock({
         reports: overview ?? null,
       };
 
-      if (hasWorkspaceData(mergeWorkspaceData(workspace, overviewWorkspace))) {
+      if (hasWorkspaceData(mergeWorkspaceData(workspaceRef.current, overviewWorkspace))) {
         setWorkspace((current) => mergeWorkspaceData(current, overviewWorkspace));
       }
 
-      setWorkspaceLoading(!hasWorkspaceData(mergeWorkspaceData(workspace, overviewWorkspace)));
+      setWorkspaceLoading(!hasWorkspaceData(mergeWorkspaceData(workspaceRef.current, overviewWorkspace)));
       setWorkspaceError("");
       loaderCeilingTimer = window.setTimeout(() => {
         if (active) {
@@ -267,18 +298,6 @@ export default function CognitiveDock({
       }
     };
   }, [panel, apiHref, overview]);
-
-  useEffect(() => {
-    if (!overview) {
-      return;
-    }
-
-    setWorkspace((current) => mergeWorkspaceData(current, {
-      candidates: Array.isArray(overview.candidates) ? overview.candidates as Array<Record<string, unknown>> : undefined,
-      interviews: Array.isArray(overview.pendingInterviews) ? overview.pendingInterviews as Array<Record<string, unknown>> : undefined,
-      reports: overview,
-    }));
-  }, [overview]);
 
   const searchItems = useMemo<SearchItem[]>(() => {
     const items: SearchItem[] = [
@@ -431,6 +450,216 @@ export default function CognitiveDock({
     return { priorities, metrics };
   }, [workspace, overview, activeInterviewCount, candidateCount, flaggedCount]);
 
+  const aiStartingPoints = useMemo(() => [
+    {
+      title: "Review candidates",
+      description: "Find top candidates and items needing attention.",
+      prompt: "Show candidates who need my attention",
+      icon: Users,
+      tone: "from-cyan-400/20 to-blue-500/5",
+    },
+    {
+      title: "Interview operations",
+      description: "Surface interrupted, pending, and completed interviews.",
+      prompt: "Show interrupted interviews",
+      icon: ClipboardList,
+      tone: "from-amber-400/20 to-orange-500/5",
+    },
+    {
+      title: "Pipeline intelligence",
+      description: "Summarize jobs, scores, and recruiter priorities.",
+      prompt: "Give me a pipeline summary",
+      icon: BarChart3,
+      tone: "from-emerald-400/20 to-teal-500/5",
+    },
+    {
+      title: "Team access",
+      description: "Learn how to add users, roles, and permissions.",
+      prompt: "How do I add users and give them access?",
+      icon: ShieldAlert,
+      tone: "from-violet-400/20 to-fuchsia-500/5",
+    },
+  ], []);
+
+  const buildAiReply = useCallback((question: string): VerisAiMessage => {
+    const normalized = normalizeSearch(question);
+    const candidates = workspace.candidates;
+    const interviews = workspace.interviews;
+    const jobs = workspace.jobs;
+    const candidateName = (item: Record<string, unknown>) => readText(item.candidateName ?? item.fullName ?? item.name, "Candidate");
+    const jobName = (item: Record<string, unknown>) => readText(item.jobTitle ?? item.job_title, "Unassigned role");
+    const scoreFor = (item: Record<string, unknown>) => readNumber(item.score ?? item.verisScreeningScore);
+    const makeId = () => `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    if (/(how.*interview|interview.*flow|interview.*work|start.*end|candidate journey|send.*interview)/.test(normalized)) {
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: "The interview lifecycle runs from recruiter setup through evidence review. **Candidate answers and recordings are saved progressively**, so a temporary failure should not erase the completed portion. Recruiters remain responsible for the final hiring decision.",
+        cards: [
+          { title: "1. Configure the role", body: "Create the job with skills, experience, interview settings, and allowed devices. VERIS Screening can analyze resumes before invitations are sent.", meta: "Recruiter · Jobs / VERIS Screening", href: pageHref("/jobs"), tone: "cyan" },
+          { title: "2. Select and invite", body: "Choose candidates, review duplicate invitations, skip previously invited candidates if needed, then use flexible access or a fixed schedule.", meta: "Flexible access is configured as a 24-hour window", href: canViewCandidates ? pageHref("/candidates") : undefined, tone: "cyan" },
+          { title: "3. Prepare questions", body: "The interview question set is prepared from the role requirements and available resume evidence, with safeguards for retries and regenerated attempts.", meta: "Job-based, resume-based, and behavioral signal", tone: "emerald" },
+          { title: "4. Candidate preflight", body: "The candidate opens the secure link and completes camera, microphone, device, connection, and attention checks before the interview begins.", meta: "Candidate interview room", tone: "emerald" },
+          { title: "5. Conduct the interview", body: "VERIS presents questions one by one while recording the session. Responses, transcript evidence, and progress are stored during the interview.", meta: "Candidate can move forward when the current step is safely finalized", tone: "amber" },
+          { title: "6. Complete and evaluate", body: "After the final answer, the attempt is finalized and the recruiter receives status, score, summary, recording, transcript, and integrity evidence when available.", meta: "Recruiter · Interviews and Reports", href: canViewInterviews ? pageHref("/interviews") : undefined, tone: "emerald" },
+          { title: "7. Handle an interruption", body: "Technical interruptions appear for recruiter review. Eligible attempts below the recovery threshold can receive a controlled recovery link instead of silently restarting everything.", meta: "Recovery is single-use, recruiter-controlled, and time limited", href: canViewInterviews ? pageHref("/interviews") : undefined, tone: "rose" },
+          { title: "8. Make the hiring decision", body: "Review the complete evidence, record the decision, and take the next hiring action. VERIS provides decision support but does not automatically hire or reject.", meta: "Human decision required", href: canViewReports ? pageHref("/reports") : undefined, tone: "cyan" },
+        ],
+        sources: ["Jobs", "VERIS Screening", "Interview workflow", "Recovery policy", "Reports"],
+      };
+    }
+
+    if (/(add.*user|add.*member|team access|manage team|role.*permission|permission.*role|invite.*recruiter|user.*access|disable.*user|remove.*user)/.test(normalized)) {
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: "Team access is managed through **Manage Team** using organization roles plus per-user permission controls. Only an authorized administrator should grant or change access, and users receive only the features included in their effective permissions.",
+        cards: [
+          { title: "1. Open Manage Team", body: "Go to Manage Team and choose Add User. Enter the recruiter’s full name and email address.", meta: "Administrator access required", href: pageHref("/manage-team"), tone: "cyan" },
+          { title: "2. Assign an organization role", body: "Select the appropriate organization role. Its default permission set is applied automatically as the starting point.", meta: "Use least-privilege access", href: pageHref("/manage-team"), tone: "emerald" },
+          { title: "3. Review exact permissions", body: "Add or remove individual permissions before sending the invite. These permissions control access to jobs, candidates, interviews, reports, billing, alerts, and administrative features.", meta: "Role defaults can be adjusted per member", href: pageHref("/manage-team"), tone: "amber" },
+          { title: "4. Send the access invitation", body: "Submitting the user creates a pending membership and emails a secure access link. The current invitation window is 72 hours.", meta: "Pending invites can be resent", href: pageHref("/manage-team"), tone: "cyan" },
+          { title: "5. User accepts and signs in", body: "The invited user opens the secure link, completes access setup, and enters the organization workspace with their assigned role and permissions.", meta: "Access is organization-scoped", tone: "emerald" },
+          { title: "6. Maintain access", body: "Administrators can edit the role and exact permissions, resend an invitation, temporarily disable or re-enable access, or remove the member from the organization.", meta: "Changes take effect through the member’s effective permission profile", href: pageHref("/manage-team"), tone: "rose" },
+        ],
+        sources: ["Manage Team", "Organization roles", "Permission catalog", "Access invitations"],
+      };
+    }
+
+    if (/(interrupt|network|stuck|halt|expired|exited|break)/.test(normalized)) {
+      const affected = interviews.filter((item) =>
+        /(interrupt|network|stuck|halt|expired|exited|abandon|heartbeat)/.test(
+          normalizeSearch(`${item.status} ${item.interruptionReason} ${item.reason} ${item.errorMessage}`),
+        ),
+      ).slice(0, 6);
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: affected.length
+          ? `I found **${affected.length} interview${affected.length === 1 ? "" : "s"}** with interruption-related signals in the currently loaded workspace. Review the evidence before resending an invite.`
+          : "I could not find an interruption-related interview in the currently loaded workspace. The interview queue may still contain older records outside this live snapshot.",
+        cards: affected.map((item) => ({
+          title: candidateName(item),
+          body: `${jobName(item)} · ${readText(item.status, "Status unavailable")}`,
+          meta: readText(item.interruptionReason ?? item.reason ?? item.errorMessage, "Open the interview for session evidence"),
+          href: canViewInterviews ? pageHref("/interviews") : undefined,
+          tone: "rose",
+        })),
+        sources: ["Interviews"],
+      };
+    }
+
+    if (/(top|best|high score|shortlist|compare)/.test(normalized)) {
+      const ranked = [...candidates]
+        .filter((item) => scoreFor(item) !== null)
+        .sort((a, b) => (scoreFor(b) ?? 0) - (scoreFor(a) ?? 0))
+        .slice(0, 5);
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: ranked.length
+          ? `Here are the **top ${ranked.length} candidates by visible score**. Treat the score as one signal and review interview evidence before deciding.`
+          : "No scored candidates are visible in the current workspace snapshot yet.",
+        cards: ranked.map((item) => ({
+          title: candidateName(item),
+          body: jobName(item),
+          meta: `${Math.round(scoreFor(item) ?? 0)}% · ${readText(item.status, "Pipeline")}`,
+          href: canViewCandidates ? pageHref("/candidates") : undefined,
+          tone: "emerald",
+        })),
+        sources: ["Candidates", "VERIS scores"],
+      };
+    }
+
+    if (/(flag|risk|integrity|attention|review)/.test(normalized)) {
+      const flagged = candidates.filter((item) =>
+        /(flag|risk|review|concern)/.test(normalizeSearch(`${item.status} ${item.decision} ${item.aiSummaryFull} ${item.riskLevel}`)),
+      ).slice(0, 6);
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: flagged.length
+          ? `I found **${flagged.length} candidate${flagged.length === 1 ? "" : "s"}** with review or integrity signals. These are review prompts, not automatic rejection decisions.`
+          : "No candidate review flags are visible in the current workspace snapshot.",
+        cards: flagged.map((item) => ({
+          title: candidateName(item),
+          body: jobName(item),
+          meta: readText(item.decision ?? item.status ?? item.riskLevel, "Review evidence"),
+          href: canViewCandidates ? pageHref("/candidates") : undefined,
+          tone: "amber",
+        })),
+        sources: ["Candidates", "Integrity signals"],
+      };
+    }
+
+    if (/(job|role|opening)/.test(normalized)) {
+      const active = jobs.filter((item) => item.isActive !== false).slice(0, 6);
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: `There are **${active.length} active role${active.length === 1 ? "" : "s"}** in the loaded workspace${jobs.length > active.length ? " (showing the first six)" : ""}.`,
+        cards: active.map((item) => ({
+          title: jobName(item),
+          body: Array.isArray(item.coreSkills) ? item.coreSkills.slice(0, 4).join(" · ") : "Role configuration",
+          meta: `${readNumber((item._count as Record<string, unknown> | undefined)?.interviews) ?? 0} interviews`,
+          href: pageHref("/jobs"),
+          tone: "cyan",
+        })),
+        sources: ["Jobs"],
+      };
+    }
+
+    const exactCandidates = candidates.filter((item) => normalized.length > 2 && normalizeSearch(candidateName(item)).includes(normalized)).slice(0, 4);
+    if (exactCandidates.length) {
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: `I found **${exactCandidates.length} matching candidate record${exactCandidates.length === 1 ? "" : "s"}**.`,
+        cards: exactCandidates.map((item) => ({
+          title: candidateName(item),
+          body: jobName(item),
+          meta: [scoreFor(item) === null ? null : `${Math.round(scoreFor(item) ?? 0)}%`, readText(item.status, "Pipeline")].filter(Boolean).join(" · "),
+          href: canViewCandidates ? pageHref("/candidates") : undefined,
+          tone: "cyan",
+        })),
+        sources: ["Candidates"],
+      };
+    }
+
+    const metricSummary = copilot.metrics.map((metric) => `**${metric.label}:** ${metric.value}`).join(" · ");
+    return {
+      id: makeId(),
+      role: "assistant",
+      content: `Here is the live workspace snapshot: ${metricSummary}\n\nMy recommended first action: **${copilot.priorities[0]?.title ?? "review the interview queue"}**. You can also ask me for top candidates, interrupted interviews, review flags, or active jobs.`,
+      cards: copilot.priorities.slice(0, 3).map((item) => ({ title: item.title, body: item.body, tone: item.tone === "risk" ? "rose" : "cyan" })),
+      sources: ["Jobs", "Candidates", "Interviews", "Reports"],
+    };
+  }, [workspace, copilot, canViewCandidates, canViewInterviews, canViewReports, pageHref]);
+
+  const askVerisAi = useCallback((question: string) => {
+    const cleanQuestion = question.trim();
+    if (!cleanQuestion || aiBusy) return;
+
+    setAiMessages((current) => [...current, {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: cleanQuestion,
+    }]);
+    setAiInput("");
+    setAiBusy(true);
+    window.setTimeout(() => {
+      setAiMessages((current) => [...current, buildAiReply(cleanQuestion)]);
+      setAiBusy(false);
+    }, 260);
+  }, [aiBusy, buildAiReply]);
+
+  const startNewAiChat = useCallback(() => {
+    setAiMessages([]);
+    setAiInput("");
+    setAiBusy(false);
+  }, []);
+
   const dockSections = [
     {
       label: "Quick Actions",
@@ -465,7 +694,7 @@ export default function CognitiveDock({
     {
       label: "Intelligence",
       items: [
-        canUseCopilot ? { label: "VERIS Copilot", icon: BrainCircuit, onClick: () => setPanel("copilot"), active: panel === "copilot", featured: true } : null,
+        canUseCopilot ? { label: "VERIS AI", icon: BrainCircuit, onClick: () => setPanel("copilot"), active: panel === "copilot", featured: true } : null,
       ].filter(present),
     },
   ].filter((section) => section.items.length > 0);
@@ -520,7 +749,7 @@ export default function CognitiveDock({
             <motion.section
               role="dialog"
               aria-label={getPanelTitle(panel)}
-              className="absolute bottom-24 left-1/2 max-h-[min(76dvh,720px)] w-[min(92vw,640px)] -translate-x-1/2 overflow-hidden rounded-[28px] border border-cyan-400/15 bg-[#071226]/95 p-5 text-white shadow-[0_30px_100px_rgba(2,6,23,0.65),0_0_56px_rgba(34,211,238,0.12)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2"
+              className={`absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[28px] border border-cyan-400/15 bg-[#071226]/95 p-5 text-white shadow-[0_30px_100px_rgba(2,6,23,0.65),0_0_56px_rgba(34,211,238,0.12)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "w-[min(94vw,1080px)]" : "w-[min(92vw,640px)]"}`}
               initial={{ opacity: 0, x: -10, scale: 0.97 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -10, scale: 0.97 }}
@@ -534,14 +763,21 @@ export default function CognitiveDock({
                     <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/70">Interview Operations</p>
                     <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setPanel(null)}
-                    className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white"
-                    aria-label="Close panel"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {panel === "copilot" && aiMessages.length ? (
+                      <button type="button" onClick={startNewAiChat} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white">
+                        <RefreshCw className="h-3.5 w-3.5" /> New chat
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setPanel(null)}
+                      className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white"
+                      aria-label="Close panel"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {(panel === "search" || panel === "copilot") && ((workspaceLoading && !hasLiveWorkspaceData) || workspaceError) ? (
@@ -647,60 +883,96 @@ export default function CognitiveDock({
                 ) : null}
 
                 {panel === "copilot" ? (
-                  <div className="mt-5 max-h-[56dvh] space-y-4 overflow-y-auto pr-1">
-                    <div className="rounded-2xl border border-cyan-300/12 bg-cyan-400/[0.06] p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]">
-                          <Sparkles className="h-5 w-5" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold text-white">VERIS Copilot online</p>
-                          <p className="mt-1 text-xs text-slate-400">Live recruiter guidance from jobs, interviews, candidates, and reports.</p>
-                        </div>
+                  <div className="mt-5 grid h-[min(64dvh,650px)] min-h-[480px] overflow-hidden rounded-3xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[260px_minmax(0,1fr)]">
+                    <aside className="hidden border-r border-white/8 bg-white/[0.025] p-4 lg:block">
+                      <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><Sparkles className="h-5 w-5" /></span>
+                        <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 truncate text-[11px] text-slate-400">Live workspace intelligence</p></div>
                       </div>
-                    </div>
+                      <p className="mb-3 mt-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Try asking</p>
+                      <div className="space-y-2">
+                        {aiStartingPoints.map(({ title, prompt, icon: Icon }) => (
+                          <button key={title} type="button" onClick={() => askVerisAi(prompt)} className="group flex w-full items-center gap-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-3 text-left transition hover:border-cyan-300/20 hover:bg-cyan-400/[0.08]">
+                            <Icon className="h-4 w-4 shrink-0 text-cyan-200/70 transition group-hover:text-cyan-100" />
+                            <span className="text-xs font-medium text-slate-300 group-hover:text-white">{title}</span>
+                            <ArrowRight className="ml-auto h-3.5 w-3.5 text-slate-600" />
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-5 grid grid-cols-2 gap-2">
+                        {copilot.metrics.map((metric) => (
+                          <div key={metric.label} className="rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5">
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">{metric.label}</p>
+                            <p className="mt-1 text-base font-semibold text-white">{metric.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </aside>
 
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {copilot.metrics.map((metric) => (
-                        <div key={metric.label} className="rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{metric.label}</p>
-                          <p className="mt-2 text-lg font-semibold text-white">{metric.value}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-2">
-                      {copilot.priorities.map((item) => (
-                        <article key={item.title} className="rounded-2xl border border-white/5 bg-white/[0.03] p-4">
-                          <div className="flex items-start gap-3">
-                            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-400/10 text-cyan-100">
-                              {item.tone === "risk" ? <TriangleAlert className="h-4 w-4 text-rose-200" /> : <BrainCircuit className="h-4 w-4" />}
-                            </span>
-                            <div>
-                              <p className={`text-sm font-semibold ${getDecisionTone(item.tone === "risk" ? "flagged" : "review")}`}>{item.title}</p>
-                              <p className="mt-2 text-sm leading-6 text-slate-300">{item.body}</p>
+                    <div className="flex min-w-0 flex-col overflow-hidden">
+                      {aiMessages.length === 0 ? (
+                        <div className="flex flex-1 flex-col overflow-y-auto px-5 py-6 sm:px-7">
+                          <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center">
+                            <div className="text-center">
+                              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100"><BrainCircuit className="h-6 w-6" /></span>
+                              <h3 className="mt-4 text-2xl font-semibold tracking-tight text-white">How can I help today?</h3>
+                              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-400">Ask about candidates, interviews, jobs, review signals, or pipeline priorities. Answers use the recruiter data you are permitted to see.</p>
+                            </div>
+                            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                              {aiStartingPoints.map(({ title, description, prompt, icon: Icon, tone }) => (
+                                <button key={title} type="button" onClick={() => askVerisAi(prompt)} className={`group rounded-2xl border border-white/8 bg-gradient-to-br ${tone} p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/25`}>
+                                  <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-slate-950/35 text-cyan-100"><Icon className="h-4.5 w-4.5" /></span>
+                                  <p className="mt-5 text-sm font-semibold text-white">{title}</p>
+                                  <p className="mt-2 text-xs leading-5 text-slate-400">{description}</p>
+                                  <ArrowRight className="mt-4 h-4 w-4 text-cyan-200/60 transition group-hover:translate-x-1 group-hover:text-cyan-100" />
+                                </button>
+                              ))}
                             </div>
                           </div>
-                        </article>
-                      ))}
-                    </div>
+                        </div>
+                      ) : (
+                        <Conversation className="min-h-0 flex-1">
+                          <ConversationContent className="gap-5 px-5 py-6 sm:px-7">
+                            {aiMessages.map((message) => (
+                              <Message key={message.id} from={message.role}>
+                                <MessageContent className={message.role === "assistant" ? "w-full" : undefined}>
+                                  {message.role === "assistant" ? <MessageResponse>{message.content}</MessageResponse> : <p>{message.content}</p>}
+                                  {message.cards?.length ? (
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                      {message.cards.map((card, index) => {
+                                        const tone = card.tone === "rose" ? "border-rose-300/15 bg-rose-400/[0.06]" : card.tone === "amber" ? "border-amber-300/15 bg-amber-400/[0.06]" : card.tone === "emerald" ? "border-emerald-300/15 bg-emerald-400/[0.06]" : "border-cyan-300/15 bg-cyan-400/[0.06]";
+                                        const cardContent = <><div className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-950/30"><CheckCircle2 className="h-4 w-4 text-cyan-100" /></span><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{card.title}</p><p className="mt-1 text-xs leading-5 text-slate-300">{card.body}</p>{card.meta ? <p className="mt-2 text-[11px] leading-4 text-slate-500">{card.meta}</p> : null}</div></div></>;
+                                        return card.href ? <a key={`${card.title}-${index}`} href={card.href} className={`rounded-2xl border p-3 transition hover:border-cyan-300/30 ${tone}`}>{cardContent}</a> : <article key={`${card.title}-${index}`} className={`rounded-2xl border p-3 ${tone}`}>{cardContent}</article>;
+                                      })}
+                                    </div>
+                                  ) : null}
+                                  {message.sources?.length ? <p className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500"><FileSearch className="h-3 w-3" /> Sources: {message.sources.join(" · ")}</p> : null}
+                                </MessageContent>
+                              </Message>
+                            ))}
+                            {aiBusy ? <Message from="assistant"><MessageContent><span className="inline-flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin text-cyan-200" /> Reading workspace signals...</span></MessageContent></Message> : null}
+                          </ConversationContent>
+                          <ConversationScrollButton className="border-cyan-300/20 bg-[#0b1729] text-cyan-100" />
+                        </Conversation>
+                      )}
 
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      {canSendInterview ? (
-                      <button type="button" onClick={openSendInterview} className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-3 text-left text-sm font-semibold text-cyan-50 transition hover:border-cyan-300/30 hover:bg-cyan-400/15">
-                        Send next invite
-                      </button>
-                      ) : null}
-                      {canViewCandidates ? (
-                      <a href={pageHref("/candidates")} className="rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm font-semibold text-slate-200 transition hover:border-cyan-300/20 hover:bg-cyan-400/10">
-                        Review queue
-                      </a>
-                      ) : null}
-                      {canViewReports ? (
-                      <a href={pageHref("/reports")} className="rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm font-semibold text-slate-200 transition hover:border-cyan-300/20 hover:bg-cyan-400/10">
-                        Open reports
-                      </a>
-                      ) : null}
+                      <div className="border-t border-white/8 bg-[#071226]/95 p-3 sm:p-4">
+                        <Suggestions className="mb-3">
+                          {["How interviews work", "Add users and access", "Interrupted interviews", "Top candidates"].map((suggestion) => (
+                            <Suggestion key={suggestion} suggestion={suggestion} onClick={askVerisAi} className="border-white/10 bg-white/[0.035] text-slate-300 hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white" />
+                          ))}
+                        </Suggestions>
+                        <PromptInput onSubmit={(message) => askVerisAi(message.text)} className="rounded-2xl border border-cyan-300/20 bg-white/[0.04] shadow-[0_0_24px_rgba(34,211,238,0.06)]">
+                          <PromptInputBody>
+                            <PromptInputTextarea value={aiInput} onChange={(event) => setAiInput(event.target.value)} placeholder="Ask VERIS AI about your hiring workspace..." className="min-h-12 text-slate-100 placeholder:text-slate-500" />
+                          </PromptInputBody>
+                          <PromptInputFooter>
+                            <span className="inline-flex items-center gap-1.5 px-2 text-[10px] text-slate-500"><MessageSquareText className="h-3 w-3" /> Enter to send · Shift + Enter for new line</span>
+                            <PromptInputSubmit status={aiBusy ? "submitted" : "ready"} disabled={!aiInput.trim() || aiBusy} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200" />
+                          </PromptInputFooter>
+                        </PromptInput>
+                        <p className="mt-2 text-center text-[10px] text-slate-600">VERIS AI summarizes visible workspace data. Recruiters remain responsible for hiring decisions.</p>
+                      </div>
                     </div>
                   </div>
                 ) : null}
