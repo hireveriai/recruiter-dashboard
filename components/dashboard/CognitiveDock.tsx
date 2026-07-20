@@ -749,7 +749,7 @@ export default function CognitiveDock({
             <motion.section
               role="dialog"
               aria-label={getPanelTitle(panel)}
-              className={`absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[28px] border border-cyan-400/15 bg-[#071226]/95 p-5 text-white shadow-[0_30px_100px_rgba(2,6,23,0.65),0_0_56px_rgba(34,211,238,0.12)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "w-[min(94vw,1080px)]" : "w-[min(92vw,640px)]"}`}
+              className={`absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[28px] border border-cyan-400/15 bg-[#071226]/95 p-5 text-white shadow-[0_30px_100px_rgba(2,6,23,0.65),0_0_56px_rgba(34,211,238,0.12)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-3 !top-3 !max-h-none !translate-y-0 w-[min(94vw,1080px)] md:w-[min(calc(100vw-7rem),1080px)]" : "w-[min(92vw,640px)]"}`}
               initial={{ opacity: 0, x: -10, scale: 0.97 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -10, scale: 0.97 }}
@@ -757,8 +757,8 @@ export default function CognitiveDock({
               onClick={(event) => event.stopPropagation()}
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)]" />
-              <div className="relative">
-                <div className="flex items-start justify-between gap-4">
+              <div className={`relative ${panel === "copilot" ? "flex h-full min-h-0 flex-col" : ""}`}>
+                <div className="flex shrink-0 items-start justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/70">Interview Operations</p>
                     <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
@@ -883,7 +883,7 @@ export default function CognitiveDock({
                 ) : null}
 
                 {panel === "copilot" ? (
-                  <div className="mt-5 grid h-[min(64dvh,650px)] min-h-[480px] overflow-hidden rounded-3xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[260px_minmax(0,1fr)]">
+                  <div className="mt-5 grid min-h-0 flex-1 overflow-hidden rounded-3xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[260px_minmax(0,1fr)]">
                     <aside className="hidden border-r border-white/8 bg-white/[0.025] p-4 lg:block">
                       <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><Sparkles className="h-5 w-5" /></span>
