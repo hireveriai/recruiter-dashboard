@@ -85,6 +85,24 @@ type GenerateQuestionInput = {
   similarityThreshold?: number
   maxAttempts?: number
   generationTimeoutMs?: number
+  previousQuestions?: string[]
+}
+
+async function getPriorCandidateJobQuestions(context: InterviewContextRow) {
+  const rows = await prisma.$queryRaw<Array<{ question_text: string }>>(Prisma.sql`
+    select distinct iq.question_text
+    from public.interview_questions iq
+    join public.interviews prior on prior.interview_id = iq.interview_id
+    where prior.organization_id = ${context.organization_id}::uuid
+      and prior.candidate_id = ${context.candidate_id}::uuid
+      and prior.job_id = ${context.job_id}::uuid
+      and prior.interview_id <> ${context.interview_id}::uuid
+      and nullif(trim(coalesce(iq.question_text, '')), '') is not null
+    order by iq.question_text
+    limit 100
+  `)
+
+  return rows.map((row) => row.question_text.trim()).filter(Boolean)
 }
 
 function sleep(ms: number) {
@@ -532,6 +550,7 @@ async function markQuestionGenerationSucceeded(organizationId: string, interview
 export async function prepareInterviewQuestionsWithRetry(input: GenerateQuestionInput) {
   await markQuestionGenerationStarted(input.organizationId, input.interviewId)
   const context = await getInterviewContext(input.organizationId, input.interviewId)
+  const previousQuestions = input.previousQuestions ?? await getPriorCandidateJobQuestions(context)
   let lastError: unknown = null
   const maxAttempts = Math.max(1, Math.min(QUESTION_RETRY_COUNT, input.maxAttempts ?? QUESTION_RETRY_COUNT))
 
@@ -564,8 +583,8 @@ export async function prepareInterviewQuestionsWithRetry(input: GenerateQuestion
           codingDifficulty: context.coding_difficulty,
           codingDurationMinutes: context.coding_duration_minutes,
           codingLanguages: context.coding_languages ?? [],
-          previousQuestions: [],
-          similarityThreshold: input.similarityThreshold ?? 0.8,
+          previousQuestions,
+          similarityThreshold: input.similarityThreshold ?? 0.72,
         }),
         input.generationTimeoutMs ?? CREATE_LINK_AI_TIMEOUT_MS,
         "AI question generation timed out"
