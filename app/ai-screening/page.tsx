@@ -824,6 +824,7 @@ export default function AiScreeningPage() {
   const [compareCandidateIds, setCompareCandidateIds] = useState<string[]>([])
   const [compareModalOpen, setCompareModalOpen] = useState(false)
   const [pendingSendCandidateIds, setPendingSendCandidateIds] = useState<string[]>([])
+  const [skippedSendCandidateIds, setSkippedSendCandidateIds] = useState<string[]>([])
   const [confirmSendOpen, setConfirmSendOpen] = useState(false)
   const [sendAccessType, setSendAccessType] = useState<InterviewAccessType>("FLEXIBLE")
   const [defaultScheduleStartTime, setDefaultScheduleStartTime] = useState("")
@@ -1244,8 +1245,16 @@ export default function AiScreeningPage() {
     () => matches.filter((match) => pendingSendCandidateIds.includes(match.candidateId)),
     [matches, pendingSendCandidateIds]
   )
-  const pendingSendMissingEmailCount = pendingSendMatches.filter((match) => !match.email).length
-  const shouldCollapseCustomSchedule = customScheduleEnabled && pendingSendMatches.length > 10 && !customScheduleExpanded
+  const includedPendingSendMatches = useMemo(
+    () => pendingSendMatches.filter((match) => !skippedSendCandidateIds.includes(match.candidateId)),
+    [pendingSendMatches, skippedSendCandidateIds]
+  )
+  const activeDuplicateInviteWarnings = useMemo(
+    () => duplicateInviteWarnings.filter((warning) => !skippedSendCandidateIds.includes(warning.candidateId)),
+    [duplicateInviteWarnings, skippedSendCandidateIds]
+  )
+  const pendingSendMissingEmailCount = includedPendingSendMatches.filter((match) => !match.email).length
+  const shouldCollapseCustomSchedule = customScheduleEnabled && includedPendingSendMatches.length > 10 && !customScheduleExpanded
   const uploadedResumeCount = uploadRows.filter(isResumeReady).length
   const resumeStatusText =
     resumeState === "IDLE"
@@ -1394,6 +1403,7 @@ export default function AiScreeningPage() {
     setSelectedCandidateIds([])
     setCompareCandidateIds([])
     setPendingSendCandidateIds([])
+    setSkippedSendCandidateIds([])
     setSendResults([])
     setConfirmSendOpen(false)
     setCompareModalOpen(false)
@@ -1963,7 +1973,11 @@ export default function AiScreeningPage() {
       const payload = await response.json().catch(() => null)
 
       if (payload?.warning) {
-        setDuplicateInviteWarnings(payload.duplicates ?? [])
+        const warnings = (payload.duplicates ?? []) as DuplicateInviteWarning[]
+        setDuplicateInviteWarnings(warnings)
+        setSkippedSendCandidateIds((current) => [
+          ...new Set([...current, ...warnings.map((warning) => warning.candidateId)]),
+        ])
         setNotice("")
         setSendProgressOpen(false)
         return "warning"
@@ -2093,6 +2107,7 @@ export default function AiScreeningPage() {
     }
 
     setPendingSendCandidateIds(uniqueCandidateIds)
+    setSkippedSendCandidateIds([])
     setDuplicateInviteWarnings([])
     resetSendScheduleState()
     setConfirmSendOpen(true)
@@ -2101,6 +2116,7 @@ export default function AiScreeningPage() {
   function closeSendConfirmation() {
     setConfirmSendOpen(false)
     setPendingSendCandidateIds([])
+    setSkippedSendCandidateIds([])
     setDuplicateInviteWarnings([])
     resetSendScheduleState()
   }
@@ -2141,7 +2157,7 @@ export default function AiScreeningPage() {
 
   function buildCandidateInterviewSchedules(): CandidateInterviewSchedule[] | null {
     if (sendAccessType === "FLEXIBLE") {
-      return pendingSendMatches.map((match) => ({
+      return includedPendingSendMatches.map((match) => ({
         candidateId: match.candidateId,
         accessType: "FLEXIBLE",
         startTime: null,
@@ -2158,7 +2174,7 @@ export default function AiScreeningPage() {
 
     const scheduledCandidates: CandidateInterviewSchedule[] = []
 
-    for (const match of pendingSendMatches) {
+    for (const match of includedPendingSendMatches) {
       const draft = customScheduleEnabled
         ? getCandidateScheduleDraft(match.candidateId)
         : { startTime: defaultScheduleStartTime, endTime: defaultScheduleEndTime }
@@ -2182,7 +2198,7 @@ export default function AiScreeningPage() {
   }
 
   async function confirmPendingSend() {
-    const candidateIds = pendingSendMatches.map((match) => match.candidateId)
+    const candidateIds = includedPendingSendMatches.map((match) => match.candidateId)
 
     if (candidateIds.length === 0) {
       closeSendConfirmation()
@@ -2208,7 +2224,7 @@ export default function AiScreeningPage() {
   }
 
   async function confirmDuplicateBulkSend() {
-    const candidateIds = pendingSendMatches.map((match) => match.candidateId)
+    const candidateIds = includedPendingSendMatches.map((match) => match.candidateId)
     const candidates = buildCandidateInterviewSchedules()
 
     if (!candidates || candidateIds.length === 0) {
@@ -3309,7 +3325,7 @@ export default function AiScreeningPage() {
               {duplicateInviteWarnings.length > 0 ? "Review Existing Interview Invite" : "Confirm Interview Send"}
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              You are about to send interviews to {pendingSendMatches.length} candidate{pendingSendMatches.length === 1 ? "" : "s"}.
+              {includedPendingSendMatches.length} of {pendingSendMatches.length} candidate{pendingSendMatches.length === 1 ? "" : "s"} selected to receive an interview.
             </p>
             {pendingSendMissingEmailCount > 0 ? (
               <p className="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
@@ -3327,7 +3343,7 @@ export default function AiScreeningPage() {
                   </p>
                 ) : null}
                 <p className="mt-2 font-semibold text-amber-50">
-                  Nothing has been sent yet. Choose Send All Anyway to continue with the complete selected batch.
+                  Previously invited candidates are skipped by default. Select them below only if you want to send another invite.
                 </p>
               </div>
             ) : null}
@@ -3388,7 +3404,7 @@ export default function AiScreeningPage() {
                       onChange={(event) => {
                         const enabled = event.target.checked
                         setCustomScheduleEnabled(enabled)
-                        setCustomScheduleExpanded(enabled && pendingSendMatches.length <= 10)
+                        setCustomScheduleExpanded(enabled && includedPendingSendMatches.length <= 10)
                         setCandidateScheduleDrafts({})
                         setSendScheduleError("")
                       }}
@@ -3400,7 +3416,7 @@ export default function AiScreeningPage() {
                   {customScheduleEnabled ? (
                     shouldCollapseCustomSchedule ? (
                       <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-700 bg-slate-950/45 p-3 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-slate-300">Custom schedule enabled for {pendingSendMatches.length} candidates.</p>
+                        <p className="text-sm text-slate-300">Custom schedule enabled for {includedPendingSendMatches.length} candidates.</p>
                         <button
                           type="button"
                           onClick={() => setCustomScheduleExpanded(true)}
@@ -3413,7 +3429,7 @@ export default function AiScreeningPage() {
                       <div className="mt-4 space-y-3">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Candidate Schedules</p>
-                          {pendingSendMatches.length > 10 ? (
+                          {includedPendingSendMatches.length > 10 ? (
                             <button
                               type="button"
                               onClick={() => setCustomScheduleExpanded(false)}
@@ -3424,7 +3440,7 @@ export default function AiScreeningPage() {
                           ) : null}
                         </div>
                         <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
-                          {pendingSendMatches.map((match) => {
+                          {includedPendingSendMatches.map((match) => {
                             const draft = getCandidateScheduleDraft(match.candidateId)
 
                             return (
@@ -3453,17 +3469,36 @@ export default function AiScreeningPage() {
             ) : null}
 
             <div className="mt-5 max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/35">
-              {pendingSendMatches.map((match) => (
-                <div key={match.candidateId} className="flex items-center justify-between gap-3 border-b border-slate-800 px-3 py-2 last:border-b-0">
-                  <div className="min-w-0">
+              {pendingSendMatches.map((match) => {
+                const duplicate = duplicateInviteWarnings.find((warning) => warning.candidateId === match.candidateId)
+                const included = !skippedSendCandidateIds.includes(match.candidateId)
+
+                return (
+                <label key={match.candidateId} className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-800 px-3 py-2 last:border-b-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={included}
+                      onChange={(event) => {
+                        setSkippedSendCandidateIds((current) => event.target.checked
+                          ? current.filter((candidateId) => candidateId !== match.candidateId)
+                          : [...new Set([...current, match.candidateId])])
+                        setSendScheduleError("")
+                      }}
+                      className="h-4 w-4 shrink-0 accent-cyan-400"
+                    />
+                    <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-white">{match.candidateName}</p>
                     <p className="truncate text-xs text-slate-500">{match.email || "No email"}</p>
+                    {duplicate ? <p className="mt-1 text-[11px] text-amber-200/80">Previously invited {formatDateTime(duplicate.lastSentAt)}</p> : null}
+                    </div>
                   </div>
-                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase ${getRiskTone(match.riskLevel)}`}>
-                    {match.riskLevel}
+                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase ${duplicate ? "border-amber-400/25 bg-amber-500/10 text-amber-200" : getRiskTone(match.riskLevel)}`}>
+                    {duplicate ? (included ? "Resend" : "Skipped") : match.riskLevel}
                   </span>
-                </div>
-              ))}
+                </label>
+                )
+              })}
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -3475,12 +3510,12 @@ export default function AiScreeningPage() {
               </button>
               <button
                 type="button"
-                onClick={duplicateInviteWarnings.length > 0 ? confirmDuplicateBulkSend : confirmPendingSend}
-                disabled={isBusy || pendingSendMatches.length === 0}
+                onClick={activeDuplicateInviteWarnings.length > 0 ? confirmDuplicateBulkSend : confirmPendingSend}
+                disabled={isBusy || includedPendingSendMatches.length === 0}
                 className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <SendIcon />
-                {duplicateInviteWarnings.length > 0 ? "Send All Anyway" : "Send Interview"}
+                {activeDuplicateInviteWarnings.length > 0 ? "Send Selected Anyway" : "Send Interview"}
               </button>
             </div>
           </div>

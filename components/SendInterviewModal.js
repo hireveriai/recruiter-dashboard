@@ -202,6 +202,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
   const [emailError, setEmailError] = useState("")
   const [copyStatus, setCopyStatus] = useState("idle")
   const [duplicateWarning, setDuplicateWarning] = useState(null)
+  const [duplicateResendEmails, setDuplicateResendEmails] = useState([])
   const [trialCredits, setTrialCredits] = useState(() => normalizeTrialCredits(initialTrialCredits))
   const [creditConfirmationOpen, setCreditConfirmationOpen] = useState(false)
   const [confirmedCreditNotice, setConfirmedCreditNotice] = useState(false)
@@ -224,6 +225,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
     setEmailError("")
     setCopyStatus("idle")
     setDuplicateWarning(null)
+    setDuplicateResendEmails([])
     setCreditConfirmationOpen(false)
     setConfirmedCreditNotice(false)
     setUpgradeLimitOpen(false)
@@ -495,7 +497,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
     return interviewData.data || interviewData
   }
 
-  const handleSubmit = async ({ confirmedDuplicate = false, confirmedCredit = false } = {}) => {
+  const handleSubmit = async ({ confirmedDuplicate = false, confirmedCredit = false, skippedEmails = [] } = {}) => {
     setError("")
     setLink("")
     setBatchResults([])
@@ -513,7 +515,10 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
       return
     }
 
-    const candidates = collectCandidatesForSubmission()
+    const skippedEmailSet = new Set(skippedEmails)
+    const candidates = collectCandidatesForSubmission().filter(
+      (candidate) => !skippedEmailSet.has(candidate.email)
+    )
     if (candidates.length === 0) {
       showFormError("Add at least one candidate")
       return
@@ -568,7 +573,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
           })
           const duplicateData = await duplicateResponse.json().catch(() => null)
           return duplicateResponse.ok && duplicateData?.warning
-            ? { email: candidate.email, lastSentAt: duplicateData.lastSentAt }
+            ? { name: candidate.name, email: candidate.email, lastSentAt: duplicateData.lastSentAt }
             : null
         }))
         const duplicateCandidates = duplicateChecks.filter(Boolean)
@@ -577,6 +582,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
           setDuplicateWarning({
             candidates: duplicateCandidates,
           })
+          setDuplicateResendEmails([])
           return
         }
       }
@@ -760,9 +766,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
           <div className="w-full max-w-md rounded-2xl border border-amber-400/25 bg-[#0b1220] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
             <h3 className="text-lg font-semibold text-white">Duplicate invite detected</h3>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              {duplicateWarning.candidates.length === 1
-                ? "This candidate has already received an interview invite. Send another invite?"
-                : `${duplicateWarning.candidates.length} candidates have already received interview invites. Send those invites again?`}
+              Previously invited candidates are skipped by default. Select any candidate who should receive another invite.
             </p>
             <div className="mt-4 max-h-48 space-y-2 overflow-y-auto">
               {duplicateWarning.candidates.map((candidate) => {
@@ -772,10 +776,21 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                   : "an earlier date"
 
                 return (
-                  <div key={candidate.email} className="rounded-xl border border-amber-300/15 bg-amber-500/[0.06] px-3 py-2">
-                    <p className="text-sm font-medium text-white">{candidate.email}</p>
-                    <p className="mt-1 text-xs text-amber-100/70">Last sent {sentAtLabel}</p>
-                  </div>
+                  <label key={candidate.email} className="flex cursor-pointer items-center gap-3 rounded-xl border border-amber-300/15 bg-amber-500/[0.06] px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={duplicateResendEmails.includes(candidate.email)}
+                      onChange={(event) => setDuplicateResendEmails((current) => event.target.checked
+                        ? [...new Set([...current, candidate.email])]
+                        : current.filter((emailAddress) => emailAddress !== candidate.email))}
+                      className="h-4 w-4 shrink-0 accent-cyan-400"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-white">{candidate.name}</p>
+                      <p className="truncate text-xs text-slate-400">{candidate.email}</p>
+                      <p className="mt-1 text-xs text-amber-100/70">Last sent {sentAtLabel} · {duplicateResendEmails.includes(candidate.email) ? "Send again" : "Skip"}</p>
+                    </div>
+                  </label>
                 )
               })}
             </div>
@@ -790,12 +805,15 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
               <button
                 type="button"
                 onClick={() => {
+                  const skippedEmails = duplicateWarning.candidates
+                    .map((candidate) => candidate.email)
+                    .filter((candidateEmail) => !duplicateResendEmails.includes(candidateEmail))
                   setDuplicateWarning(null)
-                  void handleSubmit({ confirmedDuplicate: true })
+                  void handleSubmit({ confirmedDuplicate: true, skippedEmails })
                 }}
                 className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               >
-                Send Again
+                Continue with selected
               </button>
             </div>
           </div>
