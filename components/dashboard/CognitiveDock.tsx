@@ -26,13 +26,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
-import {
-  PromptInput,
-  PromptInputBody,
-  PromptInputFooter,
-  PromptInputSubmit,
-  PromptInputTextarea,
-} from "@/components/ai-elements/prompt-input";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 
 import { buildAuthUrl } from "@/lib/client/auth-query";
@@ -758,10 +751,13 @@ export default function CognitiveDock({
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)]" />
               <div className={`relative ${panel === "copilot" ? "flex h-full min-h-0 flex-col" : ""}`}>
-                <div className="flex shrink-0 items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.26em] text-cyan-200/70">Interview Operations</p>
-                    <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
+                <div className="flex shrink-0 items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    {panel === "copilot" ? <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100"><Sparkles className="h-4 w-4" /></span> : null}
+                    <div>
+                      <h2 className="text-base font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
+                      <p className="mt-0.5 text-[10px] text-slate-400">Interview operations intelligence</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {panel === "copilot" && aiMessages.length ? (
@@ -884,7 +880,7 @@ export default function CognitiveDock({
 
                 {panel === "copilot" ? (
                   <div className="mt-3 grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[220px_minmax(0,1fr)]">
-                    <aside className="hidden min-h-0 overflow-y-auto border-r border-white/8 bg-white/[0.025] p-3 lg:block">
+                    <aside className="hidden min-h-0 overflow-hidden border-r border-white/8 bg-white/[0.025] p-3 lg:block">
                       <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><Sparkles className="h-5 w-5" /></span>
                         <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 truncate text-[11px] text-slate-400">Live workspace intelligence</p></div>
@@ -899,27 +895,19 @@ export default function CognitiveDock({
                           </button>
                         ))}
                       </div>
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        {copilot.metrics.map((metric) => (
-                          <div key={metric.label} className="rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">{metric.label}</p>
-                            <p className="mt-1 text-base font-semibold text-white">{metric.value}</p>
-                          </div>
-                        ))}
-                      </div>
                     </aside>
 
                     <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                       {aiMessages.length === 0 ? (
-                        <div className="flex flex-1 flex-col overflow-y-auto px-5 py-4 sm:px-6">
-                          <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center">
+                        <div className="flex flex-1 flex-col overflow-y-auto px-5 py-4 sm:overflow-hidden sm:px-6">
+                          <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center">
                             <div className="text-center">
                               <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100"><BrainCircuit className="h-5 w-5" /></span>
                               <h3 className="mt-3 text-xl font-semibold tracking-tight text-white">How can I help today?</h3>
                               <p className="mx-auto mt-1.5 max-w-xl text-xs leading-5 text-slate-400">Ask about candidates, interviews, jobs, review signals, or pipeline priorities. Answers use the recruiter data you are permitted to see.</p>
                             </div>
-                            <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
-                              {aiStartingPoints.map(({ title, description, prompt, icon: Icon, tone }) => (
+                            <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                              {aiStartingPoints.slice(0, 3).map(({ title, description, prompt, icon: Icon, tone }) => (
                                 <button key={title} type="button" onClick={() => askVerisAi(prompt)} className={`group rounded-xl border border-white/8 bg-gradient-to-br ${tone} p-3.5 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/25`}>
                                   <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-slate-950/35 text-cyan-100"><Icon className="h-4 w-4" /></span>
                                   <p className="mt-3 text-sm font-semibold text-white">{title}</p>
@@ -956,22 +944,30 @@ export default function CognitiveDock({
                         </Conversation>
                       )}
 
-                      <div className="shrink-0 border-t border-white/8 bg-[#071226]/95 p-2.5 sm:px-3 sm:py-2.5">
-                        <Suggestions className="mb-2">
+                      <div className="shrink-0 border-t border-white/8 bg-[#071226]/95 px-3 py-2.5">
+                        <Suggestions className="mb-2 flex-nowrap overflow-x-auto">
                           {["How interviews work", "Add users and access", "Interrupted interviews", "Top candidates"].map((suggestion) => (
                             <Suggestion key={suggestion} suggestion={suggestion} onClick={askVerisAi} className="border-white/10 bg-white/[0.035] text-slate-300 hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white" />
                           ))}
                         </Suggestions>
-                        <PromptInput onSubmit={(message) => askVerisAi(message.text)} className="rounded-2xl border border-cyan-300/20 bg-white/[0.04] shadow-[0_0_24px_rgba(34,211,238,0.06)]">
-                          <PromptInputBody>
-                            <PromptInputTextarea value={aiInput} onChange={(event) => setAiInput(event.target.value)} placeholder="Ask VERIS AI about your hiring workspace..." className="min-h-10 text-slate-100 placeholder:text-slate-500" />
-                          </PromptInputBody>
-                          <PromptInputFooter>
-                            <span className="inline-flex items-center gap-1.5 px-2 text-[10px] text-slate-500"><MessageSquareText className="h-3 w-3" /> Enter to send · Shift + Enter for new line</span>
-                            <PromptInputSubmit status={aiBusy ? "submitted" : "ready"} disabled={!aiInput.trim() || aiBusy} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200" />
-                          </PromptInputFooter>
-                        </PromptInput>
-                        <p className="mt-1.5 text-center text-[10px] text-slate-600">VERIS AI summarizes visible workspace data. Recruiters remain responsible for hiring decisions.</p>
+                        <form
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            if (aiInput.trim() && !aiBusy) askVerisAi(aiInput);
+                          }}
+                          className="flex h-12 items-center gap-2 rounded-xl border border-cyan-300/20 bg-white/[0.04] px-3 shadow-[0_0_20px_rgba(34,211,238,0.05)] focus-within:border-cyan-300/40"
+                        >
+                          <input
+                            value={aiInput}
+                            onChange={(event) => setAiInput(event.target.value)}
+                            placeholder="Ask VERIS AI about your hiring workspace..."
+                            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
+                          />
+                          <button type="submit" disabled={!aiInput.trim() || aiBusy} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-300 text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-35" aria-label="Send message">
+                            {aiBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                          </button>
+                        </form>
+                        <p className="mt-1.5 flex items-center justify-center gap-1.5 text-[9px] text-slate-600"><MessageSquareText className="h-3 w-3" /> Enter to send · VERIS AI summarizes visible workspace data.</p>
                       </div>
                     </div>
                   </div>
