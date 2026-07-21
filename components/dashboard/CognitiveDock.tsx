@@ -749,7 +749,7 @@ export default function CognitiveDock({
             <motion.section
               role="dialog"
               aria-label={getPanelTitle(panel)}
-              className={`absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[28px] border border-cyan-400/15 bg-[#071226]/95 p-5 text-white shadow-[0_30px_100px_rgba(2,6,23,0.65),0_0_56px_rgba(34,211,238,0.12)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-3 !top-3 !max-h-none !translate-y-0 w-[min(94vw,1080px)] md:w-[min(calc(100vw-7rem),1080px)]" : "w-[min(92vw,640px)]"}`}
+              className={`absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[24px] border border-cyan-400/15 bg-[#071226]/95 p-4 text-white shadow-[0_24px_80px_rgba(2,6,23,0.58),0_0_42px_rgba(34,211,238,0.09)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-auto !top-1/2 h-[min(78dvh,700px)] !max-h-[700px] !-translate-y-1/2 w-[min(92vw,980px)] md:w-[min(calc(100vw-7rem),980px)]" : "w-[min(92vw,640px)]"}`}
               initial={{ opacity: 0, x: -10, scale: 0.97 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -10, scale: 0.97 }}
@@ -760,8 +760,8 @@ export default function CognitiveDock({
               <div className={`relative ${panel === "copilot" ? "flex h-full min-h-0 flex-col" : ""}`}>
                 <div className="flex shrink-0 items-start justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/70">Interview Operations</p>
-                    <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.26em] text-cyan-200/70">Interview Operations</p>
+                    <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
                   </div>
                   <div className="flex items-center gap-2">
                     {panel === "copilot" && aiMessages.length ? (
@@ -883,23 +883,23 @@ export default function CognitiveDock({
                 ) : null}
 
                 {panel === "copilot" ? (
-                  <div className="mt-5 grid min-h-0 flex-1 overflow-hidden rounded-3xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[260px_minmax(0,1fr)]">
-                    <aside className="hidden min-h-0 overflow-y-auto border-r border-white/8 bg-white/[0.025] p-4 lg:block">
+                  <div className="mt-3 grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[220px_minmax(0,1fr)]">
+                    <aside className="hidden min-h-0 overflow-y-auto border-r border-white/8 bg-white/[0.025] p-3 lg:block">
                       <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><Sparkles className="h-5 w-5" /></span>
                         <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 truncate text-[11px] text-slate-400">Live workspace intelligence</p></div>
                       </div>
-                      <p className="mb-3 mt-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Try asking</p>
-                      <div className="space-y-2">
+                      <p className="mb-2 mt-4 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-500">Try asking</p>
+                      <div className="space-y-1.5">
                         {aiStartingPoints.map(({ title, prompt, icon: Icon }) => (
-                          <button key={title} type="button" onClick={() => askVerisAi(prompt)} className="group flex w-full items-center gap-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-3 text-left transition hover:border-cyan-300/20 hover:bg-cyan-400/[0.08]">
+                          <button key={title} type="button" onClick={() => askVerisAi(prompt)} className="group flex w-full items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5 text-left transition hover:border-cyan-300/20 hover:bg-cyan-400/[0.08]">
                             <Icon className="h-4 w-4 shrink-0 text-cyan-200/70 transition group-hover:text-cyan-100" />
                             <span className="text-xs font-medium text-slate-300 group-hover:text-white">{title}</span>
                             <ArrowRight className="ml-auto h-3.5 w-3.5 text-slate-600" />
                           </button>
                         ))}
                       </div>
-                      <div className="mt-5 grid grid-cols-2 gap-2">
+                      <div className="mt-4 grid grid-cols-2 gap-2">
                         {copilot.metrics.map((metric) => (
                           <div key={metric.label} className="rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5">
                             <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">{metric.label}</p>
@@ -911,20 +911,20 @@ export default function CognitiveDock({
 
                     <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                       {aiMessages.length === 0 ? (
-                        <div className="flex flex-1 flex-col overflow-y-auto px-5 py-6 sm:px-7">
+                        <div className="flex flex-1 flex-col overflow-y-auto px-5 py-4 sm:px-6">
                           <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center">
                             <div className="text-center">
-                              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100"><BrainCircuit className="h-6 w-6" /></span>
-                              <h3 className="mt-4 text-2xl font-semibold tracking-tight text-white">How can I help today?</h3>
-                              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-400">Ask about candidates, interviews, jobs, review signals, or pipeline priorities. Answers use the recruiter data you are permitted to see.</p>
+                              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100"><BrainCircuit className="h-5 w-5" /></span>
+                              <h3 className="mt-3 text-xl font-semibold tracking-tight text-white">How can I help today?</h3>
+                              <p className="mx-auto mt-1.5 max-w-xl text-xs leading-5 text-slate-400">Ask about candidates, interviews, jobs, review signals, or pipeline priorities. Answers use the recruiter data you are permitted to see.</p>
                             </div>
-                            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                            <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
                               {aiStartingPoints.map(({ title, description, prompt, icon: Icon, tone }) => (
-                                <button key={title} type="button" onClick={() => askVerisAi(prompt)} className={`group rounded-2xl border border-white/8 bg-gradient-to-br ${tone} p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/25`}>
-                                  <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-slate-950/35 text-cyan-100"><Icon className="h-4.5 w-4.5" /></span>
-                                  <p className="mt-5 text-sm font-semibold text-white">{title}</p>
-                                  <p className="mt-2 text-xs leading-5 text-slate-400">{description}</p>
-                                  <ArrowRight className="mt-4 h-4 w-4 text-cyan-200/60 transition group-hover:translate-x-1 group-hover:text-cyan-100" />
+                                <button key={title} type="button" onClick={() => askVerisAi(prompt)} className={`group rounded-xl border border-white/8 bg-gradient-to-br ${tone} p-3.5 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/25`}>
+                                  <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-slate-950/35 text-cyan-100"><Icon className="h-4 w-4" /></span>
+                                  <p className="mt-3 text-sm font-semibold text-white">{title}</p>
+                                  <p className="mt-1 text-[11px] leading-4 text-slate-400">{description}</p>
+                                  <ArrowRight className="mt-2.5 h-3.5 w-3.5 text-cyan-200/60 transition group-hover:translate-x-1 group-hover:text-cyan-100" />
                                 </button>
                               ))}
                             </div>
@@ -956,7 +956,7 @@ export default function CognitiveDock({
                         </Conversation>
                       )}
 
-                      <div className="shrink-0 border-t border-white/8 bg-[#071226]/95 p-3 sm:px-4 sm:py-3">
+                      <div className="shrink-0 border-t border-white/8 bg-[#071226]/95 p-2.5 sm:px-3 sm:py-2.5">
                         <Suggestions className="mb-2">
                           {["How interviews work", "Add users and access", "Interrupted interviews", "Top candidates"].map((suggestion) => (
                             <Suggestion key={suggestion} suggestion={suggestion} onClick={askVerisAi} className="border-white/10 bg-white/[0.035] text-slate-300 hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white" />
