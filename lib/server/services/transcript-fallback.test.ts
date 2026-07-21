@@ -43,3 +43,15 @@ test("cleans stored answer text that exactly echoes the question", () => {
     null
   )
 })
+
+test("never assigns an unlabeled full recording transcript to a missing answer", () => {
+  const rawRecordingTranscript =
+    "Explain your experience. I have five years of experience. " +
+    "Implement an API validator. This is the API payload. ".repeat(80)
+  const rows = [
+    { question: "How do you secure OAuth2 data?", answerText: null },
+  ]
+
+  assert.deepEqual(extractCandidateAnswersFromTranscript(rawRecordingTranscript), [])
+  assert.deepEqual(fillMissingAnswersFromTranscript(rows, rawRecordingTranscript), rows)
+})

@@ -110,14 +110,12 @@ export function extractCandidateAnswersFromTranscript(transcript: string | null 
     return candidateSegments
   }
 
-  if (labeledSegments.length > 0) {
-    return []
-  }
-
-  return value
-    .split(/\n{2,}/)
-    .map((answer) => cleanRecoveredCandidateAnswer(answer, null))
-    .filter(Boolean)
+  // A raw recording transcript is one continuous document containing every
+  // question and answer. It has no reliable per-question boundaries, so using
+  // paragraphs (or the whole document) as positional answers can attach an
+  // entire interview to one missing answer. Only explicitly labelled
+  // candidate-answer segments are safe for this display-only fallback.
+  return []
 }
 
 export function fillMissingAnswersFromTranscript<T extends { answer?: string; answerText?: string | null; question?: string | null }>(
