@@ -336,12 +336,12 @@ export default function ReportsPage() {
 
               <ExpandableSection
                 title="Interview Evidence Report"
-                subtitle="A compact readout of confidence, experimental vocal pressure, clarity, suspicion, and behavioral anomaly load."
+                subtitle="A compact readout of confidence, experimental voice activity, clarity, review signals, and behavioral anomalies."
               >
                 <div className="grid gap-4 lg:grid-cols-5">
                   {[
                     ["Confidence", report.cognitiveRisk.confidenceScore, "text-cyan-200", true, "Not available"],
-                    ["Vocal pressure (experimental)", report.cognitiveRisk.stressIndex, "text-amber-200", true, "Not available"],
+                    ["Voice activity (experimental)", report.cognitiveRisk.voiceActivityIndex ?? report.cognitiveRisk.stressIndex, "text-amber-200", true, "Not available"],
                     ["Clarity", report.cognitiveRisk.clarityIndex, "text-emerald-200", true, "Not available"],
                     ["Suspicion", report.cognitiveRisk.suspicionIndex, "text-rose-200", false, "Not available"],
                     ["Anomalies", report.cognitiveRisk.behavioralAnomalies, "text-violet-200", false, "0"],

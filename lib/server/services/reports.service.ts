@@ -88,6 +88,8 @@ export type ReportsPayload = {
   }
   cognitiveRisk: {
     confidenceScore: number | null
+    voiceActivityIndex: number | null
+    /** @deprecated Compatibility alias for voiceActivityIndex. */
     stressIndex: number | null
     clarityIndex: number | null
     suspicionIndex: number | null
@@ -1349,7 +1351,7 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
 
   const confidenceScore = averageNullable(confidenceValues)
   const clarityIndex = averageNullable(clarityValues)
-  const stressIndex = averageNullable(vocalPressureValues)
+  const voiceActivityIndex = averageNullable(vocalPressureValues)
   const suspicionIndex = rows.length ? Number((rows.reduce((sum, row) => sum + row.suspicious_index, 0) / rows.length).toFixed(1)) : null
   const behavioralAnomalies = rows.reduce(
     (sum, row) =>
@@ -1424,9 +1426,9 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
         helper: "Actual calm-room multi-face events from interview signal telemetry.",
       },
       {
-        label: "Vocal Pressure Observations",
+        label: "Voice Activity Samples",
         value: rows.reduce((sum, row) => sum + row.vocal_pressure_count, 0),
-        helper: "Experimental vocal-pressure observations captured from available interview audio; not a medical or deception finding.",
+        helper: "Experimental microphone loudness and volume-variation samples. Device gain, distance, and background noise affect this value; it is not a stress or deception finding.",
       },
       {
         label: "Tab Switching",
@@ -1633,7 +1635,8 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
     interviewFunnel,
     cognitiveRisk: {
       confidenceScore,
-      stressIndex,
+      voiceActivityIndex,
+      stressIndex: voiceActivityIndex,
       clarityIndex,
       suspicionIndex,
       behavioralAnomalies,
