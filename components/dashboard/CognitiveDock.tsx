@@ -911,11 +911,11 @@ export default function CognitiveDock({
                             </div>
                             <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                               {aiStartingPoints.slice(0, 3).map(({ title, description, prompt, icon: Icon, tone }) => (
-                                <button key={title} type="button" onClick={() => askVerisAi(prompt)} className={`group min-h-[126px] rounded-xl border border-white/8 bg-gradient-to-br ${tone} p-3.5 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/25`}>
-                                  <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-slate-950/35 text-cyan-100"><Icon className="h-4 w-4" /></span>
-                                  <p className="mt-3 text-sm font-semibold text-white">{title}</p>
-                                  <p className="mt-1 text-[11px] leading-4 text-slate-400">{description}</p>
-                                  <ArrowRight className="mt-2.5 h-3.5 w-3.5 text-cyan-200/60 transition group-hover:translate-x-1 group-hover:text-cyan-100" />
+                                <button key={title} type="button" onClick={() => askVerisAi(prompt)} className={`group flex h-[148px] min-w-0 flex-col rounded-xl border border-white/8 bg-gradient-to-br ${tone} p-3 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/25`}>
+                                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-slate-950/35 text-cyan-100"><Icon className="h-3.5 w-3.5" /></span>
+                                  <p className="mt-2 truncate text-sm font-semibold text-white">{title}</p>
+                                  <p className="mt-1 line-clamp-2 min-h-8 text-[11px] leading-4 text-slate-400">{description}</p>
+                                  <ArrowRight className="mt-auto h-3.5 w-3.5 shrink-0 text-cyan-200/60 transition group-hover:translate-x-1 group-hover:text-cyan-100" />
                                 </button>
                               ))}
                             </div>
