@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "next build --webpack"
+  "buildCommand": "next build --webpack",
+  "crons": [
+    {
+      "path": "/api/cron/refund-expired-interviews",
+      "schedule": "15 0 * * *"
+    }
+  ]
 }

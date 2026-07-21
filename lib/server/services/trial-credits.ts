@@ -53,6 +53,8 @@ type RefundableInviteRow = {
   organization_id: string
   status: string | null
   expires_at: Date | string | null
+  balance_source: CreditBalanceSource
+  subscription_id: string | null
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -360,9 +362,12 @@ async function deductSubscriptionCredits(input: {
   kind: TrialCreditKind
   amount: number
   subscriptionId: string
+  source?: string | null
+  sourceIds?: string[]
 }) {
-  const rows = input.kind === "INTERVIEW"
-    ? await prisma.$queryRaw<SubscriptionCreditRow[]>(Prisma.sql`
+  return prisma.$transaction(async (tx) => {
+    const rows = input.kind === "INTERVIEW"
+      ? await tx.$queryRaw<SubscriptionCreditRow[]>(Prisma.sql`
       update public.hireveri_user_subscriptions
       set
         "totalCredits" = "totalCredits" - ${input.amount},
@@ -382,7 +387,7 @@ async function deductSubscriptionCredits(input: {
         "screeningCredits" as screening_credits_remaining,
         "expiresAt" as expires_at
     `)
-    : await prisma.$queryRaw<SubscriptionCreditRow[]>(Prisma.sql`
+      : await tx.$queryRaw<SubscriptionCreditRow[]>(Prisma.sql`
       update public.hireveri_user_subscriptions
       set
         "screeningCredits" = "screeningCredits" - ${input.amount},
@@ -402,13 +407,27 @@ async function deductSubscriptionCredits(input: {
         "expiresAt" as expires_at
     `)
 
-  const row = rows[0]
-  if (!row) {
-    throw new ApiError(402, "SUBSCRIPTION_CREDITS_EXHAUSTED", "Your subscription does not have enough credits for this action.")
-  }
+    const row = rows[0]
+    if (!row) {
+      throw new ApiError(402, "SUBSCRIPTION_CREDITS_EXHAUSTED", "Your subscription does not have enough credits for this action.")
+    }
 
-  invalidateTrialCreditDashboardCache(input.organizationId)
-  return mapSubscriptionCreditRow(row)
+    await recordCreditDeductionEvents({
+      client: tx,
+      organizationId: input.organizationId,
+      kind: input.kind,
+      amount: input.amount,
+      source: input.source ?? "deduction",
+      sourceIds: input.sourceIds ?? [],
+      metadata: {
+        balanceSource: "subscription",
+        subscriptionId: input.subscriptionId,
+      },
+    })
+
+    invalidateTrialCreditDashboardCache(input.organizationId)
+    return mapSubscriptionCreditRow(row)
+  })
 }
 
 async function getRefundableInviteRows(organizationId: string, inviteIds?: string[]) {
@@ -423,10 +442,17 @@ async function getRefundableInviteRows(organizationId: string, inviteIds?: strin
       ii.interview_id::text,
       i.organization_id::text,
       ii.status,
-      ii.expires_at
+      ii.expires_at,
+      coalesce(deduction.metadata->>'balanceSource', 'trial') as balance_source,
+      nullif(deduction.metadata->>'subscriptionId', '') as subscription_id
     from public.interview_invites ii
     inner join public.interviews i
       on i.interview_id = ii.interview_id
+    inner join public.workspace_trial_credit_events deduction
+      on deduction.organization_id = i.organization_id
+      and deduction.kind = 'INTERVIEW'
+      and deduction.source in ('interview_link', 'interview_batch')
+      and deduction.source_id = i.interview_id::text
     where i.organization_id = ${organizationId}::uuid
       ${inviteFilter}
       and coalesce(upper(ii.access_type), '') <> 'RECOVERY'
@@ -441,7 +467,7 @@ async function getRefundableInviteRows(organizationId: string, inviteIds?: strin
         where evt.organization_id = i.organization_id
           and evt.kind = 'INTERVIEW'
           and evt.source = ${INTERVIEW_REFUND_EVENT_SOURCE}
-          and evt.source_id = ii.invite_id::text
+          and evt.source_id = i.interview_id::text
       )
     order by ii.expires_at asc nulls last, ii.created_at asc
     limit 250
@@ -449,10 +475,11 @@ async function getRefundableInviteRows(organizationId: string, inviteIds?: strin
 }
 
 async function insertRefundEvent(input: {
+  client: QueryClient
   organizationId: string
   invite: RefundableInviteRow
 }) {
-  const rows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+  const rows = await input.client.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     insert into public.workspace_trial_credit_events (
       organization_id,
       kind,
@@ -466,7 +493,7 @@ async function insertRefundEvent(input: {
       'INTERVIEW',
       1,
       ${INTERVIEW_REFUND_EVENT_SOURCE},
-      ${input.invite.invite_id},
+      ${input.invite.interview_id},
       ${JSON.stringify({
         refund: true,
         reason: "unused_interview_link_expired_or_revoked",
@@ -486,48 +513,28 @@ async function insertRefundEvent(input: {
 }
 
 async function refundOneInterviewCredit(input: {
+  client: QueryClient
   organizationId: string
   invite: RefundableInviteRow
 }) {
-  const trialDeductionEvents = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-    select id::text
-    from public.workspace_trial_credit_events
-    where organization_id = ${input.organizationId}::uuid
-      and kind = 'INTERVIEW'
-      and source = 'interview_link'
-      and source_id = ${input.invite.interview_id}
-    limit 1
-  `)
-
-  if (trialDeductionEvents.length > 0) {
-    await upsertTrialCreditRow(input.organizationId)
-    await prisma.$executeRaw(Prisma.sql`
-      update public.workspace_trial_credits
-      set
-        interview_credits_remaining = interview_credits_remaining + 1,
-        updated_at = now()
-      where organization_id = ${input.organizationId}::uuid
-    `)
-    return
-  }
-
-  const activeSubscription = await getActiveSubscriptionCredits(input.organizationId)
-
-  if (activeSubscription?.subscriptionId) {
-    await prisma.$executeRaw(Prisma.sql`
+  if (input.invite.balance_source === "subscription" && input.invite.subscription_id) {
+    const updated = await input.client.$executeRaw(Prisma.sql`
       update public.hireveri_user_subscriptions
       set
         "totalCredits" = "totalCredits" + 1,
         "usedCredits" = greatest(coalesce("usedCredits", 0) - 1, 0),
         "updatedAt" = now()
-      where id = ${activeSubscription.subscriptionId}
+      where id = ${input.invite.subscription_id}
         and "organizationId" = ${input.organizationId}::uuid
     `)
+    if (Number(updated) !== 1) {
+      throw new Error("Original subscription balance was not found for interview refund")
+    }
     return
   }
 
-  await upsertTrialCreditRow(input.organizationId)
-  await prisma.$executeRaw(Prisma.sql`
+  await upsertTrialCreditRow(input.organizationId, input.client)
+  await input.client.$executeRaw(Prisma.sql`
     update public.workspace_trial_credits
     set
       interview_credits_remaining = interview_credits_remaining + 1,
@@ -550,20 +557,21 @@ export async function refundExpiredUnusedInterviewCredits(input: {
   let refunded = 0
 
   for (const invite of invites) {
-    const eventInserted = await insertRefundEvent({
-      organizationId: input.organizationId,
-      invite,
+    const didRefund = await prisma.$transaction(async (tx) => {
+      const eventInserted = await insertRefundEvent({
+        client: tx,
+        organizationId: input.organizationId,
+        invite,
+      })
+      if (!eventInserted) return false
+      await refundOneInterviewCredit({
+        client: tx,
+        organizationId: input.organizationId,
+        invite,
+      })
+      return true
     })
-
-    if (!eventInserted) {
-      continue
-    }
-
-    await refundOneInterviewCredit({
-      organizationId: input.organizationId,
-      invite,
-    })
-    refunded += 1
+    if (didRefund) refunded += 1
   }
 
   if (refunded > 0) {
@@ -571,6 +579,44 @@ export async function refundExpiredUnusedInterviewCredits(input: {
   }
 
   return { refunded }
+}
+
+export async function refundAllExpiredUnusedInterviewCredits() {
+  await ensureTrialCreditSchema()
+  const organizations = await prisma.$queryRaw<Array<{ organization_id: string }>>(Prisma.sql`
+    select distinct i.organization_id::text as organization_id
+    from public.interview_invites ii
+    inner join public.interviews i on i.interview_id = ii.interview_id
+    inner join public.workspace_trial_credit_events deduction
+      on deduction.organization_id = i.organization_id
+      and deduction.kind = 'INTERVIEW'
+      and deduction.source in ('interview_link', 'interview_batch')
+      and deduction.source_id = i.interview_id::text
+    where coalesce(upper(ii.access_type), '') <> 'RECOVERY'
+      and ii.used_at is null
+      and (
+        upper(coalesce(ii.status, 'ACTIVE')) in ('EXPIRED', 'REVOKED')
+        or ii.expires_at <= now()
+      )
+      and not exists (
+        select 1
+        from public.workspace_trial_credit_events refund
+        where refund.organization_id = i.organization_id
+          and refund.kind = 'INTERVIEW'
+          and refund.source = ${INTERVIEW_REFUND_EVENT_SOURCE}
+          and refund.source_id = i.interview_id::text
+      )
+  `)
+
+  let refunded = 0
+  for (const organization of organizations) {
+    const result = await refundExpiredUnusedInterviewCredits({
+      organizationId: organization.organization_id,
+    })
+    refunded += result.refunded
+  }
+
+  return { organizations: organizations.length, refunded }
 }
 
 export async function getTrialCreditsDashboardSnapshot(organizationId: string, client: QueryClient = prisma) {
@@ -625,6 +671,7 @@ export async function deductTrialCredits(input: {
   amount?: number
   source?: string | null
   sourceId?: string | null
+  sourceIds?: string[]
 }) {
   const amount = Math.max(1, Math.floor(input.amount ?? 1))
   const creditsBeforeDeduction = await getOrCreateTrialCredits(input.organizationId).catch((error) => {
@@ -659,6 +706,8 @@ export async function deductTrialCredits(input: {
         kind: input.kind,
         amount,
         subscriptionId: creditsBeforeDeduction.subscriptionId,
+        source: input.source,
+        sourceIds: input.sourceIds ?? (input.sourceId ? [input.sourceId] : []),
       })
     } catch (error) {
       if (error instanceof ApiError) {
@@ -672,8 +721,9 @@ export async function deductTrialCredits(input: {
   }
 
   try {
-    const rows = input.kind === "INTERVIEW"
-      ? await prisma.$queryRaw<TrialCreditRow[]>(Prisma.sql`
+    return await prisma.$transaction(async (tx) => {
+      const rows = input.kind === "INTERVIEW"
+        ? await tx.$queryRaw<TrialCreditRow[]>(Prisma.sql`
         update public.workspace_trial_credits
         set
           interview_credits_remaining = interview_credits_remaining - ${amount},
@@ -685,7 +735,7 @@ export async function deductTrialCredits(input: {
           interview_credits_remaining,
           screening_credits_remaining
       `)
-      : await prisma.$queryRaw<TrialCreditRow[]>(Prisma.sql`
+        : await tx.$queryRaw<TrialCreditRow[]>(Prisma.sql`
         update public.workspace_trial_credits
         set
           screening_credits_remaining = screening_credits_remaining - ${amount},
@@ -698,23 +748,31 @@ export async function deductTrialCredits(input: {
           screening_credits_remaining
       `)
 
-    const row = rows[0]
-    if (!row) {
-      throw new ApiError(402, "FREE_TRIAL_LIMIT_REACHED", FREE_TRIAL_LIMIT_MESSAGE)
-    }
+      const row = rows[0]
+      if (!row) {
+        throw new ApiError(402, "FREE_TRIAL_LIMIT_REACHED", FREE_TRIAL_LIMIT_MESSAGE)
+      }
 
-    await recordTrialCreditEvent({
-      organizationId: input.organizationId,
-      kind: input.kind,
-      amount,
-      source: input.source ?? "deduction",
-      sourceId: input.sourceId ?? null,
-      remainingAfter: row,
+      await recordCreditDeductionEvents({
+        client: tx,
+        organizationId: input.organizationId,
+        kind: input.kind,
+        amount,
+        source: input.source ?? "deduction",
+        sourceIds: input.sourceIds ?? (input.sourceId ? [input.sourceId] : []),
+        metadata: {
+          balanceSource: "trial",
+          remainingAfter: {
+            interviewCreditsRemaining: row.interview_credits_remaining,
+            screeningCreditsRemaining: row.screening_credits_remaining,
+          },
+        },
+      })
+
+      const snapshot = mapTrialCreditRow(row)
+      invalidateTrialCreditDashboardCache(input.organizationId)
+      return snapshot
     })
-
-    const snapshot = mapTrialCreditRow(row)
-    invalidateTrialCreditDashboardCache(input.organizationId)
-    return snapshot
   } catch (error) {
     if (error instanceof ApiError) {
       throw error
@@ -726,35 +784,38 @@ export async function deductTrialCredits(input: {
   }
 }
 
-async function recordTrialCreditEvent(input: {
+async function recordCreditDeductionEvents(input: {
+  client: QueryClient
   organizationId: string
   kind: TrialCreditKind
   amount: number
   source: string
-  sourceId: string | null
-  remainingAfter: TrialCreditRow
+  sourceIds: string[]
+  metadata: Record<string, unknown>
 }) {
-  await prisma.$executeRaw(Prisma.sql`
-    insert into public.workspace_trial_credit_events (
-      organization_id,
-      kind,
-      amount,
-      source,
-      source_id,
-      metadata
-    )
-    values (
-      ${input.organizationId}::uuid,
-      ${input.kind},
-      ${input.amount},
-      ${input.source},
-      ${input.sourceId},
-      ${JSON.stringify({ remainingAfter: {
-        interviewCreditsRemaining: input.remainingAfter.interview_credits_remaining,
-        screeningCreditsRemaining: input.remainingAfter.screening_credits_remaining,
-      } })}::jsonb
-    )
-  `).catch((error) => {
-    console.warn("Trial credit audit event write skipped", error)
-  })
+  const sourceIds: Array<string | null> = input.sourceIds.filter(Boolean)
+  if (sourceIds.length === 0) sourceIds.push(null)
+
+  const amountPerSource = input.amount === sourceIds.length ? 1 : input.amount
+  for (const sourceId of sourceIds) {
+    await input.client.$executeRaw(Prisma.sql`
+      insert into public.workspace_trial_credit_events (
+        organization_id,
+        kind,
+        amount,
+        source,
+        source_id,
+        metadata
+      )
+      values (
+        ${input.organizationId}::uuid,
+        ${input.kind},
+        ${amountPerSource},
+        ${input.source},
+        ${sourceId},
+        ${JSON.stringify(input.metadata)}::jsonb
+      )
+      on conflict do nothing
+    `)
+  }
 }

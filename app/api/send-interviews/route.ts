@@ -534,6 +534,10 @@ export async function POST(request: Request) {
           organizationId: auth.organizationId,
           kind: "INTERVIEW",
           amount: chargeableLinkCount,
+          source: "interview_batch",
+          sourceIds: results
+            .filter((result) => result.inviteLink && result.interviewId)
+            .map((result) => result.interviewId as string),
         })
       : await getOrCreateTrialCredits(auth.organizationId)
 
