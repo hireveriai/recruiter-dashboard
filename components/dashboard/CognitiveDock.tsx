@@ -751,19 +751,12 @@ export default function CognitiveDock({
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)]" />
               <div className={`relative ${panel === "copilot" ? "flex h-full min-h-0 flex-col" : ""}`}>
-                <div className="flex shrink-0 items-center justify-between gap-4">
-                  <div className="flex items-center">
-                    <div>
-                      <h2 className="text-base font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
-                      <p className="mt-0.5 text-[10px] text-slate-400">Interview operations intelligence</p>
-                    </div>
+                {panel !== "copilot" ? <div className="flex shrink-0 items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-semibold tracking-tight text-white">{getPanelTitle(panel)}</h2>
+                    <p className="mt-0.5 text-[10px] text-slate-400">Interview operations intelligence</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {panel === "copilot" && aiMessages.length ? (
-                      <button type="button" onClick={startNewAiChat} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white">
-                        <RefreshCw className="h-3.5 w-3.5" /> New chat
-                      </button>
-                    ) : null}
                     <button
                       type="button"
                       onClick={() => setPanel(null)}
@@ -773,7 +766,18 @@ export default function CognitiveDock({
                       <X className="h-4 w-4" />
                     </button>
                   </div>
-                </div>
+                </div> : (
+                  <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+                    {aiMessages.length ? (
+                      <button type="button" onClick={startNewAiChat} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#0d192c]/90 px-3 py-2 text-xs font-semibold text-slate-300 backdrop-blur transition hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white">
+                        <RefreshCw className="h-3.5 w-3.5" /> New chat
+                      </button>
+                    ) : null}
+                    <button type="button" onClick={() => setPanel(null)} className="rounded-xl border border-white/10 bg-[#0d192c]/90 p-2 text-slate-300 backdrop-blur transition hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white" aria-label="Close panel">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
 
                 {(panel === "search" || panel === "copilot") && ((workspaceLoading && !hasLiveWorkspaceData) || workspaceError) ? (
                   <div className="mt-4 rounded-2xl border border-cyan-300/10 bg-cyan-400/[0.05] px-4 py-3 text-sm text-slate-300">
@@ -878,11 +882,11 @@ export default function CognitiveDock({
                 ) : null}
 
                 {panel === "copilot" ? (
-                  <div className="mt-3 grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[220px_minmax(0,1fr)]">
+                  <div className="grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[220px_minmax(0,1fr)]">
                     <aside className="hidden min-h-0 overflow-hidden border-r border-white/8 bg-white/[0.025] p-3 lg:block">
                       <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><Sparkles className="h-5 w-5" /></span>
-                        <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 truncate text-[11px] text-slate-400">Live workspace intelligence</p></div>
+                        <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 whitespace-nowrap text-[10px] text-slate-400">Live workspace intelligence</p></div>
                       </div>
                       <p className="mb-2 mt-4 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-500">Try asking</p>
                       <div className="space-y-1.5">
