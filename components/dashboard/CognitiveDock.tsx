@@ -484,6 +484,29 @@ export default function CognitiveDock({
     const scoreFor = (item: Record<string, unknown>) => readNumber(item.score ?? item.verisScreeningScore);
     const makeId = () => `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+    if (/(fixed|scheduled).*(flexible)|(flexible).*(fixed|scheduled)|difference.*schedule|interview access type/.test(normalized)) {
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: "**Flexible access** lets the candidate open the interview at a convenient time during a **24-hour access window**. A **fixed schedule** limits access to the specific start and end time selected by the recruiter.",
+        cards: [
+          {
+            title: "Flexible access",
+            body: "Best when candidates should choose their own interview time. The invitation remains available during its 24-hour access window.",
+            meta: "More candidate flexibility · Less scheduling coordination",
+            tone: "cyan",
+          },
+          {
+            title: "Fixed schedule",
+            body: "Best when the interview must happen within a controlled period. The recruiter sets the exact start and end time.",
+            meta: "Precise timing · Useful for coordinated or time-sensitive interviews",
+            tone: "amber",
+          },
+        ],
+        sources: ["Interview access settings", "Candidate invitations"],
+      };
+    }
+
     if (/(how.*interview|interview.*flow|interview.*work|start.*end|candidate journey|send.*interview)/.test(normalized)) {
       return {
         id: makeId(),
