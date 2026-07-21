@@ -77,10 +77,13 @@ export async function generateRoleAwareQuestions(
     ...deriveSkillsFromText(input.candidateResumeText),
   ])).slice(0, 12)
   const duration = Number(input.interviewDurationMinutes ?? 30)
-  const durationTarget = duration >= 60 ? 15 : duration >= 45 ? 12 : duration >= 30 ? 8 : 5
+  const durationTarget = duration >= 60 ? 15 : duration >= 45 ? 12 : duration >= 30 ? 10 : 5
+  const requestedTotal = Number(input.totalQuestions)
   const desiredTotal = Math.max(
     5,
-    Math.min(15, Number(input.totalQuestions) > 0 ? Number(input.totalQuestions) : durationTarget)
+    Math.min(15, Number.isFinite(requestedTotal) && requestedTotal > 0
+      ? Math.max(requestedTotal, durationTarget)
+      : durationTarget)
   )
   const resumeTarget = resumeSkills.length > 0
     ? Math.min(2, Math.max(1, Math.round(desiredTotal * 0.2)), resumeSkills.length)
@@ -132,6 +135,8 @@ STRICT RULES:
 - Job-anchored questions must come from JOB SKILLS
 - Resume-anchored questions must come from RESUME SKILLS
 - Resume questions must test candidate-owned experience, not copy resume text
+- A resume-only skill must be tested only through transferable evidence relevant to this JD
+- Do not test specialist depth from an unrelated previous profession merely because it appears on the resume
 - Infer terminology and scenarios from the actual role. Never treat competency labels as tools or job functions.
 - For non-technical roles never use software language such as production issue, deployment, latency, rollback, debugging, or implementation failure
 - Questions must assess real responsibilities from this JD rather than merely inserting a skill into a generic template

@@ -172,11 +172,12 @@ function buildEmergencyInterviewQuestions(
   context: InterviewContextRow,
   input: GenerateQuestionInput
 ): InterviewQuestion[] {
-  const durationQuestionCount = Math.round((context.interview_duration_minutes ?? 30) / 4)
+  const duration = context.interview_duration_minutes ?? 30
+  const durationQuestionCount = duration >= 60 ? 15 : duration >= 45 ? 12 : duration >= 30 ? 10 : 5
   const fallbackQuestionCount = input.totalQuestions ?? (durationQuestionCount || 7)
   const targetCount = Math.max(
     MIN_QUESTION_COUNT,
-    Math.min(10, Number(fallbackQuestionCount))
+    Math.min(15, Number(fallbackQuestionCount))
   )
   const skills = getEmergencySkillPool(context)
   const role = inferRoleIntelligence({

@@ -53,7 +53,7 @@ function buildResumeQuestion(skill: string, index: number, seniorityLevel: "juni
 }
 
 const TECHNICAL_RESUME_ONLY_PATTERNS = [
-  /\b(api|backend|frontend|coding|debug|deployment|devops|docker|kubernetes|latency|logging|monitoring|patching|programming|rollback|sre|system|troubleshoot)\b/i,
+  /\b(api|backend|big data|data engineering|etl|frontend|coding|debug|deployment|devops|docker|kubernetes|latency|logging|monitoring|patching|programming|rollback|sre|system|troubleshoot)\b/i,
   /\b(database|dba|etl|mysql|postgres|postgresql|query|redis|sql)\b/i,
   /\b(aws|azure|gcp|java|javascript|node|python|react|typescript)\b/i,
 ]
@@ -108,7 +108,7 @@ export function resolveInterviewQuestionTarget(input: Pick<BaseGenerationInput, 
       : duration >= 45
         ? 12
         : duration >= 30
-          ? 8
+          ? 10
           : 5
   const requestedTotal = Number(input.totalQuestions)
 
@@ -255,14 +255,22 @@ export async function generateInterviewQuestions(
     ...deriveSkillsFromText(input.candidateResumeText),
   ])).map(normalizeSkillName)
   const resumeSkills = filterResumeSkillsForJobFit(input, rawResumeSkills, jobSkills)
-  const resumeOnlySkills = resumeSkills.filter((skill) => !jobSkills.includes(skill))
-  const selectedResumeSkills = (resumeOnlySkills.length > 0 ? resumeOnlySkills : resumeSkills)
-    .slice(0, targetResumeCount)
-
   const generatedQuestions = generated.map((question, index) => mapQuestion(question, index))
+  const generatedResumeQuestions = generatedQuestions
+    .filter((question) => question.source_type === "resume")
+    .slice(0, targetResumeCount)
+  const generatedResumeSkills = new Set(generatedResumeQuestions.map((question) => normalizeSkillName(question.skill)))
+  const commonResumeSkills = resumeSkills.filter((skill) => jobSkills.includes(skill))
+  const selectedResumeSkills = [
+    ...commonResumeSkills,
+    ...resumeSkills.filter((skill) => !commonResumeSkills.includes(skill)),
+  ]
+    .filter((skill) => !generatedResumeSkills.has(normalizeSkillName(skill)))
+    .slice(0, Math.max(0, targetResumeCount - generatedResumeQuestions.length))
+
   const keptJobQuestions = generatedQuestions
     .filter((question) => question.source_type !== "resume")
-    .slice(0, Math.max(0, totalQuestions - selectedResumeSkills.length))
+    .slice(0, Math.max(0, totalQuestions - targetResumeCount))
 
   const injectedResumeQuestions = selectedResumeSkills.map((skill, index) => {
     const retakeVariantOffset = (input.previousQuestions?.length ?? 0) % 3
@@ -286,7 +294,11 @@ export async function generateInterviewQuestions(
     )
   })
 
-  const finalQuestions = [...keptJobQuestions, ...injectedResumeQuestions].slice(0, totalQuestions)
+  const finalQuestions = [
+    ...keptJobQuestions,
+    ...generatedResumeQuestions,
+    ...injectedResumeQuestions,
+  ].slice(0, totalQuestions)
 
   if (!isCodingRequired(input)) {
     return finalQuestions

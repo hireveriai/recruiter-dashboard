@@ -728,7 +728,7 @@ function resolveBaseQuestionCount(input: BaseGenerationInput) {
       : duration >= 45
         ? 12
         : duration >= 30
-          ? 8
+          ? 10
           : 4
 
   if (typeof input.totalQuestions === "number" && input.totalQuestions > 0) {
@@ -742,7 +742,7 @@ function resolveBaseQuestionCount(input: BaseGenerationInput) {
     return 12
   }
   if (duration >= 30) {
-    return 8
+    return 10
   }
   return 4
 }
