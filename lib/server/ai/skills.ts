@@ -1067,7 +1067,7 @@ const ROLE_FAMILY_DEFAULT_SKILLS: Record<RoleFamily, string[]> = {
   operations: ["scheduling", "resource_allocation", "sla_management", "service_delivery", "rescheduling"],
   sales: ["sales_pipeline_management", "prospecting", "negotiation", "deal_closing", "account_management"],
   customer_success: ["customer_success_management", "customer_onboarding", "customer_retention", "renewal_management", "stakeholder_management"],
-  hr: ["talent_acquisition", "candidate_sourcing", "candidate_screening", "interview_management", "employee_relations"],
+  hr: ["employee_lifecycle", "hr_operations", "hris_administration", "employee_records", "benefits_administration", "employee_relations", "onboarding_and_offboarding", "hr_reporting"],
   finance: ["financial_reporting", "budgeting", "financial_forecasting", "accounts_payable", "accounts_receivable"],
   procurement: ["procurement_management", "vendor_management", "supplier_management", "purchase_order_management", "inventory_management"],
   marketing: ["campaign_management", "content_strategy", "demand_generation", "brand_management", "product_positioning"],

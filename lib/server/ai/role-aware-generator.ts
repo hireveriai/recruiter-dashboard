@@ -76,9 +76,14 @@ export async function generateRoleAwareQuestions(
     }),
     ...deriveSkillsFromText(input.candidateResumeText),
   ])).slice(0, 12)
-  const desiredTotal = Math.max(5, Math.min(10, Number(input.totalQuestions ?? 7) || 7))
+  const duration = Number(input.interviewDurationMinutes ?? 30)
+  const durationTarget = duration >= 60 ? 15 : duration >= 45 ? 12 : duration >= 30 ? 8 : 5
+  const desiredTotal = Math.max(
+    5,
+    Math.min(15, Number(input.totalQuestions) > 0 ? Number(input.totalQuestions) : durationTarget)
+  )
   const resumeTarget = resumeSkills.length > 0
-    ? Math.min(2, Math.max(1, Math.round(desiredTotal * 0.3)), resumeSkills.length)
+    ? Math.min(2, Math.max(1, Math.round(desiredTotal * 0.2)), resumeSkills.length)
     : 0
   const jobTarget = desiredTotal - resumeTarget
   const seniorityLevel = resolveSeniorityLevel(input.experienceLevel)
@@ -127,6 +132,9 @@ STRICT RULES:
 - Job-anchored questions must come from JOB SKILLS
 - Resume-anchored questions must come from RESUME SKILLS
 - Resume questions must test candidate-owned experience, not copy resume text
+- Infer terminology and scenarios from the actual role. Never treat competency labels as tools or job functions.
+- For non-technical roles never use software language such as production issue, deployment, latency, rollback, debugging, or implementation failure
+- Questions must assess real responsibilities from this JD rather than merely inserting a skill into a generic template
 - Keep question_skills and question_sources aligned 1:1 with questions
 - Apply the difficulty layer across every domain based on EXPERIENCE LEVEL
 - Junior questions should focus on direct execution, guided troubleshooting, and clear scenarios
@@ -213,13 +221,18 @@ async function generateWithRetry(
     const jobCount = validSources.filter((source) => source === "job").length
     const resumeCount = validSources.filter((source) => source === "resume").length
 
-    if (validQuestions.length >= 5 && jobCount >= targets.jobTarget && resumeCount >= targets.resumeTarget) {
+    if (validQuestions.length >= targets.desiredTotal && jobCount >= targets.jobTarget && resumeCount >= targets.resumeTarget) {
+      const selectedIndexes = [
+        ...validSources.map((source, index) => ({ source, index })).filter((item) => item.source === "job").slice(0, targets.jobTarget),
+        ...validSources.map((source, index) => ({ source, index })).filter((item) => item.source === "resume").slice(0, targets.resumeTarget),
+      ].map((item) => item.index)
+
       return {
         role_family: parsed.role_family,
         skills: parsed.skills,
-        questions: validQuestions.slice(0, targets.desiredTotal),
-        question_skills: validSkills.slice(0, targets.desiredTotal),
-        question_sources: validSources.slice(0, targets.desiredTotal),
+        questions: selectedIndexes.map((index) => validQuestions[index]),
+        question_skills: selectedIndexes.map((index) => validSkills[index]),
+        question_sources: selectedIndexes.map((index) => validSources[index]),
       }
     }
 

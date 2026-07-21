@@ -238,7 +238,7 @@ export async function generateInterviewQuestions(
   const totalQuestions = resolveInterviewQuestionTarget(input, generated.length)
   const targetResumeCount = Math.min(
     2,
-    Math.max(1, Math.round(totalQuestions * 0.3)),
+    Math.max(1, Math.round(totalQuestions * 0.2)),
   )
   const jobSkills = Array.from(new Set([
     ...sanitizeSkillList(input.coreSkills ?? [], {

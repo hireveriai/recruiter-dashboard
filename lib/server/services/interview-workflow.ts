@@ -2,6 +2,15 @@ import { Prisma } from "@prisma/client"
 
 import { generateInterviewQuestions, type InterviewQuestion } from "@/lib/interview-flow"
 import { InterviewQuestionType } from "@/lib/server/ai/interview-question-types"
+import {
+  bucketSkill,
+  classifySkillType,
+  deriveSkillsFromText,
+  getFallbackSkillsForRoleFamily,
+  inferRoleIntelligence,
+  presentSkillName,
+  sanitizeSkillList,
+} from "@/lib/server/ai/skills"
 import { ApiError } from "@/lib/server/errors"
 import { getInterviewAppUrl } from "@/lib/server/interview-url"
 import { prisma } from "@/lib/server/prisma"
@@ -118,21 +127,45 @@ function normalizeSkill(value: string | null | undefined) {
 }
 
 function getEmergencySkillPool(context: InterviewContextRow) {
+  const roleInput = {
+    jobTitle: context.job_title ?? undefined,
+    jobDescription: context.job_description ?? undefined,
+    coreSkills: context.core_skills ?? [],
+  }
+  const role = inferRoleIntelligence(roleInput)
   const skills = [
-    ...(context.core_skills ?? []),
-    context.job_title ?? "",
-    "problem solving",
-    "communication",
-    "delivery ownership",
-    "quality mindset",
-    "collaboration",
+    ...sanitizeSkillList(context.core_skills ?? [], roleInput),
+    ...deriveSkillsFromText(context.job_description ?? undefined),
+    ...getFallbackSkillsForRoleFamily(role.family),
   ]
     .map(normalizeSkill)
     .filter(Boolean)
 
-  return Array.from(new Set(skills.map((skill) => skill.toLowerCase()))).map((skill) =>
-    skill.replace(/\b\w/g, (letter) => letter.toUpperCase())
-  )
+  return Array.from(new Set(skills.map((skill) => skill.toLowerCase())))
+}
+
+function buildEmergencyQuestion(skill: string, index: number, family: string) {
+  const displaySkill = presentSkillName(skill)
+  const technical = family === "technical"
+  const technicalTemplates = [
+    `How would you diagnose a failure involving ${displaySkill} under production pressure?`,
+    `Walk me through a difficult ${displaySkill} decision and how you validated it.`,
+    `How do you test ${displaySkill} changes before releasing them?`,
+    `What trade-offs guide your approach to ${displaySkill} at scale?`,
+    `How would you improve the reliability of ${displaySkill} after a recurring incident?`,
+  ]
+  const businessTemplates = [
+    `Walk me through a time you handled ${displaySkill} with competing deadlines.`,
+    `How do you maintain accuracy when managing ${displaySkill} across multiple cases?`,
+    `What would you do when a sensitive ${displaySkill} issue requires escalation?`,
+    `How do you coordinate stakeholders when ${displaySkill} priorities conflict?`,
+    `What checks do you use to keep ${displaySkill} records and outcomes accurate?`,
+    `How would you improve an inefficient ${displaySkill} process without disrupting service?`,
+    `Which measures would you use to evaluate the quality of ${displaySkill}?`,
+  ]
+  const templates = technical ? technicalTemplates : businessTemplates
+
+  return templates[index % templates.length]
 }
 
 function buildEmergencyInterviewQuestions(
@@ -146,29 +179,23 @@ function buildEmergencyInterviewQuestions(
     Math.min(10, Number(fallbackQuestionCount))
   )
   const skills = getEmergencySkillPool(context)
-  const templates = [
-    (skill: string) => `How have you applied ${skill} to solve a production issue under delivery pressure?`,
-    (skill: string) => `Walk me through a recent decision where ${skill} affected quality, speed, or reliability.`,
-    (skill: string) => `What would you check first when ${skill} work starts failing before a deadline?`,
-    (skill: string) => `How do you communicate trade-offs in ${skill} when requirements change during implementation?`,
-    (skill: string) => `What signals tell you that ${skill} is working well for users or stakeholders?`,
-    (skill: string) => `How would you improve a weak process involving ${skill} without slowing delivery?`,
-    (skill: string) => `Walk me through how you validate assumptions before making a ${skill} decision.`,
-    (skill: string) => `How do you recover when a ${skill} approach does not produce the expected result?`,
-    (skill: string) => `What would you document after solving a difficult ${skill} problem for the team?`,
-    (skill: string) => `How do you balance speed and correctness when working on ${skill} tasks?`,
-  ]
+  const role = inferRoleIntelligence({
+    jobTitle: context.job_title ?? undefined,
+    jobDescription: context.job_description ?? undefined,
+    coreSkills: context.core_skills ?? [],
+  })
 
   const questions: InterviewQuestion[] = []
 
   for (let index = 0; index < targetCount; index += 1) {
-    const skill = skills[index % skills.length] ?? "Problem Solving"
+    const skill = skills[index % skills.length] ?? "workflow"
+    const skillType = classifySkillType(skill)
     questions.push({
       id: `emergency-${index}`,
-      question: templates[index % templates.length](skill),
-      skill,
-      skill_type: index === targetCount - 1 ? "behavioral" : "technical",
-      skill_bucket: skill,
+      question: buildEmergencyQuestion(skill, index, role.family),
+      skill: presentSkillName(skill),
+      skill_type: index === targetCount - 1 ? "behavioral" : skillType,
+      skill_bucket: bucketSkill(skill),
       source_type: index === targetCount - 1 ? "behavioral" : "job",
       reference_context: {
         anchor: skill,
@@ -184,19 +211,32 @@ function buildEmergencyInterviewQuestions(
     })
   }
 
-  const resumeSkills = context.resume_text
-    ? (parseResumeText(context.resume_text).skills ?? [])
+  const resumeTarget = context.resume_text ? Math.max(1, Math.round(targetCount * 0.2)) : 0
+  const rawResumeSkills = context.resume_text
+    ? [
+        ...(parseResumeText(context.resume_text).skills ?? []),
+        ...deriveSkillsFromText(context.resume_text),
+      ]
         .map(normalizeSkill)
         .filter(Boolean)
         .filter((skill, index, all) =>
           all.findIndex((candidate) => candidate.toLowerCase() === skill.toLowerCase()) === index
         )
-        .slice(0, Math.min(2, Math.max(1, Math.round(targetCount * 0.3))))
     : []
+  const jobSkillSet = new Set(skills.map((skill) => skill.toLowerCase()))
+  const roleRelevantResumeSkills = rawResumeSkills.filter((skill) =>
+    jobSkillSet.has(skill.toLowerCase()) ||
+    role.family === "technical" ||
+    !/\b(api|backend|frontend|coding|deployment|devops|docker|kubernetes|programming|sql|aws|azure|java|javascript|node|python|react|typescript)\b/i.test(skill)
+  )
+  const resumeSkills = [
+    ...roleRelevantResumeSkills.filter((skill) => jobSkillSet.has(skill.toLowerCase())),
+    ...roleRelevantResumeSkills.filter((skill) => !jobSkillSet.has(skill.toLowerCase())),
+  ].slice(0, resumeTarget)
   const resumeTemplates = [
-    (skill: string) => `Walk me through a resume project where you used ${skill} to solve a difficult problem.`,
-    (skill: string) => `What trade-off did you personally make while applying ${skill} in work shown on your resume?`,
-    (skill: string) => `How did you validate the outcome of a resume project involving ${skill}?`,
+    (skill: string) => `Walk me through a project where you used ${skill} to solve a difficult problem.`,
+    (skill: string) => `What trade-off did you personally make while applying ${skill} in your work?`,
+    (skill: string) => `How did you validate the outcome of a project involving ${skill}?`,
   ]
   const retakeVariantOffset = (input.previousQuestions?.length ?? 0) % resumeTemplates.length
 
@@ -208,8 +248,8 @@ function buildEmergencyInterviewQuestions(
       id: `emergency-resume-${index}`,
       question,
       skill,
-      skill_type: "technical",
-      skill_bucket: skill,
+      skill_type: classifySkillType(skill),
+      skill_bucket: bucketSkill(skill),
       source_type: "resume",
       reference_context: {
         anchor: skill,
@@ -217,7 +257,9 @@ function buildEmergencyInterviewQuestions(
       },
       is_dynamic: true,
       allow_followups: true,
-      question_type: InterviewQuestionType.TECHNICAL_DISCUSSION,
+      question_type: role.family === "technical"
+        ? InterviewQuestionType.TECHNICAL_DISCUSSION
+        : InterviewQuestionType.BEHAVIORAL,
       classifier_confidence: 0.82,
       recruiter_override: false,
       rendering_mode: "discussion",
