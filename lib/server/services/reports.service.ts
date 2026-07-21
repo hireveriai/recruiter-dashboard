@@ -1426,11 +1426,6 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
         helper: "Actual calm-room multi-face events from interview signal telemetry.",
       },
       {
-        label: "Voice Activity Samples",
-        value: rows.reduce((sum, row) => sum + row.vocal_pressure_count, 0),
-        helper: "Experimental microphone loudness and volume-variation samples. Device gain, distance, and background noise affect this value; it is not a stress or deception finding.",
-      },
-      {
         label: "Tab Switching",
         value: rows.reduce((sum, row) => sum + row.tab_switch_count, 0),
         helper: "Real browser/tab-switch counts from interview signal telemetry.",
