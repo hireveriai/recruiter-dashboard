@@ -11,7 +11,6 @@ import { createAndSendInvoiceForPayment } from "@/lib/server/services/invoices"
 const PLAN_SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,80}$/
 const RAZORPAY_MINIMUM_AMOUNT_PAISE = 100
 const DEFAULT_GST_PERCENTAGE = 18
-const DEFAULT_SUBSCRIPTION_DURATION_DAYS = 30
 
 type QueryClient = typeof prisma | Prisma.TransactionClient
 
@@ -180,7 +179,6 @@ function mapPlan(plan: PlanRow) {
   const metadata = {
     features,
     plan_type: plan.planType ?? "INTERVIEW",
-    duration_days: DEFAULT_SUBSCRIPTION_DURATION_DAYS,
   }
 
   return {
@@ -220,11 +218,6 @@ function mapCoupon(coupon: CouponRow) {
     minimumAmountPaise: coupon.minimum_amount_paise === null ? null : Number(coupon.minimum_amount_paise),
     metadata: normalizeMetadata(coupon.metadata_json),
   }
-}
-
-function getSubscriptionDurationDays(plan: ReturnType<typeof mapPlan>) {
-  const durationDays = toNumber(plan.metadata.duration_days, DEFAULT_SUBSCRIPTION_DURATION_DAYS)
-  return Math.max(1, Math.round(durationDays))
 }
 
 function buildCheckoutPlan(
@@ -1102,7 +1095,6 @@ export async function verifyAndActivatePayment(input: {
     `)
 
     const activatedPlan = buildCheckoutPlan(validation.plan, validation.addonPlan)
-    const durationDays = getSubscriptionDurationDays(validation.plan)
     const subscriptionRows = await tx.$queryRaw<
       Array<{
         id: string
@@ -1128,7 +1120,7 @@ export async function verifyAndActivatePayment(input: {
         "razorpayOrderId" = ${lockedPayment.razorpay_order_id},
         "razorpayPaymentId" = ${input.razorpayPaymentId},
         "activatedAt" = now(),
-        "expiresAt" = greatest(coalesce("expiresAt", now()), now()) + (${durationDays}::int * interval '1 day'),
+        "expiresAt" = null,
         "updatedAt" = now()
       where id = ${lockedPayment.subscription_id}
       returning

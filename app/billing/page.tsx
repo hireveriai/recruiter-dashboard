@@ -451,10 +451,8 @@ export default function BillingPage() {
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Current Period</p>
-                  <p className="mt-3 text-sm font-semibold text-white">
-                    Until {formatDate(activeSubscription?.expiresAt ?? null)}
-                  </p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Credit validity</p>
+                  <p className="mt-3 text-sm font-semibold text-white">No expiry</p>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Razorpay</p>

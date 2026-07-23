@@ -309,11 +309,10 @@ async function getActiveSubscriptionCredits(organizationId: string, client: Quer
       status,
       "totalCredits" as interview_credits_remaining,
       "screeningCredits" as screening_credits_remaining,
-      "expiresAt" as expires_at
+      null::timestamptz as expires_at
     from public.hireveri_user_subscriptions
     where "organizationId" = ${organizationId}::uuid
       and lower(coalesce(status, '')) = 'active'
-      and ("expiresAt" is null or "expiresAt" > now())
     order by "activatedAt" desc nulls last, "updatedAt" desc nulls last
     limit 1
   `).catch((error) => {
@@ -376,7 +375,6 @@ async function deductSubscriptionCredits(input: {
       where id = ${input.subscriptionId}
         and "organizationId" = ${input.organizationId}::uuid
         and lower(coalesce(status, '')) = 'active'
-        and ("expiresAt" is null or "expiresAt" > now())
         and "totalCredits" >= ${input.amount}
       returning
         id,
@@ -385,7 +383,7 @@ async function deductSubscriptionCredits(input: {
         status,
         "totalCredits" as interview_credits_remaining,
         "screeningCredits" as screening_credits_remaining,
-        "expiresAt" as expires_at
+        null::timestamptz as expires_at
     `)
       : await tx.$queryRaw<SubscriptionCreditRow[]>(Prisma.sql`
       update public.hireveri_user_subscriptions
@@ -395,7 +393,6 @@ async function deductSubscriptionCredits(input: {
       where id = ${input.subscriptionId}
         and "organizationId" = ${input.organizationId}::uuid
         and lower(coalesce(status, '')) = 'active'
-        and ("expiresAt" is null or "expiresAt" > now())
         and "screeningCredits" >= ${input.amount}
       returning
         id,
@@ -404,7 +401,7 @@ async function deductSubscriptionCredits(input: {
         status,
         "totalCredits" as interview_credits_remaining,
         "screeningCredits" as screening_credits_remaining,
-        "expiresAt" as expires_at
+        null::timestamptz as expires_at
     `)
 
     const row = rows[0]
