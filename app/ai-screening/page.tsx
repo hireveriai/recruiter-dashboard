@@ -455,7 +455,36 @@ const screeningLoaderSteps: Array<{ phase: ScreeningLoaderPhase; label: string; 
     detail: "Screening intelligence is ready for recruiter review.",
   },
 ]
-const RESUME_UPLOAD_CHUNK_SIZE = 8
+const RESUME_UPLOAD_CHUNK_SIZE = 3
+const MAX_RESUME_FILE_SIZE_BYTES = 4 * 1024 * 1024
+const MAX_RESUME_REQUEST_BYTES = 4 * 1024 * 1024
+
+function createResumeUploadChunks(files: File[]) {
+  const chunks: File[][] = []
+  let chunk: File[] = []
+  let chunkBytes = 0
+
+  for (const file of files) {
+    if (
+      chunk.length > 0 &&
+      (chunk.length >= RESUME_UPLOAD_CHUNK_SIZE ||
+        chunkBytes + file.size > MAX_RESUME_REQUEST_BYTES)
+    ) {
+      chunks.push(chunk)
+      chunk = []
+      chunkBytes = 0
+    }
+
+    chunk.push(file)
+    chunkBytes += file.size
+  }
+
+  if (chunk.length > 0) {
+    chunks.push(chunk)
+  }
+
+  return chunks
+}
 
 function ScreeningAnalysisOverlay({ phase }: { phase: ScreeningLoaderPhase | null }) {
   if (!phase) {
@@ -1455,6 +1484,12 @@ export default function AiScreeningPage() {
       return
     }
 
+    const oversizedFile = files.find((file) => file.size > MAX_RESUME_FILE_SIZE_BYTES)
+    if (oversizedFile) {
+      setError(`${oversizedFile.name} is larger than 4MB. Please compress the resume PDF and upload it again.`)
+      return
+    }
+
     const selectedJobIdForUpload = selectedExistingJobId
 
     try {
@@ -1477,12 +1512,15 @@ export default function AiScreeningPage() {
       const rows: UploadRow[] = []
       let uploadedCount = 0
 
-      for (let index = 0; index < files.length; index += RESUME_UPLOAD_CHUNK_SIZE) {
-        const chunk = files.slice(index, index + RESUME_UPLOAD_CHUNK_SIZE)
+      const uploadChunks = createResumeUploadChunks(files)
+      let processedFiles = 0
+
+      for (const chunk of uploadChunks) {
         const formData = new FormData()
         formData.append("batchId", batchId)
         chunk.forEach((file) => formData.append("files", file))
-        setNotice(`Uploading and parsing resumes... ${Math.min(index + chunk.length, files.length)} of ${files.length}`)
+        processedFiles += chunk.length
+        setNotice(`Uploading and parsing resumes... ${processedFiles} of ${files.length}`)
 
         try {
           const response = await fetch(authUrl("/api/upload-resumes"), {

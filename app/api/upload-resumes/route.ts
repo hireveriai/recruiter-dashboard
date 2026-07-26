@@ -22,7 +22,9 @@ export const runtime = "nodejs"
 export const maxDuration = 300
 
 const MAX_FILES = 50
-const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024
+// Vercel Functions reject request bodies above the platform limit before this
+// route runs. Keep one resume below 4 MiB so multipart overhead also fits.
+const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024
 const BATCH_SIZE = 3
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
         }
 
         if (file.size > MAX_FILE_SIZE_BYTES) {
-          throw new ApiError(400, "RESUME_TOO_LARGE", "Resume must be 15MB or smaller")
+          throw new ApiError(400, "RESUME_TOO_LARGE", "Resume must be 4MB or smaller")
         }
 
         const buffer = Buffer.from(await file.arrayBuffer())
