@@ -101,6 +101,15 @@ function readObjectNumber(value: unknown, key: string) {
   return toNumber((value as Record<string, unknown>)[key])
 }
 
+function readObjectString(value: unknown, key: string) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  const result = (value as Record<string, unknown>)[key]
+  return typeof result === "string" && result.trim() ? result.trim() : null
+}
+
 function isActionableSignal(type: string, value: unknown) {
   const normalizedType = type.trim().toLowerCase()
 
@@ -108,7 +117,9 @@ function isActionableSignal(type: string, value: unknown) {
     normalizedType === "face_detected" ||
     normalizedType === "camera_ready" ||
     normalizedType === "audio_ready" ||
-    normalizedType === "heartbeat"
+    normalizedType === "heartbeat" ||
+    normalizedType === "vocal_pressure" ||
+    normalizedType === "acoustic_activity"
   ) {
     return false
   }
@@ -129,6 +140,15 @@ function isActionableSignal(type: string, value: unknown) {
 }
 
 function getSignalSeverity(type: string, value: unknown): "low" | "medium" | "high" {
+  if (
+    type === "low_microphone_volume" ||
+    type === "audio_intermittently_unavailable" ||
+    type === "background_noise_detected" ||
+    type === "transcript_recovered_from_recording"
+  ) {
+    return "low"
+  }
+
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const severity = (value as { severity?: unknown }).severity
     if (severity === "low" || severity === "medium" || severity === "high") {
@@ -173,6 +193,10 @@ function getSignalLabel(type: string, value: unknown) {
     devtools: "Developer tools opened",
     external_device: "External device signal",
     audio_anomaly: "Audio anomaly",
+    low_microphone_volume: "Low microphone volume",
+    audio_intermittently_unavailable: "Audio intermittently unavailable",
+    background_noise_detected: "Background noise detected",
+    transcript_recovered_from_recording: "Transcript recovered from recording",
     network_reconnect: "Network reconnect",
     coding_start: "Coding started",
     coding_end: "Coding ended",
@@ -266,6 +290,7 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
           created_at::text
         from public.interview_signals
         where attempt_id = ${recording.attempt_id}::uuid
+          and lower(coalesce(type, '')) not in ('vocal_pressure', 'acoustic_activity')
         order by created_at asc nulls last
       `.catch(() => [] as SignalRow[]),
     ])
@@ -305,6 +330,10 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
       }
 
       const fallbackOffset = offsetMs(recording.started_at, row.created_at)
+      const sessionQuestionId = readObjectString(row.value, "sessionQuestionId")
+      const matchingQuestion = sessionQuestionId
+        ? timeline.find((item) => item.id === sessionQuestionId)
+        : null
 
       items.push({
         id: row.signal_id,
@@ -312,7 +341,12 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
         label: getSignalLabel(row.type, row.value),
         severity: getSignalSeverity(row.type, row.value),
         occurredAt: row.created_at,
-        offsetMs: readSignalOffset(row.value) ?? fallbackOffset ?? 0,
+        offsetMs:
+          readSignalOffset(row.value) ??
+          matchingQuestion?.answerOffsetMs ??
+          matchingQuestion?.offsetMs ??
+          fallbackOffset ??
+          0,
         value: row.value,
       })
 

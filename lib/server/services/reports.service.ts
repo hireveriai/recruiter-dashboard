@@ -88,9 +88,6 @@ export type ReportsPayload = {
   }
   cognitiveRisk: {
     confidenceScore: number | null
-    voiceActivityIndex: number | null
-    /** @deprecated Compatibility alias for voiceActivityIndex. */
-    stressIndex: number | null
     clarityIndex: number | null
     suspicionIndex: number | null
     behavioralAnomalies: number
@@ -136,8 +133,6 @@ export type NormalizedReportRow = {
   avg_focus_ratio: number | null
   max_look_away_duration: number | null
   avg_look_away_events: number | null
-  vocal_pressure_count: number
-  avg_vocal_pressure: number | null
   skills_tested_count: number
   skills_low_score_count: number
   skills_missing_count: number
@@ -241,8 +236,6 @@ type SignalAggRow = {
   avg_focus_ratio: number | null
   max_look_away_duration: number | null
   avg_look_away_events: number | null
-  vocal_pressure_count: number
-  avg_vocal_pressure: number | null
 }
 
 const REPORTS_CACHE_TTL_MS = 5_000
@@ -948,8 +941,6 @@ async function fetchSignalRows(organizationId: string) {
     columns.has("focus_ratio") ? `avg(coalesce(focus_ratio, 0))::numeric as avg_focus_ratio` : columns.has("avg_focus_ratio") ? `avg(coalesce(avg_focus_ratio, 0))::numeric as avg_focus_ratio` : `null::numeric as avg_focus_ratio`,
     columns.has("look_away_duration") ? `max(coalesce(look_away_duration, 0))::numeric as max_look_away_duration` : columns.has("max_look_away_duration") ? `max(coalesce(max_look_away_duration, 0))::numeric as max_look_away_duration` : `null::numeric as max_look_away_duration`,
     columns.has("look_away_events") ? `avg(coalesce(look_away_events, 0))::numeric as avg_look_away_events` : columns.has("avg_look_away_events") ? `avg(coalesce(avg_look_away_events, 0))::numeric as avg_look_away_events` : `null::numeric as avg_look_away_events`,
-    columns.has("type") && columns.has("value") ? `count(*) filter (where type = 'vocal_pressure' and value->>'score' ~ '^[0-9]+([.][0-9]+)?$')::int as vocal_pressure_count` : `0::int as vocal_pressure_count`,
-    columns.has("type") && columns.has("value") ? `avg(case when type = 'vocal_pressure' and value->>'score' ~ '^[0-9]+([.][0-9]+)?$' then (value->>'score')::numeric end)::numeric as avg_vocal_pressure` : `null::numeric as avg_vocal_pressure`,
   ]
 
   const whereClause = columns.has("organization_id") ? `where organization_id = $1::uuid` : ``
@@ -984,8 +975,6 @@ async function fetchSignalRowsForAttempts(organizationId: string, attemptIds: st
     columns.has("focus_ratio") ? `avg(coalesce(focus_ratio, 0))::numeric as avg_focus_ratio` : columns.has("avg_focus_ratio") ? `avg(coalesce(avg_focus_ratio, 0))::numeric as avg_focus_ratio` : `null::numeric as avg_focus_ratio`,
     columns.has("look_away_duration") ? `max(coalesce(look_away_duration, 0))::numeric as max_look_away_duration` : columns.has("max_look_away_duration") ? `max(coalesce(max_look_away_duration, 0))::numeric as max_look_away_duration` : `null::numeric as max_look_away_duration`,
     columns.has("look_away_events") ? `avg(coalesce(look_away_events, 0))::numeric as avg_look_away_events` : columns.has("avg_look_away_events") ? `avg(coalesce(avg_look_away_events, 0))::numeric as avg_look_away_events` : `null::numeric as avg_look_away_events`,
-    columns.has("type") && columns.has("value") ? `count(*) filter (where type = 'vocal_pressure' and value->>'score' ~ '^[0-9]+([.][0-9]+)?$')::int as vocal_pressure_count` : `0::int as vocal_pressure_count`,
-    columns.has("type") && columns.has("value") ? `avg(case when type = 'vocal_pressure' and value->>'score' ~ '^[0-9]+([.][0-9]+)?$' then (value->>'score')::numeric end)::numeric as avg_vocal_pressure` : `null::numeric as avg_vocal_pressure`,
   ]
   const filters = []
 
@@ -1286,8 +1275,6 @@ export async function getNormalizedReportRows(organizationId: string): Promise<N
         avg_focus_ratio: avgFocusRatio,
         max_look_away_duration: toNumber(signal?.max_look_away_duration),
         avg_look_away_events: toNumber(signal?.avg_look_away_events),
-        vocal_pressure_count: signal?.vocal_pressure_count ?? 0,
-        avg_vocal_pressure: toNumber(signal?.avg_vocal_pressure),
         skills_tested_count: Object.keys(skillScores).length || normalizeStringArray(skillState?.skills_covered).length,
         skills_low_score_count: weakSkills.length,
         skills_missing_count: missingSkills.length,
@@ -1344,14 +1331,8 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
   const clarityValues = rows.map((row) => row.avg_clarity_score).filter((value): value is number => value !== null)
   const depthValues = rows.map((row) => row.avg_depth_score).filter((value): value is number => value !== null)
   const fraudValues = rows.map((row) => row.avg_fraud_score).filter((value): value is number => value !== null)
-  const vocalPressureValues = rows
-    .filter((row) => row.vocal_pressure_count > 0)
-    .map((row) => row.avg_vocal_pressure)
-    .filter((value): value is number => value !== null)
-
   const confidenceScore = averageNullable(confidenceValues)
   const clarityIndex = averageNullable(clarityValues)
-  const voiceActivityIndex = averageNullable(vocalPressureValues)
   const suspicionIndex = rows.length ? Number((rows.reduce((sum, row) => sum + row.suspicious_index, 0) / rows.length).toFixed(1)) : null
   const behavioralAnomalies = rows.reduce(
     (sum, row) =>
@@ -1630,8 +1611,6 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
     interviewFunnel,
     cognitiveRisk: {
       confidenceScore,
-      voiceActivityIndex,
-      stressIndex: voiceActivityIndex,
       clarityIndex,
       suspicionIndex,
       behavioralAnomalies,
@@ -1798,8 +1777,6 @@ export async function getVerisSummaryCards(organizationId: string, limit: number
         avg_focus_ratio: toNumber(signal?.avg_focus_ratio),
         max_look_away_duration: toNumber(signal?.max_look_away_duration),
         avg_look_away_events: toNumber(signal?.avg_look_away_events),
-        vocal_pressure_count: signal?.vocal_pressure_count ?? 0,
-        avg_vocal_pressure: toNumber(signal?.avg_vocal_pressure),
         skills_tested_count: Object.keys(skillScores).length,
         skills_low_score_count: weakSkills.length,
         skills_missing_count: missingSkills.length,
