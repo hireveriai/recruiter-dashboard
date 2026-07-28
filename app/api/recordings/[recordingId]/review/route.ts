@@ -49,6 +49,7 @@ type ReviewSignal = {
   id: string
   type: string
   label: string
+  description: string
   severity: "low" | "medium" | "high"
   occurredAt: string | null
   offsetMs: number
@@ -112,31 +113,14 @@ function readObjectString(value: unknown, key: string) {
 
 function isActionableSignal(type: string, value: unknown) {
   const normalizedType = type.trim().toLowerCase()
-
-  if (
-    normalizedType === "face_detected" ||
-    normalizedType === "camera_ready" ||
-    normalizedType === "audio_ready" ||
-    normalizedType === "heartbeat" ||
-    normalizedType === "vocal_pressure" ||
-    normalizedType === "acoustic_activity"
-  ) {
-    return false
-  }
-
-  if (normalizedType === "focus_metrics") {
-    const focusRatio = readObjectNumber(value, "focusRatio")
-    const lookAwayEvents = readObjectNumber(value, "lookAwayEvents") ?? 0
-    const maxLookAwayDuration = readObjectNumber(value, "maxLookAwayDuration") ?? 0
-
-    return (
-      (focusRatio !== null && focusRatio < 0.5 && (lookAwayEvents >= 2 || maxLookAwayDuration >= 5_000)) ||
-      lookAwayEvents >= 3 ||
-      maxLookAwayDuration >= 8_000
-    )
-  }
-
-  return true
+  return new Set([
+    "no_face",
+    "attention_loss",
+    "external_device_suspected",
+    "clarification_requested",
+    "background_noise_detected",
+    "audio_intermittently_unavailable",
+  ]).has(normalizedType)
 }
 
 function getSignalSeverity(type: string, value: unknown): "low" | "medium" | "high" {
@@ -197,6 +181,8 @@ function getSignalLabel(type: string, value: unknown) {
     audio_intermittently_unavailable: "Audio intermittently unavailable",
     background_noise_detected: "Background noise detected",
     transcript_recovered_from_recording: "Transcript recovered from recording",
+    external_device_suspected: "Might be using External Device",
+    clarification_requested: "Clarification requested",
     network_reconnect: "Network reconnect",
     coding_start: "Coding started",
     coding_end: "Coding ended",
@@ -215,6 +201,25 @@ function getSignalLabel(type: string, value: unknown) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ")
+}
+
+function getSignalDescription(type: string) {
+  const descriptions: Record<string, string> = {
+    no_face:
+      "No face was reliably detected for a sustained period. Lighting, camera angle, or leaving the frame may cause this.",
+    attention_loss:
+      "Sustained head or gaze direction away from the interview was detected. Brief natural glances are excluded.",
+    external_device_suspected:
+      "A sustained same-direction gaze may indicate another screen or device. This is a review cue, not proof.",
+    clarification_requested:
+      "The candidate asked VERIS to explain the same question differently. This is neutral and does not affect scoring.",
+    background_noise_detected:
+      "Sustained background sound may have affected audio or transcript quality.",
+    audio_intermittently_unavailable:
+      "The microphone stream became unavailable during part of the interview, so some spoken content may be missing from the transcript.",
+  }
+
+  return descriptions[type] ?? ""
 }
 
 export async function GET(request: Request, context: { params: Promise<{ recordingId: string }> }) {
@@ -339,6 +344,7 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
         id: row.signal_id,
         type: row.type,
         label: getSignalLabel(row.type, row.value),
+        description: getSignalDescription(row.type),
         severity: getSignalSeverity(row.type, row.value),
         occurredAt: row.created_at,
         offsetMs:

@@ -30,6 +30,7 @@ type SignalItem = {
   id: string
   type: string
   label: string
+  description: string
   severity: RiskLevel
   occurredAt: string | null
   offsetMs: number
@@ -421,9 +422,14 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                     key={signal.id}
                     type="button"
                     onClick={() => seekTo(signal.offsetMs)}
-                    className={`flex items-center justify-between rounded-xl border px-3 py-2 text-left text-sm ${riskClass(signal.severity)}`}
+                    className={`flex items-start justify-between rounded-xl border px-3 py-3 text-left text-sm ${riskClass(signal.severity)}`}
                   >
-                    <span className="truncate">{signal.label}</span>
+                    <span className="min-w-0">
+                      <span className="block font-medium">{signal.label}</span>
+                      <span className="mt-1 block text-xs leading-5 opacity-75">
+                        {signal.description}
+                      </span>
+                    </span>
                     <span className="ml-3 font-mono text-xs">{formatTime(signal.offsetMs)}</span>
                   </button>
                 ))
