@@ -17,12 +17,11 @@ import { formatOrgDateTime } from "@/lib/time";
 export default function SettingsPage() {
   const searchParams = useAuthSearchParams();
   const cacheKey = `settings:${searchParams.toString()}`;
-  const initialSettings = readSessionJsonCache(cacheKey);
   const { timezone, timezoneLabel, setTimezoneState } = useOrgTimezone();
   const [query, setQuery] = useState("");
-  const [selectedTimezone, setSelectedTimezone] = useState(() => initialSettings?.timezone ?? DEFAULT_ORG_TIMEZONE);
-  const [selectedLabel, setSelectedLabel] = useState(() => initialSettings?.timezoneLabel ?? DEFAULT_ORG_TIMEZONE_LABEL);
-  const [status, setStatus] = useState(() => ({ loading: !initialSettings, saving: false, error: "", notice: "" }));
+  const [selectedTimezone, setSelectedTimezone] = useState(DEFAULT_ORG_TIMEZONE);
+  const [selectedLabel, setSelectedLabel] = useState(DEFAULT_ORG_TIMEZONE_LABEL);
+  const [status, setStatus] = useState({ loading: true, saving: false, error: "", notice: "" });
 
   useEffect(() => {
     let active = true;

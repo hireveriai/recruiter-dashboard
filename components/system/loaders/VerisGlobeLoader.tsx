@@ -68,7 +68,7 @@ export default function VerisGlobeLoader({
       aria-busy="true"
       aria-live="polite"
       className={[
-        "hv-veris-loader-shell relative flex items-center justify-center overflow-hidden bg-[#08111f] px-4 py-8 text-white",
+        "hv-preserve-dark hv-veris-loader-shell relative flex items-center justify-center overflow-hidden bg-[#08111f] px-4 py-8 text-white",
         fullscreen ? "min-h-[calc(100svh-var(--hv-loader-viewport-offset))]" : "min-h-[560px] rounded-[28px] border border-slate-800",
       ].join(" ")}
       role="status"

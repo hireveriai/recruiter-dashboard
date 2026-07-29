@@ -235,7 +235,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-[#08111f] px-6 py-8 text-white">
+      <main className="hv-preserve-dark min-h-screen bg-[#08111f] px-6 py-8 text-white">
         <div className="mx-auto max-w-3xl rounded-2xl border border-rose-400/25 bg-rose-500/10 p-6 text-rose-100">
           {error}
         </div>
@@ -245,7 +245,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
 
   if (!data) {
     return (
-      <main className="min-h-screen bg-[#08111f] px-6 py-8 text-white">
+      <main className="hv-preserve-dark min-h-screen bg-[#08111f] px-6 py-8 text-white">
         <div className="mx-auto max-w-6xl animate-pulse space-y-5">
           <div className="h-28 rounded-2xl bg-slate-800/60" />
           <div className="grid gap-5 lg:grid-cols-[1.4fr_0.8fr]">
@@ -258,7 +258,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#08111f] text-white">
+    <main className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
       <section className="border-b border-slate-800 bg-[#0b1424] px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>

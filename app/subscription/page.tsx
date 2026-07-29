@@ -93,9 +93,8 @@ function PlanCard({ plan, featured = false }: { plan: Plan; featured?: boolean }
 export default function SubscriptionPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `subscription:${searchParams.toString()}`
-  const initialPlans = readSessionJsonCache(cacheKey) as Plan[] | null
-  const [plans, setPlans] = useState<Plan[]>(() => initialPlans ?? [])
-  const [loading, setLoading] = useState(() => !initialPlans)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -168,7 +167,7 @@ export default function SubscriptionPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#08111f] text-white">
+      <main className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
         <Navbar onSendInterviewClick={() => undefined} />
         <VerisGlobeLoader
           eyebrow="Subscription"
@@ -186,7 +185,7 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#08111f] text-white">
+    <main className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
       <Navbar onSendInterviewClick={() => undefined} />
       <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:pl-28 lg:px-8 lg:pl-32">
         <section className="overflow-hidden rounded-[32px] border border-cyan-400/16 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.16),transparent_28%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(2,6,23,0.94))] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.42)] sm:p-8">

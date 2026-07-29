@@ -346,9 +346,8 @@ function CompletedCandidateDetails({ candidate, onClose }) {
 export default function CandidatesPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `candidates:${searchParams.toString()}`
-  const initialCandidates = readSessionJsonCache(cacheKey)
-  const [candidates, setCandidates] = useState(() => initialCandidates ?? [])
-  const [loading, setLoading] = useState(() => !initialCandidates)
+  const [candidates, setCandidates] = useState([])
+  const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState("")
   const [expandedCandidateId, setExpandedCandidateId] = useState("")
   const [reviewCandidate, setReviewCandidate] = useState(null)

@@ -402,7 +402,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
   const answerSummaries = Array.isArray(interview.answerSummaries) ? interview.answerSummaries : []
 
   return (
-    <div className="relative max-h-[88vh] overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
+    <div className="hv-preserve-dark relative max-h-[88vh] overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
         <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
 
         <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
@@ -554,9 +554,8 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
 export default function InterviewsPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `interviews:${searchParams.toString()}`
-  const initialInterviews = readSessionJsonCache(cacheKey)
-  const [interviews, setInterviews] = useState(() => initialInterviews ?? [])
-  const [loading, setLoading] = useState(() => !initialInterviews)
+  const [interviews, setInterviews] = useState([])
+  const [loading, setLoading] = useState(true)
   const [summaryInterviewId, setSummaryInterviewId] = useState("")
   const [openSendInterview, setOpenSendInterview] = useState(false)
   const [actionBusyId, setActionBusyId] = useState("")
@@ -868,7 +867,7 @@ export default function InterviewsPage() {
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
       <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
+        <section className="hv-elevated-section rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
           <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Interview Registry</p>
@@ -899,7 +898,7 @@ export default function InterviewsPage() {
           </div>
         </section>
 
-        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+        <section className="hv-elevated-section mt-8 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
           <div className="flex flex-col gap-4 border-b border-slate-800 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">Interview Register</h2>

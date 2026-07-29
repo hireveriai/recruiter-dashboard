@@ -448,10 +448,9 @@ function EditUserModal({ isOpen, member, availableRoles, allPermissions, saving,
 export default function ManageTeamPage() {
   const searchParams = useAuthSearchParams();
   const cacheKey = `manage-team:${searchParams.toString()}`;
-  const initialData = readSessionJsonCache(cacheKey);
-  const [data, setData] = useState(() => initialData ?? null);
+  const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(() => !initialData);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);

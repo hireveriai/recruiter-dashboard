@@ -151,9 +151,8 @@ function JobSkillsCell({ skills }) {
 export default function JobsPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `jobs:${searchParams.toString()}`
-  const initialJobs = readSessionJsonCache(cacheKey)
-  const [jobs, setJobs] = useState(() => initialJobs?.jobs ?? [])
-  const [supportsJobActiveState, setSupportsJobActiveState] = useState(() => Boolean(initialJobs?.supportsJobActiveState))
+  const [jobs, setJobs] = useState([])
+  const [supportsJobActiveState, setSupportsJobActiveState] = useState(false)
   const [openSendInterview, setOpenSendInterview] = useState(false)
   const [openEditJob, setOpenEditJob] = useState(false)
   const [selectedJob, setSelectedJob] = useState(null)

@@ -36,7 +36,7 @@ export default function FreeTrialUsage({ credits }) {
   const screeningLabel = !hasCreditSource || isSubscription ? "VERIS Screening Credits" : "AI Screenings Left"
 
   return (
-    <section className="mb-5 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-[0_14px_40px_rgba(2,6,23,0.18)]">
+    <section className="hv-elevated-section mb-5 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-[0_14px_40px_rgba(2,6,23,0.18)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{eyebrow}</p>

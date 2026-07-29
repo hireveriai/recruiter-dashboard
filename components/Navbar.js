@@ -223,10 +223,10 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
   const [openCreateJob, setOpenCreateJob] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
-  const [alerts, setAlerts] = useState(() => initialAlerts ?? readCachedAlerts() ?? []);
+  const [alerts, setAlerts] = useState(() => initialAlerts ?? []);
   const [readAlertIds, setReadAlertIds] = useState(() => new Set());
   const [feedback, setFeedback] = useState(null);
-  const [profile, setProfile] = useState(() => initialProfile ?? readCachedPermissionProfile());
+  const [profile, setProfile] = useState(() => initialProfile);
   const displayProfile = initialProfile?.name ? initialProfile : profile;
   const permissionProfile = displayProfile?.permissions?.length ? displayProfile : DEFAULT_RECRUITER_PERMISSION_PROFILE;
   const visibleNavItems = useMemo(
@@ -238,6 +238,36 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
   const canViewBilling = canAccessFeature(displayProfile, "billing");
   const canManageSettings = canAccessFeature(displayProfile, "settings");
   const alertReadStorageKey = useMemo(() => getAlertReadStorageKey(displayProfile), [displayProfile]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (initialAlerts === undefined) {
+      const cachedAlerts = readCachedAlerts();
+      if (cachedAlerts) {
+        window.queueMicrotask(() => {
+          if (active) {
+            setAlerts(cachedAlerts);
+          }
+        });
+      }
+    }
+
+    if (!initialProfile?.name) {
+      const cachedProfile = readCachedPermissionProfile();
+      if (cachedProfile) {
+        window.queueMicrotask(() => {
+          if (active) {
+            setProfile((current) => current?.name ? current : cachedProfile);
+          }
+        });
+      }
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [initialAlerts, initialProfile]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -531,7 +561,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/92 text-white shadow-[0_8px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl">
+      <header className="hv-navbar sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/92 text-white shadow-[0_8px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl">
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-slate-800/80" />
         <div className="relative mx-auto flex w-full max-w-[1840px] flex-nowrap items-center justify-between gap-3 px-3 py-4 sm:px-4 xl:px-6">
           <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 xl:gap-3">
@@ -570,9 +600,9 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                     href={item.href}
                     onClick={() => handleNavigationClick(item.href)}
                     className={[
-                      "group relative inline-flex transform-gpu whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
+                      "hv-nav-link group relative inline-flex transform-gpu whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
                       active
-                        ? "border-slate-700 bg-slate-900 font-semibold text-white shadow-sm"
+                        ? "hv-nav-link-active border-slate-700 bg-slate-900 font-semibold text-white shadow-sm"
                         : "border-transparent text-slate-300/90 hover:border-slate-700 hover:bg-slate-900/70 hover:text-white",
                     ].join(" ")}
                   >
@@ -595,9 +625,9 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                   type="button"
                   onClick={() => setAlertsOpen((value) => !value)}
                   className={[
-                    "group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] font-medium tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
+                    "hv-nav-link group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] font-medium tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
                     alertsOpen
-                      ? "border-slate-700 bg-slate-900 text-white shadow-sm"
+                      ? "hv-nav-link-active border-slate-700 bg-slate-900 text-white shadow-sm"
                       : "border-transparent text-slate-300/90 hover:border-slate-700 hover:bg-slate-900/70 hover:text-white",
                   ].join(" ")}
                 >

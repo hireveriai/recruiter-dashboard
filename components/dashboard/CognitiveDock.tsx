@@ -724,10 +724,10 @@ export default function CognitiveDock({
         className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 md:bottom-auto md:left-4 md:top-[calc(50%+44px)] md:-translate-x-0 md:-translate-y-1/2 lg:left-5 xl:left-6"
         aria-label="Interview Operations Dock"
       >
-        <div className="relative rounded-[32px] border border-white/5 bg-[#081120]/55 p-1.5 shadow-[0_18px_60px_rgba(2,6,23,0.36),0_0_34px_rgba(34,211,238,0.055)] backdrop-blur-2xl">
+        <div className="hv-preserve-dark relative rounded-[32px] border border-white/5 bg-[#081120]/72 p-2.5 shadow-[0_18px_60px_rgba(2,6,23,0.36),0_0_34px_rgba(34,211,238,0.09)] backdrop-blur-2xl">
           <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.01)_38%,transparent),radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.105),transparent_46%)]" />
           <motion.nav
-            className="relative flex max-w-[calc(100vw-2rem)] items-center gap-1.5 overflow-x-auto md:max-h-[calc(100dvh-10rem)] md:w-[52px] md:max-w-none md:flex-col md:gap-2 md:overflow-visible xl:w-14"
+            className="relative flex max-w-[calc(100vw-2rem)] items-center gap-1.5 overflow-x-auto md:max-h-[calc(100dvh-8rem)] md:w-[52px] md:max-w-none md:flex-col md:gap-2 md:overflow-visible md:py-1 xl:w-14"
             initial="hidden"
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.045, delayChildren: 0.12 } } }}
@@ -756,7 +756,7 @@ export default function CognitiveDock({
       <AnimatePresence>
         {panel ? (
           <motion.div
-            className="fixed inset-0 z-[65] bg-slate-950/50 backdrop-blur-sm"
+            className="hv-preserve-dark fixed inset-0 z-[65] bg-slate-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -765,7 +765,7 @@ export default function CognitiveDock({
             <motion.section
               role="dialog"
               aria-label={getPanelTitle(panel)}
-              className={`absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[24px] border border-cyan-400/15 bg-[#071226]/95 p-4 text-white shadow-[0_24px_80px_rgba(2,6,23,0.58),0_0_42px_rgba(34,211,238,0.09)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-auto !top-1/2 h-[min(82dvh,780px)] !max-h-[780px] !-translate-y-1/2 w-[min(94vw,1100px)] md:w-[min(calc(100vw-7rem),1100px)]" : "w-[min(92vw,640px)]"}`}
+            className={`hv-preserve-dark absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[24px] border border-cyan-400/15 bg-[#071226]/95 p-4 text-white shadow-[0_24px_80px_rgba(2,6,23,0.58),0_0_42px_rgba(34,211,238,0.09)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-auto !top-1/2 h-[min(82dvh,780px)] !max-h-[780px] !-translate-y-1/2 w-[min(94vw,1100px)] md:w-[min(calc(100vw-7rem),1100px)]" : "w-[min(92vw,640px)]"}`}
               initial={{ opacity: 0, x: -10, scale: 0.97 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -10, scale: 0.97 }}

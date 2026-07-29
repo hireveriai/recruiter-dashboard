@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 
 import BackToDashboardLink from "@/components/BackToDashboardLink"
 import Navbar from "@/components/Navbar"
@@ -146,7 +146,7 @@ function CreditUsageCard({
   const accentBg = accent === "cyan" ? "bg-cyan-400/10" : "bg-blue-500/10"
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
+    <div className="hv-theme-panel relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
       <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.08),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.08),transparent_38%)]" />
       <div className="relative flex items-start justify-between gap-4">
         <div>
@@ -161,17 +161,18 @@ function CreditUsageCard({
       <div className="relative mt-5 grid gap-5 sm:grid-cols-[148px_1fr] sm:items-center">
         <div
           aria-label={`${title}: ${percentage}% used`}
-          className="relative mx-auto flex h-36 w-36 items-center justify-center rounded-full border border-slate-700/80 shadow-[0_0_34px_rgba(15,23,42,0.7)] sm:mx-0"
+          className="hv-chart-donut relative mx-auto flex h-36 w-36 items-center justify-center rounded-full border border-slate-700/80 sm:mx-0"
           role="img"
           style={{
-            background: `conic-gradient(${accentColor} 0deg ${usedDegrees}deg, rgba(30,41,59,0.95) ${usedDegrees}deg 360deg)`,
-            boxShadow: `0 0 34px ${accentGlow}, inset 0 0 24px rgba(2,6,23,0.7)`,
-          }}
+            "--hv-chart-accent": accentColor,
+            "--hv-chart-degrees": `${usedDegrees}deg`,
+            "--hv-chart-glow": accentGlow,
+          } as CSSProperties}
         >
-          <div className="absolute inset-3 rounded-full border border-slate-800 bg-slate-950" />
-          <div className="absolute inset-6 rounded-full border border-slate-800/80 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.08),transparent_42%),#08111f]" />
+          <div className="hv-chart-donut-ring absolute inset-3 rounded-full border" />
+          <div className="hv-chart-donut-core absolute inset-6 rounded-full border" />
           <div className="relative text-center">
-            <p className="text-3xl font-semibold tracking-tight text-white">{percentage}%</p>
+            <p className="hv-chart-donut-label text-3xl font-semibold tracking-tight">{percentage}%</p>
             <p className={`mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${accentText}`}>Used</p>
           </div>
         </div>
@@ -210,15 +211,14 @@ function CreditUsageCard({
 export default function BillingPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `billing:${searchParams.toString()}`
-  const initialData = readSessionJsonCache(cacheKey) as BillingData | null
-  const [data, setData] = useState<BillingData>(() => initialData ?? { organization: null, invoices: [], payments: [], subscriptions: [] })
-  const [settings, setSettings] = useState(() => ({
-    gstNumber: initialData?.organization?.gstNumber ?? "",
-    billingAddress: initialData?.organization?.billingAddress ?? "",
-    financeEmail: initialData?.organization?.financeEmail ?? "",
-    invoiceRecipientEmail: initialData?.organization?.invoiceRecipientEmail ?? "",
-  }))
-  const [loading, setLoading] = useState(() => !initialData)
+  const [data, setData] = useState<BillingData>({ organization: null, invoices: [], payments: [], subscriptions: [] })
+  const [settings, setSettings] = useState({
+    gstNumber: "",
+    billingAddress: "",
+    financeEmail: "",
+    invoiceRecipientEmail: "",
+  })
+  const [loading, setLoading] = useState(true)
   const [savingSettings, setSavingSettings] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
@@ -399,7 +399,7 @@ export default function BillingPage() {
       <div className="mx-auto max-w-[1400px]">
         <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-blue-400/40 hover:bg-slate-900 hover:text-white" />
 
-        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
+        <div className="hv-elevated-section mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
           <p className="text-xs uppercase tracking-[0.3em] text-blue-300/80">Organization Billing</p>
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -410,7 +410,7 @@ export default function BillingPage() {
             </div>
             <Link
               href="/billing/checkout"
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+              className="hv-solid-action inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.24)] transition hover:-translate-y-0.5 hover:bg-blue-500 hover:shadow-[0_16px_34px_rgba(37,99,235,0.3)]"
             >
               Purchase Plan
             </Link>
@@ -723,7 +723,7 @@ export default function BillingPage() {
               type="button"
               onClick={() => void saveBillingSettings()}
               disabled={savingSettings}
-              className="mt-5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="hv-solid-action mt-5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {savingSettings ? "Saving..." : "Save Billing Settings"}
             </button>

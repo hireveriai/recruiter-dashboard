@@ -122,7 +122,7 @@ export default function Pipeline({ initialPipeline, isLoading = false }) {
           {cards.map((item) => (
           <div
             key={item.title}
-            className="rounded-xl border border-slate-800 bg-slate-900/75 p-5 shadow-sm"
+            className="hv-theme-panel rounded-xl border border-slate-800 bg-slate-900/75 p-5 shadow-sm"
           >
             <div className="flex justify-between items-center">
               <span className="text-gray-400 text-sm">

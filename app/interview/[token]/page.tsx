@@ -90,7 +90,7 @@ export default function InterviewTokenPage() {
   }, [token])
 
   return (
-    <main className="min-h-screen bg-[#020817] text-white px-6 py-12">
+    <main className="hv-preserve-dark min-h-screen bg-[#020817] px-6 py-12 text-white">
       <div className="mx-auto max-w-2xl rounded-2xl border border-slate-800 bg-slate-950/80 p-8 shadow-2xl">
         {isLoading ? (
           <>

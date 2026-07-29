@@ -64,7 +64,7 @@ function WorkspaceShell({ tone = "loading", title, message, ctaLabel, onCtaClick
   const isError = tone === "error"
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#07101d] px-6 text-white">
+    <div className="hv-preserve-dark relative flex min-h-screen items-center justify-center overflow-hidden bg-[#07101d] px-6 text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(34,211,238,0.16),transparent_22%),radial-gradient(circle_at_82%_22%,rgba(59,130,246,0.12),transparent_20%),radial-gradient(circle_at_50%_100%,rgba(14,165,233,0.08),transparent_28%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:88px_88px]" />
 

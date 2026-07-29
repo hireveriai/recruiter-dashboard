@@ -54,12 +54,11 @@ function getInsightSummary(item) {
 export default function VerisInsightsPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `veris-insights:${searchParams.toString()}`
-  const initialSummaries = readSessionJsonCache(cacheKey)
-  const [summaries, setSummaries] = useState(() => initialSummaries?.summaries ?? [])
+  const [summaries, setSummaries] = useState([])
   const [expandedIds, setExpandedIds] = useState(() => new Set())
-  const [isLoading, setIsLoading] = useState(() => !initialSummaries)
+  const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(() => Boolean(initialSummaries?.hasMore))
+  const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -202,7 +201,7 @@ export default function VerisInsightsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#08111f] text-white">
+      <div className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
         <Navbar />
         <VerisGlobeLoader
           eyebrow="VERIS Insights"
@@ -220,7 +219,7 @@ export default function VerisInsightsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#08111f] text-white">
+    <div className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
       <Navbar />
       <main className="px-6 py-8">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

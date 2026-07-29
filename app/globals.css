@@ -42,6 +42,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --hv-chart-track: rgba(30, 41, 59, 0.95);
+  --hv-chart-core: #08111f;
+  --hv-chart-core-ring: rgba(51, 65, 85, 0.8);
+  --hv-chart-label: #f8fafc;
+  --hv-chart-shadow: rgba(2, 6, 23, 0.72);
 }
 
 :root[data-theme="dark"] {
@@ -50,7 +55,7 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --background: #f4f7fb;
+  --background: #eef3f9;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -61,11 +66,11 @@
   --secondary: #e8eef6;
   --secondary-foreground: #1e293b;
   --muted: #e8eef6;
-  --muted-foreground: #64748b;
+  --muted-foreground: #52627a;
   --accent: #dff5fa;
   --accent-foreground: #164e63;
-  --border: rgba(71, 85, 105, 0.2);
-  --input: rgba(71, 85, 105, 0.22);
+  --border: rgba(51, 65, 85, 0.2);
+  --input: rgba(51, 65, 85, 0.24);
   --ring: #0891b2;
   --sidebar: #ffffff;
   --sidebar-foreground: #0f172a;
@@ -75,6 +80,11 @@
   --sidebar-accent-foreground: #1e293b;
   --sidebar-border: #d8e1ec;
   --sidebar-ring: #0891b2;
+  --hv-chart-track: #d7e1ec;
+  --hv-chart-core: #ffffff;
+  --hv-chart-core-ring: rgba(148, 163, 184, 0.42);
+  --hv-chart-label: #0f172a;
+  --hv-chart-shadow: rgba(15, 23, 42, 0.12);
 
   /*
    * The recruiter workspace predates theme tokens and uses Tailwind's slate
@@ -85,49 +95,86 @@
   --color-slate-900: #ffffff;
   --color-slate-800: #e2e8f0;
   --color-slate-700: #cbd5e1;
-  --color-slate-600: #94a3b8;
-  --color-slate-500: #64748b;
-  --color-slate-400: #64748b;
-  --color-slate-300: #475569;
-  --color-slate-200: #334155;
-  --color-slate-100: #1e293b;
+  --color-slate-600: #64748b;
+  --color-slate-500: #52627a;
+  --color-slate-400: #475569;
+  --color-slate-300: #334155;
+  --color-slate-200: #1e293b;
+  --color-slate-100: #0f172a;
   --color-gray-950: #f4f7fb;
   --color-gray-900: #ffffff;
   --color-gray-800: #e2e8f0;
   --color-gray-700: #cbd5e1;
-  --color-gray-600: #94a3b8;
-  --color-gray-500: #64748b;
-  --color-gray-400: #64748b;
-  --color-gray-300: #475569;
-  --color-gray-200: #334155;
-  --color-gray-100: #1e293b;
+  --color-gray-600: #64748b;
+  --color-gray-500: #52627a;
+  --color-gray-400: #475569;
+  --color-gray-300: #334155;
+  --color-gray-200: #1e293b;
+  --color-gray-100: #0f172a;
   --color-cyan-50: #164e63;
   --color-cyan-100: #155e75;
   --color-cyan-200: #0e7490;
+  --color-cyan-300: #0891b2;
+  --color-cyan-400: #0891b2;
   --color-sky-50: #0c4a6e;
   --color-sky-100: #075985;
   --color-sky-200: #0369a1;
+  --color-sky-300: #0284c7;
+  --color-sky-400: #0284c7;
   --color-blue-50: #172554;
   --color-blue-100: #1e3a8a;
   --color-blue-200: #1d4ed8;
+  --color-blue-300: #2563eb;
+  --color-blue-400: #2563eb;
   --color-teal-50: #134e4a;
   --color-teal-100: #115e59;
   --color-teal-200: #0f766e;
+  --color-teal-300: #0d9488;
+  --color-teal-400: #0d9488;
   --color-emerald-50: #064e3b;
   --color-emerald-100: #065f46;
   --color-emerald-200: #047857;
+  --color-emerald-300: #059669;
+  --color-emerald-400: #059669;
   --color-amber-50: #78350f;
   --color-amber-100: #92400e;
   --color-amber-200: #b45309;
+  --color-amber-300: #d97706;
+  --color-amber-400: #d97706;
   --color-rose-50: #881337;
   --color-rose-100: #9f1239;
   --color-rose-200: #be123c;
+  --color-rose-300: #e11d48;
+  --color-rose-400: #e11d48;
   --color-violet-50: #4c1d95;
   --color-violet-100: #5b21b6;
   --color-violet-200: #6d28d9;
+  --color-violet-300: #7c3aed;
+  --color-violet-400: #7c3aed;
   --color-fuchsia-50: #701a75;
   --color-fuchsia-100: #86198f;
   --color-fuchsia-200: #a21caf;
+  --color-fuchsia-300: #c026d3;
+  --color-fuchsia-400: #c026d3;
+  --color-orange-200: #c2410c;
+  --color-orange-300: #ea580c;
+  --color-orange-400: #ea580c;
+  --color-green-200: #15803d;
+  --color-green-300: #16a34a;
+  --color-green-400: #16a34a;
+  --color-red-200: #b91c1c;
+  --color-red-300: #dc2626;
+  --color-red-400: #dc2626;
+  --color-yellow-200: #a16207;
+  --color-yellow-300: #ca8a04;
+  --color-yellow-400: #ca8a04;
+  --color-indigo-100: #312e81;
+  --color-indigo-200: #3730a3;
+  --color-indigo-300: #4338ca;
+  --color-indigo-400: #4f46e5;
+  --color-purple-200: #7e22ce;
+  --color-purple-300: #9333ea;
+  --color-purple-400: #9333ea;
 }
 
 @theme inline {
@@ -196,7 +243,11 @@ body {
 }
 
 :root[data-theme="light"] body {
-  background: linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+  background:
+    radial-gradient(circle at 12% 2%, rgba(14, 165, 233, 0.09), transparent 28rem),
+    radial-gradient(circle at 90% 18%, rgba(99, 102, 241, 0.065), transparent 31rem),
+    linear-gradient(180deg, #f8fbff 0%, #eef3f9 58%, #e9f0f7 100%);
+  background-attachment: fixed;
 }
 
 :root[data-theme="light"] .text-white,
@@ -204,10 +255,54 @@ body {
   color: #0f172a;
 }
 
+:root[data-theme="light"] .hover\:text-white:hover,
+:root[data-theme="light"] .focus\:text-white:focus,
+:root[data-theme="light"] .group:hover .group-hover\:text-white {
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .bg-blue-500.text-white,
+:root[data-theme="light"] .bg-blue-600.text-white,
+:root[data-theme="light"] .bg-cyan-500.text-white,
+:root[data-theme="light"] .bg-sky-500.text-white,
+:root[data-theme="light"] .bg-emerald-500.text-white,
+:root[data-theme="light"] .bg-violet-500.text-white {
+  color: #ffffff;
+}
+
+:root[data-theme="light"] .hv-navbar {
+  background: rgba(248, 251, 255, 0.92);
+  border-color: rgba(148, 163, 184, 0.32);
+  box-shadow:
+    0 14px 34px rgba(15, 23, 42, 0.09),
+    inset 0 -1px 0 rgba(148, 163, 184, 0.18);
+}
+
+:root[data-theme="light"] .hv-nav-link {
+  color: #52627a;
+}
+
+:root[data-theme="light"] .hv-nav-link:hover,
+:root[data-theme="light"] .hv-nav-link:focus-visible {
+  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.09);
+}
+
+:root[data-theme="light"] .hv-nav-link-active {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.1),
+    inset 0 -2px 0 #0ea5e9;
+}
+
 :root[data-theme="light"] .hv-theme-panel {
   background: linear-gradient(180deg, #ffffff, #f8fafc);
   box-shadow:
-    0 14px 34px rgba(15, 23, 42, 0.07),
+    0 18px 42px rgba(15, 23, 42, 0.09),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
@@ -218,13 +313,144 @@ body {
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
 }
 
-:root[data-theme="light"] .hv-preserve-dark .text-white {
+:root[data-theme="light"] .hv-elevated-section {
+  border-color: rgba(148, 163, 184, 0.32);
+  box-shadow:
+    0 22px 55px rgba(15, 23, 42, 0.1),
+    0 2px 8px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+:root[data-theme="light"] .hv-solid-action,
+:root[data-theme="light"] .hv-solid-action.text-white,
+:root[data-theme="light"] .hv-solid-action .text-white {
+  color: #ffffff;
+}
+
+:root[data-theme="light"] .hv-preserve-dark {
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  --color-slate-600: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-400: #94a3b8;
+  --color-slate-300: #cbd5e1;
+  --color-slate-200: #e2e8f0;
+  --color-slate-100: #f1f5f9;
+  --color-gray-950: #030712;
+  --color-gray-900: #111827;
+  --color-gray-800: #1f2937;
+  --color-gray-700: #374151;
+  --color-gray-600: #4b5563;
+  --color-gray-500: #6b7280;
+  --color-gray-400: #9ca3af;
+  --color-gray-300: #d1d5db;
+  --color-gray-200: #e5e7eb;
+  --color-gray-100: #f3f4f6;
+  --color-cyan-50: #ecfeff;
+  --color-cyan-100: #cffafe;
+  --color-cyan-200: #a5f3fc;
+  --color-cyan-300: #67e8f9;
+  --color-cyan-400: #22d3ee;
+  --color-sky-50: #f0f9ff;
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-teal-50: #f0fdfa;
+  --color-teal-100: #ccfbf1;
+  --color-teal-200: #99f6e4;
+  --color-teal-300: #5eead4;
+  --color-teal-400: #2dd4bf;
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-rose-50: #fff1f2;
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-rose-400: #fb7185;
+  --color-violet-50: #f5f3ff;
+  --color-violet-100: #ede9fe;
+  --color-violet-200: #ddd6fe;
+  --color-violet-300: #c4b5fd;
+  --color-violet-400: #a78bfa;
+  --color-fuchsia-50: #fdf4ff;
+  --color-fuchsia-100: #fae8ff;
+  --color-fuchsia-200: #f5d0fe;
+  --color-fuchsia-300: #f0abfc;
+  --color-fuchsia-400: #e879f9;
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-green-200: #bbf7d0;
+  --color-green-300: #86efac;
+  --color-green-400: #4ade80;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-yellow-200: #fef08a;
+  --color-yellow-300: #fde047;
+  --color-yellow-400: #facc15;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+  --color-purple-200: #e9d5ff;
+  --color-purple-300: #d8b4fe;
+  --color-purple-400: #c084fc;
+  color: #f8fafc;
+}
+
+:root[data-theme="light"] .hv-preserve-dark.text-white,
+:root[data-theme="light"] .hv-preserve-dark .text-white,
+:root[data-theme="light"] .hv-preserve-dark .hover\:text-white:hover,
+:root[data-theme="light"] .hv-preserve-dark .group:hover .group-hover\:text-white {
   color: #ffffff;
 }
 
 :root[data-theme="light"] .hv-preserve-dark.text-slate-100,
 :root[data-theme="light"] .hv-preserve-dark .text-slate-100 {
   color: #f1f5f9;
+}
+
+.hv-chart-donut {
+  background: conic-gradient(
+    var(--hv-chart-accent) 0deg var(--hv-chart-degrees),
+    var(--hv-chart-track) var(--hv-chart-degrees) 360deg
+  );
+  box-shadow:
+    0 12px 30px var(--hv-chart-glow),
+    inset 0 0 20px var(--hv-chart-shadow);
+}
+
+.hv-chart-donut-ring {
+  background: var(--hv-chart-core);
+  border-color: var(--hv-chart-core-ring);
+}
+
+.hv-chart-donut-core {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(14, 165, 233, 0.08), transparent 45%),
+    var(--hv-chart-core);
+  border-color: var(--hv-chart-core-ring);
+}
+
+.hv-chart-donut-label {
+  color: var(--hv-chart-label);
 }
 
 :root[data-theme="light"] * {
@@ -628,37 +854,37 @@ a {
 }
 
 :root[data-theme="light"] .hv-veris-loader-shell {
-  background: #f4f7fb;
+  background: #07111f;
 }
 
 :root[data-theme="light"] .hv-veris-loader-atmosphere {
   background:
-    radial-gradient(circle at 50% 42%, rgba(6, 182, 212, 0.15), transparent 31%),
-    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.09), transparent 48%),
-    linear-gradient(180deg, #f8fafc, #eef4f9);
+    radial-gradient(circle at 50% 42%, rgba(34, 211, 238, 0.18), transparent 31%),
+    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.14), transparent 48%),
+    linear-gradient(180deg, #08111f, #0b1322);
 }
 
 :root[data-theme="light"] .hv-veris-loader-grid {
   background-image:
-    linear-gradient(rgba(8, 145, 178, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(37, 99, 235, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(34, 211, 238, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
 }
 
 :root[data-theme="light"] .hv-veris-loader-core-panel {
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(11, 18, 32, 0.96);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -30px 80px rgba(8, 145, 178, 0.055),
-    0 24px 60px rgba(15, 23, 42, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -30px 80px rgba(34, 211, 238, 0.08),
+    0 28px 76px rgba(2, 6, 23, 0.42);
 }
 
 :root[data-theme="light"] .hv-veris-loader-step-track {
-  background: rgba(255, 255, 255, 0.78);
-  border-color: rgba(8, 145, 178, 0.18);
+  background: rgba(8, 17, 31, 0.78);
+  border-color: rgba(103, 232, 249, 0.18);
 }
 
 :root[data-theme="light"] .hv-veris-end-node {
-  fill: rgba(248, 250, 252, 0.96);
+  fill: rgba(8, 17, 31, 0.94);
 }
 
 .hv-ai-panel {

@@ -487,7 +487,7 @@ export default function BillingCheckoutPage() {
 
   if (plansLoading || (status === "loading" && !summary)) {
     return (
-      <main className="min-h-screen bg-[#08111f] text-slate-100">
+      <main className="hv-preserve-dark min-h-screen bg-[#08111f] text-slate-100">
         <VerisGlobeLoader
           eyebrow="Billing Checkout"
           steps={[
@@ -503,7 +503,7 @@ export default function BillingCheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#08111f] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+    <main className="hv-preserve-dark min-h-screen overflow-hidden bg-[#08111f] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
       <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(7,12,22,0.98)),radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.12),transparent_34%)]" />
 
       <section className="relative mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)]">

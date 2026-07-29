@@ -33,7 +33,7 @@ export default function DashboardIntelligenceBanner({ overview, profile = null, 
 
   if (!overview) {
     return (
-      <section className="mb-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 px-5 py-4 shadow-sm">
+      <section className="hv-elevated-section mb-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 px-5 py-4 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-sky-400" />
@@ -55,7 +55,7 @@ export default function DashboardIntelligenceBanner({ overview, profile = null, 
         : "Hiring workflow active • Evaluation pipeline is live";
 
     return (
-      <section className="mb-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 px-5 py-4 shadow-sm transition-all duration-300">
+      <section className="hv-elevated-section mb-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 px-5 py-4 shadow-sm transition-all duration-300">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400" />
@@ -69,7 +69,7 @@ export default function DashboardIntelligenceBanner({ overview, profile = null, 
 
   if (state.heroState === "VERIS_OPTIONAL") {
     return (
-      <section className="mb-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 px-6 py-6 shadow-[0_14px_40px_rgba(2,6,23,0.22)] transition-all duration-300 sm:px-7">
+      <section className="hv-elevated-section mb-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 px-6 py-6 shadow-[0_14px_40px_rgba(2,6,23,0.22)] transition-all duration-300 sm:px-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Optional Screening Layer</p>
@@ -88,7 +88,7 @@ export default function DashboardIntelligenceBanner({ overview, profile = null, 
   }
 
   return (
-    <section className="mb-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 px-6 py-6 shadow-[0_14px_40px_rgba(2,6,23,0.22)] transition-all duration-300 sm:px-7">
+    <section className="hv-elevated-section mb-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 px-6 py-6 shadow-[0_14px_40px_rgba(2,6,23,0.22)] transition-all duration-300 sm:px-7">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">HireVeri Workflow</p>

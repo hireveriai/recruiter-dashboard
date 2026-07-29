@@ -89,17 +89,18 @@ function StageConversionDonut({ stage }) {
   return (
     <div
       aria-label={`${stage.label} conversion ${formatPercent(conversion)}`}
-      className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-slate-700/70"
+      className="hv-chart-donut relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-slate-700/70"
       role="img"
       style={{
-        background: `conic-gradient(${accent.color} 0deg ${degrees}deg, rgba(30,41,59,0.95) ${degrees}deg 360deg)`,
-        boxShadow: `0 0 26px ${accent.glow}, inset 0 0 20px rgba(2,6,23,0.72)`,
+        "--hv-chart-accent": accent.color,
+        "--hv-chart-degrees": `${degrees}deg`,
+        "--hv-chart-glow": accent.glow,
       }}
     >
-      <div className="absolute inset-2.5 rounded-full border border-slate-800 bg-slate-950" />
-      <div className="absolute inset-5 rounded-full border border-slate-800/80 bg-[#08111f]" />
+      <div className="hv-chart-donut-ring absolute inset-2.5 rounded-full border" />
+      <div className="hv-chart-donut-core absolute inset-5 rounded-full border" />
       <div className="relative text-center">
-        <p className="text-lg font-semibold text-white">{centerLabel}</p>
+        <p className="hv-chart-donut-label text-lg font-semibold">{centerLabel}</p>
         <p className={`mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] ${accent.text}`}>Conv.</p>
       </div>
     </div>
@@ -110,7 +111,7 @@ function ExpandableSection({ title, subtitle, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+    <section className="hv-elevated-section overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -133,9 +134,8 @@ function ExpandableSection({ title, subtitle, defaultOpen = true, children }) {
 export default function ReportsPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `reports:${searchParams.toString()}`
-  const initialReport = readSessionJsonCache(cacheKey)
-  const [report, setReport] = useState(() => initialReport ?? null)
-  const [loading, setLoading] = useState(() => !initialReport)
+  const [report, setReport] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [openSendInterview, setOpenSendInterview] = useState(false)
 
@@ -225,7 +225,7 @@ export default function ReportsPage() {
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
       <main className="mx-auto max-w-[1680px] px-4 py-7 sm:px-6 lg:px-8">
-        <section className="relative overflow-hidden rounded-[34px] border border-cyan-400/15 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.15),transparent_25%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_22%),linear-gradient(180deg,rgba(12,20,36,0.96),rgba(8,17,31,0.98))] px-8 py-8 shadow-[0_24px_100px_rgba(2,6,23,0.45)]">
+        <section className="hv-preserve-dark relative overflow-hidden rounded-[34px] border border-cyan-400/15 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.15),transparent_25%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_22%),linear-gradient(180deg,rgba(12,20,36,0.96),rgba(8,17,31,0.98))] px-8 py-8 shadow-[0_24px_100px_rgba(2,6,23,0.45)]">
           <div className="absolute inset-x-16 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.68fr)] xl:items-center 2xl:grid-cols-[minmax(0,1fr)_minmax(620px,0.68fr)]">
             <div className="min-w-0">
