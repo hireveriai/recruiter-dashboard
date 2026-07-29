@@ -209,7 +209,7 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
           </Link>
         </div>
 
-        <div className="overflow-hidden rounded-lg bg-[#111a2e]">
+      <div className="hv-theme-panel overflow-hidden rounded-lg bg-[#111a2e]">
           <table className="w-full table-fixed text-[13px] sm:text-sm">
             <colgroup>
               <col className="w-[16%]" />

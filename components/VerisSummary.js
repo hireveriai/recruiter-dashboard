@@ -51,7 +51,7 @@ function getInsightSummary(item) {
 
 function VerisInsightCard({ item, expanded, onToggle }) {
   return (
-    <div className="rounded-lg bg-[#111a2e] p-4">
+    <div className="hv-theme-panel rounded-lg bg-[#111a2e] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-base font-semibold text-white">
@@ -362,7 +362,7 @@ export default function VerisSummary({ initialSummaries, isLoading = false }) {
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {displaySummaries.length === 0 ? (
-          <div className="col-span-2 rounded-lg bg-[#111a2e] p-5 text-center text-gray-400">
+        <div className="hv-theme-panel col-span-2 rounded-lg bg-[#111a2e] p-5 text-center text-gray-400">
             No VERIS summaries available
           </div>
         ) : (

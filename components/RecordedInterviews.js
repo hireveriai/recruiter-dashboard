@@ -227,7 +227,7 @@ export default function RecordedInterviews({ initialRecordedInterviews, organiza
         ) : (
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {previewInterviews.length === 0 ? (
-            <div className="rounded-[24px] border border-slate-800 bg-[#111a2e] p-5 text-center text-gray-400 shadow-md lg:col-span-2">
+        <div className="hv-theme-panel rounded-[24px] border border-slate-800 bg-[#111a2e] p-5 text-center text-gray-400 shadow-md lg:col-span-2">
               No interview recordings available
             </div>
           ) : (

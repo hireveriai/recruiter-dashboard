@@ -68,13 +68,13 @@ export default function VerisGlobeLoader({
       aria-busy="true"
       aria-live="polite"
       className={[
-        "relative flex items-center justify-center overflow-hidden bg-[#08111f] px-4 py-8 text-white",
+        "hv-veris-loader-shell relative flex items-center justify-center overflow-hidden bg-[#08111f] px-4 py-8 text-white",
         fullscreen ? "min-h-[calc(100svh-var(--hv-loader-viewport-offset))]" : "min-h-[560px] rounded-[28px] border border-slate-800",
       ].join(" ")}
       role="status"
       style={rootStyle}
     >
-      <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.14),transparent_31%),radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.10),transparent_48%),linear-gradient(180deg,#08111f,#0b1322)]" />
+      <div aria-hidden="true" className="hv-veris-loader-atmosphere absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.14),transparent_31%),radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.10),transparent_48%),linear-gradient(180deg,#08111f,#0b1322)]" />
       <div aria-hidden="true" className="hv-veris-loader-grid absolute inset-0 opacity-25" />
 
       <div className="relative flex h-full w-full max-w-6xl items-center justify-center animate-[overlay-panel-in_220ms_ease-out_forwards]">
@@ -117,6 +117,7 @@ export default function VerisGlobeLoader({
                     cx={wave.end[0]}
                     cy={wave.end[1]}
                     r="8"
+                    className="hv-veris-end-node"
                     fill="rgba(8, 17, 31, 0.94)"
                     stroke={wave.color}
                     strokeOpacity={isActive || isComplete ? 0.75 : 0.38}
@@ -141,7 +142,7 @@ export default function VerisGlobeLoader({
               background: `conic-gradient(from 225deg, rgba(34,211,238,0.95) 0deg, rgba(59,130,246,0.95) ${progress * 3.6}deg, rgba(255,255,255,0.08) ${progress * 3.6}deg, rgba(255,255,255,0.08) 360deg)`,
             }}
           >
-            <div className="relative h-full w-full rounded-full border border-cyan-300/20 bg-[#0b1220]/96 px-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-30px_80px_rgba(34,211,238,0.07)] sm:px-8">
+            <div className="hv-veris-loader-core-panel relative h-full w-full rounded-full border border-cyan-300/20 bg-[#0b1220]/96 px-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-30px_80px_rgba(34,211,238,0.07)] sm:px-8">
               <div className="absolute inset-0 overflow-hidden rounded-full">
                 <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.07),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.035),transparent_52%)]" />
               </div>
@@ -178,7 +179,7 @@ export default function VerisGlobeLoader({
             </div>
           </div>
 
-          <div className="absolute bottom-[11%] left-1/2 z-10 flex w-[42%] -translate-x-1/2 flex-wrap justify-center gap-1.5 rounded-full border border-cyan-300/12 bg-[#08111f]/68 px-3 py-2 backdrop-blur-sm sm:gap-2">
+          <div className="hv-veris-loader-step-track absolute bottom-[11%] left-1/2 z-10 flex w-[42%] -translate-x-1/2 flex-wrap justify-center gap-1.5 rounded-full border border-cyan-300/12 bg-[#08111f]/68 px-3 py-2 backdrop-blur-sm sm:gap-2">
             {safeSteps.map((step, index) => {
               const isComplete = index < safeIndex
               const isActive = index === safeIndex
@@ -210,4 +211,3 @@ export default function VerisGlobeLoader({
     </div>
   )
 }
-

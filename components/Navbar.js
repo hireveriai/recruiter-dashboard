@@ -11,6 +11,7 @@ import { ACTION_FEEDBACK_EVENT } from "@/lib/client/action-feedback";
 import { logoutRecruiter } from "@/lib/client/logout";
 import { DEFAULT_RECRUITER_PERMISSION_PROFILE, canAccessFeature } from "@/lib/client/permissions";
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params";
+import ThemeSelector from "@/components/ThemeSelector";
 
 const CreateJobModal = dynamic(() => import("./CreateJobModal"), {
   ssr: false,
@@ -663,6 +664,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
           </div>
 
           <div className="ml-1 flex shrink-0 flex-nowrap items-center gap-2">
+            <ThemeSelector />
             <div className="relative" ref={menuRef}>
               <button
                 type="button"

@@ -41,7 +41,7 @@ export default function RecordedInterviewCard({ item, onOpenWarRoom, canOpenWarR
   const hasRecording = Boolean(recordingUrl) && item?.hasRecordingFile !== false
 
   return (
-    <article className="group relative min-w-0 overflow-hidden rounded-[24px] border border-slate-800 bg-[linear-gradient(180deg,rgba(17,26,46,0.96),rgba(8,17,31,0.98))] p-4 shadow-[0_18px_54px_rgba(2,6,23,0.28)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:shadow-[0_24px_68px_rgba(2,6,23,0.36),0_0_46px_rgba(34,211,238,0.08)] sm:p-5">
+    <article className="hv-theme-panel group relative min-w-0 overflow-hidden rounded-[24px] border border-slate-800 bg-[linear-gradient(180deg,rgba(17,26,46,0.96),rgba(8,17,31,0.98))] p-4 shadow-[0_18px_54px_rgba(2,6,23,0.28)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:shadow-[0_24px_68px_rgba(2,6,23,0.36),0_0_46px_rgba(34,211,238,0.08)] sm:p-5">
       <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/55 to-transparent opacity-70" />
       <div className="pointer-events-none absolute inset-x-4 top-20 h-6 opacity-55 transition group-hover:opacity-80" aria-hidden="true">
         <div className="flex h-full items-center gap-1">

@@ -465,7 +465,7 @@ export default function HiringWorkflow({ overview, profile = null, onAction }) {
     <div className="mt-6">
       <h3 className="text-[11px] font-medium uppercase tracking-[0.3em] text-slate-500">Hiring Workflow</h3>
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.12),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(2,6,23,0.84))] p-3 shadow-[0_14px_44px_rgba(2,6,23,0.28)]">
+        <div className="hv-theme-intelligence-panel mt-3 overflow-hidden rounded-xl border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.12),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(2,6,23,0.84))] p-3 shadow-[0_14px_44px_rgba(2,6,23,0.28)]">
         <div className="flex items-start gap-2.5">
           <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.16)]">
             <AiIcon />
