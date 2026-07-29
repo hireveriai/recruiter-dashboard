@@ -68,17 +68,25 @@ export default function VerisGlobeLoader({
       aria-busy="true"
       aria-live="polite"
       className={[
-        "hv-preserve-dark hv-veris-loader-shell relative flex items-center justify-center overflow-hidden bg-[#08111f] px-4 py-8 text-white",
+        "hv-veris-loader-shell relative flex items-center justify-center overflow-hidden bg-[#08111f] px-4 py-8",
         fullscreen ? "min-h-[calc(100svh-var(--hv-loader-viewport-offset))]" : "min-h-[560px] rounded-[28px] border border-slate-800",
       ].join(" ")}
       role="status"
       style={rootStyle}
     >
-      <div aria-hidden="true" className="hv-veris-loader-atmosphere absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.14),transparent_31%),radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.10),transparent_48%),linear-gradient(180deg,#08111f,#0b1322)]" />
-      <div aria-hidden="true" className="hv-veris-loader-grid absolute inset-0 opacity-25" />
+      <div
+        className={[
+          "hv-preserve-dark hv-veris-loader-stage relative flex w-full items-center justify-center overflow-hidden text-white",
+          fullscreen
+            ? "min-h-[calc(100svh-var(--hv-loader-viewport-offset)-4rem)]"
+            : "min-h-[496px]",
+        ].join(" ")}
+      >
+        <div aria-hidden="true" className="hv-veris-loader-atmosphere absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.14),transparent_31%),radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.10),transparent_48%),linear-gradient(180deg,#08111f,#0b1322)]" />
+        <div aria-hidden="true" className="hv-veris-loader-grid absolute inset-0 opacity-25" />
 
-      <div className="relative flex h-full w-full max-w-6xl items-center justify-center animate-[overlay-panel-in_220ms_ease-out_forwards]">
-        <div className="relative flex h-[min(92vw,calc(100svh-var(--hv-loader-viewport-offset)-190px),680px)] min-h-[430px] w-[min(92vw,calc(100svh-var(--hv-loader-viewport-offset)-190px),680px)] min-w-[430px] items-center justify-center max-[520px]:h-[92vw] max-[520px]:min-h-0 max-[520px]:w-[92vw] max-[520px]:min-w-0">
+        <div className="relative flex h-full w-full max-w-6xl items-center justify-center animate-[overlay-panel-in_220ms_ease-out_forwards]">
+          <div className="relative flex h-[min(92vw,calc(100svh-var(--hv-loader-viewport-offset)-190px),680px)] min-h-[430px] w-[min(92vw,calc(100svh-var(--hv-loader-viewport-offset)-190px),680px)] min-w-[430px] items-center justify-center max-[520px]:h-[92vw] max-[520px]:min-h-0 max-[520px]:w-[92vw] max-[520px]:min-w-0">
           <div className="hv-veris-loader-ring absolute inset-0 rounded-full border border-cyan-300/10" />
           <div className="hv-veris-loader-ring-reverse absolute inset-[8%] rounded-full border border-dashed border-sky-400/24" />
           <div className="absolute inset-[16%] rounded-full border border-blue-400/14" />
@@ -204,8 +212,9 @@ export default function VerisGlobeLoader({
             {safeIndex + 1} / {safeSteps.length}
           </p>
 
-          <div aria-hidden="true" className="absolute inset-[35%] rounded-full border border-cyan-300/10 hv-veris-loader-core" />
-          <div className="absolute bottom-[8%] left-1/2 h-px w-[36%] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-300/24 to-transparent" />
+            <div aria-hidden="true" className="absolute inset-[35%] rounded-full border border-cyan-300/10 hv-veris-loader-core" />
+            <div className="absolute bottom-[8%] left-1/2 h-px w-[36%] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-300/24 to-transparent" />
+          </div>
         </div>
       </div>
     </div>

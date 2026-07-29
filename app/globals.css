@@ -327,6 +327,67 @@ body {
   color: #ffffff;
 }
 
+:root[data-theme="light"] .hv-theme-dialog-backdrop {
+  background: rgba(30, 41, 59, 0.32);
+}
+
+:root[data-theme="light"] .hv-theme-modal {
+  border-color: rgba(148, 163, 184, 0.38);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(14, 165, 233, 0.08), transparent 26rem),
+    radial-gradient(circle at 96% 100%, rgba(99, 102, 241, 0.06), transparent 24rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 253, 0.99));
+  color: #0f172a;
+  box-shadow:
+    0 34px 90px rgba(15, 23, 42, 0.2),
+    0 8px 28px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+:root[data-theme="light"] .hv-theme-modal [class*="bg-[#"] {
+  background: rgba(248, 250, 252, 0.94);
+}
+
+:root[data-theme="light"] .hv-theme-modal [class*="border-white"] {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+:root[data-theme="light"] .hv-theme-modal [class*="bg-white/"] {
+  background-color: rgba(241, 245, 249, 0.84);
+}
+
+:root[data-theme="light"] .hv-theme-floating-action {
+  border-color: rgba(14, 165, 233, 0.28);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 20px 48px rgba(15, 23, 42, 0.16),
+    0 3px 12px rgba(15, 23, 42, 0.06);
+}
+
+:root[data-theme="light"] .hv-theme-popover {
+  border-color: rgba(148, 163, 184, 0.38);
+  background: rgba(255, 255, 255, 0.97);
+  color: #0f172a;
+  box-shadow:
+    0 20px 48px rgba(15, 23, 42, 0.16),
+    0 3px 12px rgba(15, 23, 42, 0.06);
+}
+
+:root[data-theme="light"] .hv-copilot-shell {
+  border-color: rgba(148, 163, 184, 0.32);
+  background: rgba(248, 250, 252, 0.92);
+}
+
+:root[data-theme="light"] .hv-copilot-sidebar {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(241, 245, 249, 0.94);
+}
+
+:root[data-theme="light"] .hv-copilot-composer {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.96);
+}
+
 :root[data-theme="light"] .hv-preserve-dark {
   --color-slate-950: #020617;
   --color-slate-900: #0f172a;
@@ -854,7 +915,21 @@ a {
 }
 
 :root[data-theme="light"] .hv-veris-loader-shell {
+  background:
+    radial-gradient(circle at 50% 14%, rgba(14, 165, 233, 0.11), transparent 30%),
+    radial-gradient(circle at 20% 88%, rgba(59, 130, 246, 0.07), transparent 32%),
+    linear-gradient(180deg, #f7faff 0%, #edf3fa 100%);
+}
+
+:root[data-theme="light"] .hv-veris-loader-stage {
+  max-width: 1180px;
+  border: 1px solid rgba(8, 145, 178, 0.2);
+  border-radius: 36px;
   background: #07111f;
+  box-shadow:
+    0 32px 90px rgba(15, 23, 42, 0.2),
+    0 10px 32px rgba(14, 116, 144, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 :root[data-theme="light"] .hv-veris-loader-atmosphere {

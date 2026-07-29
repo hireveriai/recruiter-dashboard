@@ -497,8 +497,13 @@ function ScreeningAnalysisOverlay({ phase }: { phase: ScreeningLoaderPhase | nul
   )
 
   return (
-    <div className="fixed inset-0 z-[140]">
-      <VerisGlobeLoader steps={screeningLoaderSteps} activeIndex={activeIndex} fullscreen />
+    <div className="fixed inset-x-0 bottom-0 top-[76px] z-[140] sm:top-[88px]">
+      <VerisGlobeLoader
+        steps={screeningLoaderSteps}
+        activeIndex={activeIndex}
+        fullscreen
+        viewportOffset="navbar"
+      />
     </div>
   )
 }
@@ -2684,7 +2689,7 @@ export default function AiScreeningPage() {
                     <MoreIcon />
                   </button>
                   {cleanupMenuOpen ? (
-                    <div className="absolute right-0 top-12 z-30 w-60 overflow-hidden rounded-xl border border-slate-700 bg-[#0B1220] p-1 shadow-2xl">
+                    <div className="hv-theme-popover absolute right-0 top-12 z-30 w-60 overflow-hidden rounded-xl border border-slate-700 bg-[#0B1220] p-1 shadow-2xl">
                       <button
                         type="button"
                         onClick={() => openCleanupModal("CLEAR_RESULTS")}
@@ -3151,7 +3156,7 @@ export default function AiScreeningPage() {
         </section>
 
         {matches.length > 0 ? (
-          <div className="sticky bottom-4 z-40 mt-6 rounded-2xl border border-cyan-400/20 bg-[#0B1220]/95 p-4 shadow-[0_18px_70px_rgba(2,6,23,0.55)] backdrop-blur">
+          <div className="hv-theme-floating-action sticky bottom-4 z-40 mt-6 rounded-2xl border border-cyan-400/20 bg-[#0B1220]/95 p-4 shadow-[0_18px_70px_rgba(2,6,23,0.55)] backdrop-blur">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-sm font-semibold text-white">Send Interview to Selected ({selectedCount})</p>
@@ -3209,8 +3214,8 @@ export default function AiScreeningPage() {
       </main>
 
       {createJobModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="create-job-title">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="create-job-title">
+          <div className="hv-theme-modal w-full max-w-2xl rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="create-job-title" className="text-lg font-semibold text-white">Create Job Description</h2>
@@ -3286,8 +3291,8 @@ export default function AiScreeningPage() {
       ) : null}
 
       {cleanupModal === "CLEAR_RESULTS" ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="clear-results-title">
-          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="clear-results-title">
+          <div className="hv-theme-modal w-full max-w-md rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
             <h2 id="clear-results-title" className="text-lg font-semibold text-white">Clear current analysis results?</h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               Match scores, recommendations, selections, and comparison state will be removed for this upload. The uploaded resumes stay available so you can run matching again.
@@ -3315,8 +3320,8 @@ export default function AiScreeningPage() {
       ) : null}
 
       {cleanupModal === "DELETE_UPLOAD" ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-upload-title">
-          <div className="w-full max-w-md rounded-2xl border border-rose-400/25 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-upload-title">
+          <div className="hv-theme-modal w-full max-w-md rounded-2xl border border-rose-400/25 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
             <h2 id="delete-upload-title" className="text-lg font-semibold text-white">Delete upload and analysis?</h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               This removes uploaded candidate records, saved analysis results, selections, and resume files for the current upload. This action cannot be undone.
@@ -3357,8 +3362,8 @@ export default function AiScreeningPage() {
       ) : null}
 
       {confirmSendOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirm-send-title">
-          <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirm-send-title">
+          <div className="hv-theme-modal max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
             <h2 id="confirm-send-title" className="text-lg font-semibold text-white">
               {duplicateInviteWarnings.length > 0 ? "Review Existing Interview Invite" : "Confirm Interview Send"}
             </h2>
@@ -3561,8 +3566,8 @@ export default function AiScreeningPage() {
       ) : null}
 
       {sendProgressOpen && (sending || sendProgressError) ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="interview-send-progress-title">
-          <div className="w-full max-w-lg rounded-[28px] border border-cyan-400/20 bg-[#0B1220] p-6 text-center shadow-[0_28px_100px_rgba(2,6,23,0.78)] sm:p-8">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="interview-send-progress-title">
+          <div className="hv-theme-modal w-full max-w-lg rounded-[28px] border border-cyan-400/20 bg-[#0B1220] p-6 text-center shadow-[0_28px_100px_rgba(2,6,23,0.78)] sm:p-8">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-400/10 shadow-[0_0_50px_rgba(34,211,238,0.16)]">
               {sending ? (
                 <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-cyan-200/20 border-t-cyan-300" aria-hidden="true" />
@@ -3604,7 +3609,7 @@ export default function AiScreeningPage() {
       ) : null}
 
       {sending && !sendProgressOpen ? (
-        <div className="fixed bottom-5 right-5 z-50 w-[min(calc(100vw-2.5rem),380px)] rounded-2xl border border-cyan-400/20 bg-[#0B1220]/95 p-4 shadow-[0_20px_70px_rgba(2,6,23,0.7)] backdrop-blur" role="status" aria-live="polite">
+        <div className="hv-theme-popover fixed bottom-5 right-5 z-50 w-[min(calc(100vw-2.5rem),380px)] rounded-2xl border border-cyan-400/20 bg-[#0B1220]/95 p-4 shadow-[0_20px_70px_rgba(2,6,23,0.7)] backdrop-blur" role="status" aria-live="polite">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 h-6 w-6 shrink-0 animate-spin rounded-full border-2 border-cyan-200/20 border-t-cyan-300" aria-hidden="true" />
             <div className="min-w-0 flex-1">
@@ -3625,8 +3630,8 @@ export default function AiScreeningPage() {
       ) : null}
 
       {selectedInsight ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-slate-950/80 px-4 py-5 backdrop-blur-sm sm:py-8" role="dialog" aria-modal="true" aria-labelledby="candidate-insight-title">
-          <div className={`flex h-[calc(100vh-40px)] w-full flex-col rounded-2xl border border-slate-800 bg-[#0B1220] shadow-[0_24px_90px_rgba(2,6,23,0.7)] sm:h-[calc(100vh-64px)] ${selectedInsight.fullReportOpen ? "max-w-5xl" : "max-w-[680px]"}`}>
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-slate-950/80 px-4 py-5 backdrop-blur-sm sm:py-8" role="dialog" aria-modal="true" aria-labelledby="candidate-insight-title">
+          <div className={`hv-theme-modal flex h-[calc(100vh-40px)] w-full flex-col rounded-2xl border border-slate-800 bg-[#0B1220] shadow-[0_24px_90px_rgba(2,6,23,0.7)] sm:h-[calc(100vh-64px)] ${selectedInsight.fullReportOpen ? "max-w-5xl" : "max-w-[680px]"}`}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">{selectedInsight.fullReportOpen ? "VERIS Full Report" : "VERIS Insight"}</p>
@@ -3777,8 +3782,8 @@ export default function AiScreeningPage() {
       ) : null}
 
       {compareModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="compare-candidates-title">
-          <div className="flex max-h-[88vh] w-full max-w-6xl flex-col rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="compare-candidates-title">
+          <div className="hv-theme-modal flex max-h-[88vh] w-full max-w-6xl flex-col rounded-2xl border border-slate-800 bg-[#0B1220] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.7)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="compare-candidates-title" className="text-lg font-semibold text-white">Compare Candidates</h2>

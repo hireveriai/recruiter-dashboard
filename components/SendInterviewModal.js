@@ -721,10 +721,10 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-md sm:py-6" role="dialog" aria-modal="true">
+    <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-md sm:py-6" role="dialog" aria-modal="true">
       {creditConfirmationOpen ? (
-        <div className="fixed inset-0 z-[65] flex items-start justify-center overflow-y-auto bg-slate-950/70 px-4 py-4 backdrop-blur-sm sm:py-6" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-2xl border border-cyan-400/20 bg-[#0b1220] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-[65] flex items-start justify-center overflow-y-auto bg-slate-950/70 px-4 py-4 backdrop-blur-sm sm:py-6" role="dialog" aria-modal="true">
+          <div className="hv-theme-modal w-full max-w-md rounded-2xl border border-cyan-400/20 bg-[#0b1220] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-200/75">Credit Notice</p>
             <h3 className="mt-3 text-lg font-semibold text-white">
               You are about to use {pendingCandidateCount} AI Interview {pendingCandidateCount === 1 ? "credit" : "credits"}.
@@ -762,8 +762,8 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
         message={trialCredits.upgradeMessage}
       />
       {duplicateWarning ? (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-sm sm:py-6" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-2xl border border-amber-400/25 bg-[#0b1220] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-sm sm:py-6" role="dialog" aria-modal="true">
+          <div className="hv-theme-modal w-full max-w-md rounded-2xl border border-amber-400/25 bg-[#0b1220] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
             <h3 className="text-lg font-semibold text-white">Duplicate invite detected</h3>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               Previously invited candidates are skipped by default. Select any candidate who should receive another invite.
@@ -819,7 +819,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
           </div>
         </div>
       ) : null}
-      <div className="hv-preserve-dark relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-cyan-500/20 bg-[#06101f]/95 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)]">
+      <div className="hv-send-interview-modal hv-theme-modal relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-cyan-500/20 bg-[#06101f]/95 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_30%)]" />
         <div className="relative max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-h-[calc(100dvh-1.5rem)] sm:p-5 md:p-5">
           <div className="mb-4 flex items-start justify-between gap-4">

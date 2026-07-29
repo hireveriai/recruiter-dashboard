@@ -26,12 +26,12 @@ export default function UpgradeLimitDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-950/82 px-4 py-6 text-white backdrop-blur-xl"
+      className="hv-theme-dialog-backdrop fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-950/82 px-4 py-6 text-white backdrop-blur-xl"
       role="dialog"
       aria-modal="true"
       aria-labelledby="upgrade-limit-title"
     >
-      <div className="relative w-full max-w-xl overflow-hidden rounded-[28px] border border-cyan-400/20 bg-[#07101f] shadow-[0_28px_110px_rgba(2,6,23,0.72)] transition duration-300">
+      <div className="hv-theme-modal relative w-full max-w-xl overflow-hidden rounded-[28px] border border-cyan-400/20 bg-[#07101f] shadow-[0_28px_110px_rgba(2,6,23,0.72)] transition duration-300">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(34,211,238,0.16),transparent_32%),radial-gradient(circle_at_88%_16%,rgba(59,130,246,0.12),transparent_28%)]" />
         <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/80 to-transparent" />
 

@@ -756,7 +756,7 @@ export default function CognitiveDock({
       <AnimatePresence>
         {panel ? (
           <motion.div
-            className="hv-preserve-dark fixed inset-0 z-[65] bg-slate-950/50 backdrop-blur-sm"
+            className="hv-theme-dialog-backdrop fixed inset-0 z-[65] bg-slate-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -765,7 +765,7 @@ export default function CognitiveDock({
             <motion.section
               role="dialog"
               aria-label={getPanelTitle(panel)}
-            className={`hv-preserve-dark absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[24px] border border-cyan-400/15 bg-[#071226]/95 p-4 text-white shadow-[0_24px_80px_rgba(2,6,23,0.58),0_0_42px_rgba(34,211,238,0.09)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-auto !top-1/2 h-[min(82dvh,780px)] !max-h-[780px] !-translate-y-1/2 w-[min(94vw,1100px)] md:w-[min(calc(100vw-7rem),1100px)]" : "w-[min(92vw,640px)]"}`}
+            className={`hv-cognitive-modal hv-theme-modal absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[24px] border border-cyan-400/15 bg-[#071226]/95 p-4 text-white shadow-[0_24px_80px_rgba(2,6,23,0.58),0_0_42px_rgba(34,211,238,0.09)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-auto !top-1/2 h-[min(82dvh,780px)] !max-h-[780px] !-translate-y-1/2 w-[min(94vw,1100px)] md:w-[min(calc(100vw-7rem),1100px)]" : "w-[min(92vw,640px)]"}`}
               initial={{ opacity: 0, x: -10, scale: 0.97 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -10, scale: 0.97 }}
@@ -905,8 +905,8 @@ export default function CognitiveDock({
                 ) : null}
 
                 {panel === "copilot" ? (
-                  <div className="grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[220px_minmax(0,1fr)]">
-                    <aside className="hidden min-h-0 overflow-hidden border-r border-white/8 bg-white/[0.025] p-3 lg:block">
+                  <div className="hv-copilot-shell grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[220px_minmax(0,1fr)]">
+                    <aside className="hv-copilot-sidebar hidden min-h-0 overflow-hidden border-r border-white/8 bg-white/[0.025] p-3 lg:block">
                       <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><Sparkles className="h-5 w-5" /></span>
                         <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 whitespace-nowrap text-[10px] text-slate-400">Live workspace intelligence</p></div>
@@ -970,7 +970,7 @@ export default function CognitiveDock({
                         </Conversation>
                       )}
 
-                      <div className="shrink-0 border-t border-white/8 bg-[#071226]/95 px-3 py-2.5">
+                      <div className="hv-copilot-composer shrink-0 border-t border-white/8 bg-[#071226]/95 px-3 py-2.5">
                         <Suggestions className="mb-2 flex-nowrap overflow-x-auto">
                           {["How interviews work", "Add users and access", "Interrupted interviews", "Top candidates"].map((suggestion) => (
                             <Suggestion key={suggestion} suggestion={suggestion} onClick={askVerisAi} className="border-white/10 bg-white/[0.035] text-slate-300 hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-white" />
