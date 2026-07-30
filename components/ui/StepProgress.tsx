@@ -28,11 +28,15 @@ export function StepProgress({ currentStep }: StepProgressProps) {
   const activeIndex = getActiveIndex(currentStep)
 
   return (
-    <nav aria-label="VERIS screening progress" className="rounded-2xl border border-slate-800 bg-[#0f172a] px-5 py-5">
+    <nav
+      aria-label="VERIS screening progress"
+      className="hv-step-progress rounded-2xl border border-slate-800 bg-[#0f172a] px-5 py-5"
+    >
       <ol className="flex items-start">
         {steps.map((step, index) => {
           const completed = index < activeIndex
           const active = index === activeIndex
+          const state = completed ? "completed" : active ? "active" : "upcoming"
           const circleClass = completed
             ? "bg-green-500 text-white"
             : active
@@ -45,20 +49,27 @@ export function StepProgress({ currentStep }: StepProgressProps) {
               <div className="flex min-w-0 flex-col items-center gap-2">
                 <span
                   className={[
-                    "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition",
+                    "hv-step-progress-circle flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition",
                     circleClass,
                   ].join(" ")}
+                  data-state={state}
                   aria-current={active ? "step" : undefined}
                 >
                   {index + 1}
                 </span>
-                <span className={`text-center text-xs font-medium ${active ? "text-blue-100" : completed ? "text-green-200" : "text-gray-400"}`}>
+                <span
+                  className={`hv-step-progress-label text-center text-xs font-medium ${active ? "text-blue-100" : completed ? "text-green-200" : "text-gray-400"}`}
+                  data-state={state}
+                >
                   {step.label}
                 </span>
               </div>
               {index < steps.length - 1 ? (
-                <div className="mx-3 mt-4 h-0.5 min-w-8 flex-1 rounded-full bg-gray-700">
-                  <div className={`h-full rounded-full transition ${lineClass}`} />
+                <div className="hv-step-progress-track mx-3 mt-4 h-0.5 min-w-8 flex-1 rounded-full bg-gray-700">
+                  <div
+                    className={`hv-step-progress-line h-full rounded-full transition ${lineClass}`}
+                    data-state={index < activeIndex ? "completed" : "upcoming"}
+                  />
                 </div>
               ) : null}
             </li>

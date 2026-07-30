@@ -897,6 +897,17 @@ a {
   animation: hv-veris-loader-ring-reverse 18s linear infinite;
 }
 
+.hv-veris-loader-progress-ring {
+  background:
+    conic-gradient(
+      from 225deg,
+      rgba(34, 211, 238, 0.95) 0deg,
+      rgba(59, 130, 246, 0.95) var(--hv-loader-progress),
+      rgba(255, 255, 255, 0.08) var(--hv-loader-progress),
+      rgba(255, 255, 255, 0.08) 360deg
+    );
+}
+
 .hv-veris-loader-line {
   animation: hv-veris-loader-line-flow 2.4s ease-in-out infinite;
 }
@@ -923,8 +934,8 @@ a {
 
 :root[data-theme="light"] .hv-veris-loader-shell {
   background:
-    radial-gradient(circle at 50% 44%, rgba(14, 165, 233, 0.09), transparent 24rem),
-    linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+    radial-gradient(circle at 50% 45%, rgba(14, 165, 233, 0.055), transparent 22rem),
+    #ffffff;
 }
 
 :root[data-theme="light"] .hv-veris-loader-stage {
@@ -936,32 +947,145 @@ a {
 }
 
 :root[data-theme="light"] .hv-veris-loader-atmosphere {
-  background:
-    radial-gradient(circle at 50% 44%, rgba(14, 165, 233, 0.11), transparent 29%),
-    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.055), transparent 46%);
+  background: transparent;
 }
 
 :root[data-theme="light"] .hv-veris-loader-grid {
-  background-image:
-    linear-gradient(rgba(14, 116, 144, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
+  display: none;
 }
 
 :root[data-theme="light"] .hv-veris-loader-core-panel {
-  background: rgba(11, 18, 32, 0.96);
+  border-color: rgba(186, 230, 253, 0.72);
+  background:
+    radial-gradient(circle at 34% 20%, rgba(125, 211, 252, 0.7), transparent 32%),
+    radial-gradient(circle at 72% 78%, rgba(8, 47, 73, 0.46), transparent 44%),
+    linear-gradient(145deg, #0ea5e9 0%, #0369a1 48%, #0c4a6e 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -30px 80px rgba(34, 211, 238, 0.08),
-    0 28px 76px rgba(2, 6, 23, 0.42);
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -38px 90px rgba(8, 47, 73, 0.22),
+    0 24px 64px rgba(3, 105, 161, 0.26),
+    0 7px 22px rgba(15, 23, 42, 0.12);
 }
 
 :root[data-theme="light"] .hv-veris-loader-step-track {
-  background: rgba(8, 17, 31, 0.78);
-  border-color: rgba(103, 232, 249, 0.18);
+  border-color: rgba(3, 105, 161, 0.2);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 12px 32px rgba(3, 105, 161, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 :root[data-theme="light"] .hv-veris-end-node {
-  fill: rgba(8, 17, 31, 0.94);
+  fill: rgba(239, 246, 255, 0.98);
+}
+
+:root[data-theme="light"] .hv-veris-wave-path {
+  stroke: #1e40af;
+  stroke-opacity: 0.34;
+}
+
+:root[data-theme="light"] .hv-veris-wave[data-state="active"] .hv-veris-wave-path {
+  stroke: #0c4a6e;
+  stroke-opacity: 0.76;
+  filter: drop-shadow(0 0 5px rgba(2, 132, 199, 0.28));
+}
+
+:root[data-theme="light"] .hv-veris-wave[data-state="completed"] .hv-veris-wave-path {
+  stroke: #0369a1;
+  stroke-opacity: 0.54;
+}
+
+:root[data-theme="light"] .hv-veris-wave-dot {
+  fill: #1d4ed8;
+}
+
+:root[data-theme="light"] .hv-veris-loader-eyebrow {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+:root[data-theme="light"] .hv-veris-loader-detail {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+:root[data-theme="light"] .hv-veris-loader-step-count {
+  color: #315273;
+}
+
+:root[data-theme="light"] .hv-veris-loader-ring-outer {
+  border-color: rgba(30, 64, 175, 0.16);
+  box-shadow: 0 0 62px rgba(2, 132, 199, 0.09);
+}
+
+:root[data-theme="light"] .hv-veris-loader-ring-dashed {
+  border-color: rgba(29, 78, 216, 0.28);
+}
+
+:root[data-theme="light"] .hv-veris-loader-ring-mid {
+  border-color: rgba(3, 105, 161, 0.2);
+}
+
+:root[data-theme="light"] .hv-veris-loader-ring-inner {
+  border-color: rgba(30, 64, 175, 0.22);
+}
+
+:root[data-theme="light"] .hv-veris-loader-progress-ring {
+  background:
+    conic-gradient(
+      from 225deg,
+      #22d3ee 0deg,
+      #1d4ed8 var(--hv-loader-progress),
+      rgba(2, 132, 199, 0.14) var(--hv-loader-progress),
+      rgba(2, 132, 199, 0.14) 360deg
+    );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.78),
+    0 24px 72px rgba(3, 105, 161, 0.24);
+}
+
+:root[data-theme="light"] .hv-step-progress {
+  border-color: rgba(148, 163, 184, 0.34);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(14, 165, 233, 0.08), transparent 20rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  box-shadow:
+    0 16px 42px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+:root[data-theme="light"] .hv-step-progress-circle[data-state="active"] {
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+}
+
+:root[data-theme="light"] .hv-step-progress-circle[data-state="completed"] {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+}
+
+:root[data-theme="light"] .hv-step-progress-circle[data-state="upcoming"] {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+:root[data-theme="light"] .hv-step-progress-label[data-state="active"] {
+  color: #1d4ed8;
+}
+
+:root[data-theme="light"] .hv-step-progress-label[data-state="completed"] {
+  color: #047857;
+}
+
+:root[data-theme="light"] .hv-step-progress-label[data-state="upcoming"] {
+  color: #475569;
+}
+
+:root[data-theme="light"] .hv-step-progress-track {
+  background: #cbd5e1;
+}
+
+:root[data-theme="light"] .hv-step-progress-line[data-state="completed"] {
+  background: #10b981;
 }
 
 .hv-ai-panel {

@@ -87,10 +87,10 @@ export default function VerisGlobeLoader({
 
         <div className="relative flex h-full w-full max-w-6xl items-center justify-center animate-[overlay-panel-in_220ms_ease-out_forwards]">
           <div className="relative flex h-[min(92vw,calc(100svh-var(--hv-loader-viewport-offset)-190px),680px)] min-h-[430px] w-[min(92vw,calc(100svh-var(--hv-loader-viewport-offset)-190px),680px)] min-w-[430px] items-center justify-center max-[520px]:h-[92vw] max-[520px]:min-h-0 max-[520px]:w-[92vw] max-[520px]:min-w-0">
-          <div className="hv-veris-loader-ring absolute inset-0 rounded-full border border-cyan-300/10" />
-          <div className="hv-veris-loader-ring-reverse absolute inset-[8%] rounded-full border border-dashed border-sky-400/24" />
-          <div className="absolute inset-[16%] rounded-full border border-blue-400/14" />
-          <div className="absolute inset-[24%] rounded-full border border-cyan-300/14" />
+          <div className="hv-veris-loader-ring hv-veris-loader-ring-outer absolute inset-0 rounded-full border border-cyan-300/10" />
+          <div className="hv-veris-loader-ring-reverse hv-veris-loader-ring-dashed absolute inset-[8%] rounded-full border border-dashed border-sky-400/24" />
+          <div className="hv-veris-loader-ring-mid absolute inset-[16%] rounded-full border border-blue-400/14" />
+          <div className="hv-veris-loader-ring-inner absolute inset-[24%] rounded-full border border-cyan-300/14" />
 
           <svg
             aria-hidden="true"
@@ -102,8 +102,13 @@ export default function VerisGlobeLoader({
               const isActive = index === safeIndex
 
               return (
-                <g key={wave.path} className="hv-veris-wave">
+                <g
+                  key={wave.path}
+                  className="hv-veris-wave"
+                  data-state={isActive ? "active" : isComplete ? "completed" : "upcoming"}
+                >
                   <path
+                    className="hv-veris-wave-path"
                     d={wave.path}
                     fill="none"
                     stroke={wave.color}
@@ -113,10 +118,10 @@ export default function VerisGlobeLoader({
                     strokeWidth={isActive ? 1.8 : 1.2}
                   />
                   <circle
+                    className="hv-veris-wave-dot"
                     r={isActive ? 5 : 3.5}
                     fill={isActive || isComplete ? wave.color : "#164e63"}
                     opacity={isActive || isComplete ? 1 : 0.52}
-                    className="hv-veris-wave-dot"
                     style={{ animationDelay: `${index * 280}ms` }}
                   >
                     <animateMotion dur="2.8s" repeatCount="indefinite" path={wave.path} />
@@ -145,10 +150,10 @@ export default function VerisGlobeLoader({
           </svg>
 
           <div
-            className="absolute inset-[13%] rounded-full p-[2px] shadow-[0_0_110px_rgba(34,211,238,0.20)] transition-[background] duration-500 sm:inset-[19%] lg:inset-[22%]"
+            className="hv-veris-loader-progress-ring absolute inset-[13%] rounded-full p-[2px] shadow-[0_0_110px_rgba(34,211,238,0.20)] transition-[background] duration-500 sm:inset-[19%] lg:inset-[22%]"
             style={{
-              background: `conic-gradient(from 225deg, rgba(34,211,238,0.95) 0deg, rgba(59,130,246,0.95) ${progress * 3.6}deg, rgba(255,255,255,0.08) ${progress * 3.6}deg, rgba(255,255,255,0.08) 360deg)`,
-            }}
+              "--hv-loader-progress": `${progress * 3.6}deg`,
+            } as CSSProperties}
           >
             <div className="hv-veris-loader-core-panel relative h-full w-full rounded-full border border-cyan-300/20 bg-[#0b1220]/96 px-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-30px_80px_rgba(34,211,238,0.07)] sm:px-8">
               <div className="absolute inset-0 overflow-hidden rounded-full">
@@ -158,7 +163,7 @@ export default function VerisGlobeLoader({
               <div aria-hidden="true" className="absolute inset-x-10 top-1/2 h-px bg-cyan-300/10" />
 
               <div className="absolute inset-0 z-10 text-center">
-                <p className="absolute left-1/2 top-[16%] max-w-[76%] -translate-x-1/2 text-center text-[8px] font-semibold uppercase leading-4 tracking-[0.08em] text-cyan-200/75 sm:text-[9px] sm:tracking-[0.14em] lg:text-[10px]">
+                <p className="hv-veris-loader-eyebrow absolute left-1/2 top-[16%] max-w-[76%] -translate-x-1/2 text-center text-[8px] font-semibold uppercase leading-4 tracking-[0.08em] text-cyan-200/75 sm:text-[9px] sm:tracking-[0.14em] lg:text-[10px]">
                   {eyebrow}
                 </p>
                 <h2
@@ -170,7 +175,7 @@ export default function VerisGlobeLoader({
                   {activeStep.label}
                 </h2>
                 <p
-                  className="absolute left-1/2 top-[57%] max-w-[80%] -translate-x-1/2 text-[10px] leading-4 text-slate-400 sm:text-[11px] sm:leading-5 lg:text-xs"
+                  className="hv-veris-loader-detail absolute left-1/2 top-[57%] max-w-[80%] -translate-x-1/2 text-[10px] leading-4 text-slate-400 sm:text-[11px] sm:leading-5 lg:text-xs"
                   style={{
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
@@ -208,7 +213,7 @@ export default function VerisGlobeLoader({
               )
             })}
           </div>
-          <p className="absolute bottom-[4.5%] left-1/2 z-10 -translate-x-1/2 text-[8px] uppercase tracking-[0.18em] text-slate-500 sm:text-[9px]">
+          <p className="hv-veris-loader-step-count absolute bottom-[4.5%] left-1/2 z-10 -translate-x-1/2 text-[8px] uppercase tracking-[0.18em] text-slate-500 sm:text-[9px]">
             {safeIndex + 1} / {safeSteps.length}
           </p>
 
