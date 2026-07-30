@@ -881,6 +881,13 @@ a {
   mask-image: radial-gradient(circle at 50% 42%, black, transparent 72%);
 }
 
+.hv-veris-loader-atmosphere {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(34, 211, 238, 0.14), transparent 31%),
+    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1), transparent 48%),
+    linear-gradient(180deg, #08111f, #0b1322);
+}
+
 .hv-veris-loader-ring {
   animation: hv-veris-loader-ring-spin 14s linear infinite;
   box-shadow: 0 0 70px rgba(34, 211, 238, 0.09);
@@ -916,33 +923,28 @@ a {
 
 :root[data-theme="light"] .hv-veris-loader-shell {
   background:
-    radial-gradient(circle at 50% 14%, rgba(14, 165, 233, 0.11), transparent 30%),
-    radial-gradient(circle at 20% 88%, rgba(59, 130, 246, 0.07), transparent 32%),
-    linear-gradient(180deg, #f7faff 0%, #edf3fa 100%);
+    radial-gradient(circle at 50% 44%, rgba(14, 165, 233, 0.09), transparent 24rem),
+    linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
 }
 
 :root[data-theme="light"] .hv-veris-loader-stage {
-  max-width: 1180px;
-  border: 1px solid rgba(8, 145, 178, 0.2);
-  border-radius: 36px;
-  background: #07111f;
-  box-shadow:
-    0 32px 90px rgba(15, 23, 42, 0.2),
-    0 10px 32px rgba(14, 116, 144, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 :root[data-theme="light"] .hv-veris-loader-atmosphere {
   background:
-    radial-gradient(circle at 50% 42%, rgba(34, 211, 238, 0.18), transparent 31%),
-    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.14), transparent 48%),
-    linear-gradient(180deg, #08111f, #0b1322);
+    radial-gradient(circle at 50% 44%, rgba(14, 165, 233, 0.11), transparent 29%),
+    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.055), transparent 46%);
 }
 
 :root[data-theme="light"] .hv-veris-loader-grid {
   background-image:
-    linear-gradient(rgba(34, 211, 238, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(14, 116, 144, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
 }
 
 :root[data-theme="light"] .hv-veris-loader-core-panel {

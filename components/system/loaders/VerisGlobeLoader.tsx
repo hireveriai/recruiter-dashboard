@@ -82,7 +82,7 @@ export default function VerisGlobeLoader({
             : "min-h-[496px]",
         ].join(" ")}
       >
-        <div aria-hidden="true" className="hv-veris-loader-atmosphere absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.14),transparent_31%),radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.10),transparent_48%),linear-gradient(180deg,#08111f,#0b1322)]" />
+        <div aria-hidden="true" className="hv-veris-loader-atmosphere absolute inset-0" />
         <div aria-hidden="true" className="hv-veris-loader-grid absolute inset-0 opacity-25" />
 
         <div className="relative flex h-full w-full max-w-6xl items-center justify-center animate-[overlay-panel-in_220ms_ease-out_forwards]">
