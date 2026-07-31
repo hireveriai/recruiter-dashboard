@@ -1,8 +1,8 @@
 ﻿"use client"
 
 import Link from "next/link"
-import { Fragment, useEffect, useMemo, useState } from "react"
-import { Download, FileText, Info, Link2, RotateCw, Video } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Download, Ellipsis, FileText, Info, Link2, RotateCw, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -16,6 +16,12 @@ import SendInterviewModal from "../../components/SendInterviewModal"
 import { CandidateActionModal } from "../../components/dashboard/CandidateActionModal"
 import { DecisionPill } from "../../components/dashboard/DecisionPill"
 import { VerisGlobeLoader } from "../../components/system/loaders"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu"
 
 const RECRUITER_STATUS_DEFINITIONS = {
   COMPLETED: {
@@ -375,18 +381,6 @@ function getAccessLabel(item) {
   return "Flexible"
 }
 
-const tableActionBase =
-  "inline-flex min-h-9 max-w-full items-center justify-center gap-1.5 rounded-lg px-1.5 py-1 text-sm font-semibold leading-tight transition disabled:cursor-not-allowed disabled:opacity-55"
-const tableActionNeutral =
-  `${tableActionBase} text-slate-200 hover:bg-slate-800/55 hover:text-white`
-const tableActionCyan =
-  `${tableActionBase} text-cyan-100 hover:bg-cyan-400/10 hover:text-white`
-const tableActionEmerald =
-  `${tableActionBase} text-emerald-100 hover:bg-emerald-400/10 hover:text-white`
-const tableActionAmber =
-  `${tableActionBase} text-amber-100 hover:bg-amber-400/10 hover:text-white`
-const tableActionRose =
-  `${tableActionBase} text-rose-100 hover:bg-rose-400/10 hover:text-white`
 const tableMutedChip =
   "inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-medium leading-none text-slate-500"
 const tableProcessingChip =
@@ -989,16 +983,15 @@ export default function InterviewsPage() {
           <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
             <table className="w-full table-fixed text-sm">
               <colgroup>
-                <col className="w-[9%]" />
-                <col className="w-[11%]" />
+                <col className="w-[14%]" />
                 <col className="w-[12%]" />
+                <col className="w-[14%]" />
                 <col className="w-[13%]" />
-                <col className="w-[10%]" />
+                <col className="w-[11%]" />
                 <col className="w-[6%]" />
                 <col className="w-[7%]" />
-                <col className="w-[12%]" />
-                <col className="w-[11%]" />
-                <col className="w-[9%]" />
+                <col className="w-[13%]" />
+                <col className="w-[10%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
@@ -1010,27 +1003,39 @@ export default function InterviewsPage() {
                   <th className="px-4 py-5 text-left font-medium">Score</th>
                   <th className="px-4 py-5 text-left font-medium">Decision</th>
                   <th className="px-4 py-5 text-left font-medium">Latest Activity</th>
-                  <th className="px-4 py-5 text-left font-medium">Hiring Action</th>
-                  <th className="px-4 py-5 text-center font-medium">Action</th>
+                  <th className="px-4 py-5 text-center font-medium">Hiring Action</th>
                 </tr>
               </thead>
               <tbody>
                   {interviews.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-10 text-center text-slate-400">No interviews available</td>
+                    <td colSpan={9} className="p-10 text-center text-slate-400">No interviews available</td>
                   </tr>
                 ) : filteredInterviews.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
+                    <td colSpan={9} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
                   </tr>
                 ) : (
                   filteredInterviews.map((interview) => {
                     const recruiterStatus = getRecruiterStatus(interview)
                     const interruptionReason = getInterruptionReason(interview)
+                    const interviewStatus = normalizeStatusKey(interview.status)
+                    const isEarlyExit = isEarlyExitInterview(interview)
+                    const isCompleted = isCompletedInterview(interview)
+                    const canTakeAction = isCompleted && !isEarlyExit && !interview.recruiterDecisionStatus
+                    const canViewSummary = isCompleted && !isEarlyExit
+                    const canCopyLink =
+                      !isCompleted &&
+                      !isEarlyExit &&
+                      ["READY", "EMAIL_FAILED"].includes(interviewStatus) &&
+                      Boolean(interview.link)
+                    const canRetryPreparation = interviewStatus === "PREPARATION_FAILED"
+                    const canRetryEmail = interviewStatus === "EMAIL_FAILED"
+                    const hasHiringActions =
+                      canTakeAction || canViewSummary || canCopyLink || canRetryPreparation || canRetryEmail
 
                     return (
-                    <Fragment key={interview.interviewId}>
-                    <tr className="border-t border-slate-800/80 text-slate-200">
+                    <tr key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200">
                       <td className="px-4 py-5 font-medium text-white">
                         <span className="block truncate" title={interview.candidateName || "Candidate"}>
                           {interview.candidateName}
@@ -1084,90 +1089,86 @@ export default function InterviewsPage() {
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
                       <td className="px-4 py-5 text-slate-400"><span className="block truncate">{formatDateTime(getInterviewActivityValue(interview))}</span></td>
                       <td className="px-4 py-5 align-middle">
-                        {isEarlyExitInterview(interview) ? (
-                          <span className="text-amber-200/80">{getEarlyExitText(interview)}</span>
-                        ) : isCompletedInterview(interview) ? (
-                          interview.recruiterDecisionStatus ? (
+                        <div className="flex items-center justify-center gap-2">
+                          {isEarlyExit ? (
+                            <span className="text-xs font-semibold leading-tight text-amber-100">
+                              {getEarlyExitText(interview)}
+                            </span>
+                          ) : interview.recruiterDecisionStatus ? (
                             <DecisionPill status={interview.recruiterDecisionStatus} />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setReviewInterview(interview)}
-                              className={tableActionCyan}
-                              aria-label={`Take hiring action for ${interview.candidateName}`}
-                            >
-                              <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              Take Action
-                            </button>
-                          )
-                        ) : (
-                          <span className="text-slate-600">After completion</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-5 text-center">
-                        {isEarlyExitInterview(interview) ? (
-                          <span className="inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-semibold leading-tight text-amber-100">
-                            Exited Early
-                          </span>
-                        ) : isCompletedInterview(interview) ? (
-                          <div className="flex flex-col items-start gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => openInterviewSummary(interview)}
-                              className={tableActionEmerald}
-                              aria-label={`View completed summary for ${interview.candidateName}`}
-                            >
-                              <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              View Summary
-                            </button>
-                          </div>
-                        ) : String(interview.status).toUpperCase() === "PREPARATION_FAILED" ? (
-                          <button
-                            type="button"
-                            onClick={() => retryPreparation(interview)}
-                            disabled={actionBusyId === interview.interviewId}
-                            className={tableActionRose}
-                          >
-                            <RotateCw className="h-4 w-4 shrink-0" aria-hidden="true" />
-                            {actionBusyId === interview.interviewId ? "Retrying..." : "Retry Prep"}
-                          </button>
-                        ) : String(interview.status).toUpperCase() === "EMAIL_FAILED" ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => copyLink(interview)}
-                              disabled={!interview.link}
-                              className={tableActionNeutral}
-                            >
-                              <Link2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              {copiedInterviewId === interview.interviewId ? "Copied" : "Copy Link"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => retryEmail(interview)}
-                              disabled={actionBusyId === interview.interviewId}
-                              className={tableActionAmber}
-                            >
-                              <RotateCw className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              {actionBusyId === interview.interviewId ? "Sending..." : "Retry Email"}
-                            </button>
-                          </div>
-                        ) : String(interview.status).toUpperCase() === "READY" ? (
-                          <button
-                            type="button"
-                            onClick={() => copyLink(interview)}
-                            disabled={!interview.link}
-                            className={tableActionNeutral}
-                          >
-                            <Link2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                            {copiedInterviewId === interview.interviewId ? "Copied" : "Copy Link"}
-                          </button>
-                        ) : (
-                          <span className="text-slate-600">-</span>
-                        )}
+                          ) : null}
+
+                          {hasHiringActions ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+                                  aria-label={`Open hiring actions for ${interview.candidateName || "candidate"}`}
+                                >
+                                  <Ellipsis className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                sideOffset={6}
+                                className="min-w-48 border border-slate-700 bg-slate-900 p-1.5 text-slate-200 shadow-[0_18px_48px_rgba(2,6,23,0.55)] ring-0"
+                              >
+                                {canTakeAction ? (
+                                  <DropdownMenuItem
+                                    onSelect={() => setReviewInterview(interview)}
+                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-cyan-100 focus:bg-cyan-400/10 focus:text-cyan-50"
+                                  >
+                                    <FileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                                    Take Action
+                                  </DropdownMenuItem>
+                                ) : null}
+                                {canViewSummary ? (
+                                  <DropdownMenuItem
+                                    onSelect={() => openInterviewSummary(interview)}
+                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-emerald-100 focus:bg-emerald-400/10 focus:text-emerald-50"
+                                  >
+                                    <FileText className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                                    View Summary
+                                  </DropdownMenuItem>
+                                ) : null}
+                                {canCopyLink ? (
+                                  <DropdownMenuItem
+                                    onSelect={() => copyLink(interview)}
+                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-slate-100 focus:bg-slate-800 focus:text-white"
+                                  >
+                                    <Link2 className="h-4 w-4 text-slate-300" aria-hidden="true" />
+                                    {copiedInterviewId === interview.interviewId ? "Copied" : "Copy Link"}
+                                  </DropdownMenuItem>
+                                ) : null}
+                                {canRetryPreparation ? (
+                                  <DropdownMenuItem
+                                    onSelect={() => retryPreparation(interview)}
+                                    disabled={actionBusyId === interview.interviewId}
+                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-rose-100 focus:bg-rose-400/10 focus:text-rose-50"
+                                  >
+                                    <RotateCw className="h-4 w-4 text-rose-300" aria-hidden="true" />
+                                    {actionBusyId === interview.interviewId ? "Retrying..." : "Retry Preparation"}
+                                  </DropdownMenuItem>
+                                ) : null}
+                                {canRetryEmail ? (
+                                  <DropdownMenuItem
+                                    onSelect={() => retryEmail(interview)}
+                                    disabled={actionBusyId === interview.interviewId}
+                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-amber-100 focus:bg-amber-400/10 focus:text-amber-50"
+                                  >
+                                    <RotateCw className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                                    {actionBusyId === interview.interviewId ? "Sending..." : "Retry Email"}
+                                  </DropdownMenuItem>
+                                ) : null}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : !isEarlyExit ? (
+                            <span className="text-slate-600">-</span>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
-                    </Fragment>
                     )
                   })
                 )}
