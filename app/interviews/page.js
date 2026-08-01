@@ -376,6 +376,13 @@ function normalizeRecruiterDecision(status) {
   return normalized || "PENDING"
 }
 
+function formatLatestActivity(value) {
+  return formatDateTime(value, undefined, { withTimezone: false })
+    .replace(" â€¢ ", " ")
+    .replace(/\bAM\b/, "A.M.")
+    .replace(/\bPM\b/, "P.M.")
+}
+
 const tableMutedChip =
   "inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-medium leading-none text-slate-500"
 const tableProcessingChip =
@@ -993,18 +1000,18 @@ export default function InterviewsPage() {
             </button>
           </div>
 
-          <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-auto overscroll-contain">
-            <table className="w-full min-w-[1380px] table-fixed text-sm">
+          <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
+            <table className="w-full table-fixed text-sm">
               <colgroup>
-                <col className="w-[13%]" />
-                <col className="w-[11%]" />
-                <col className="w-[13%]" />
-                <col className="w-[11%]" />
-                <col className="w-[10%]" />
-                <col className="w-[6%]" />
-                <col className="w-[7%]" />
                 <col className="w-[12%]" />
+                <col className="w-[10%]" />
+                <col className="w-[13%]" />
+                <col className="w-[9%]" />
+                <col className="w-[8%]" />
+                <col className="w-[5%]" />
+                <col className="w-[7%]" />
                 <col className="w-[11%]" />
+                <col className="w-[19%]" />
                 <col className="w-[6%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
@@ -1013,12 +1020,12 @@ export default function InterviewsPage() {
                   <th className="px-4 py-5 text-center font-medium">Recording</th>
                   <th className="px-4 py-5 text-left font-medium">Job</th>
                   <th className="px-4 py-5 text-left font-medium">Status</th>
-                  <th className="px-4 py-5 text-left font-medium">Interview Type</th>
-                  <th className="px-4 py-5 text-left font-medium">Score</th>
-                  <th className="px-4 py-5 text-left font-medium">VERIS Decision</th>
-                  <th className="px-4 py-5 text-left font-medium">Recruiter Decision</th>
-                  <th className="px-4 py-5 text-left font-medium">Latest Activity</th>
-                  <th className="px-4 py-5 text-center font-medium">Actions</th>
+                  <th className="px-3 py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Type</span></th>
+                  <th className="px-3 py-5 text-left font-medium">Score</th>
+                  <th className="px-3 py-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Decision</span></th>
+                  <th className="px-3 py-5 text-left font-medium"><span className="block">Recruiter</span><span className="block">Decision</span></th>
+                  <th className="px-3 py-5 text-left font-medium"><span className="block">Latest</span><span className="block">Activity</span></th>
+                  <th className="px-3 py-5 text-center font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1100,10 +1107,10 @@ export default function InterviewsPage() {
                           ) : null}
                         </div>
                       </td>
-                      <td className="px-4 py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
-                      <td className="px-4 py-5 text-slate-300">{formatScore(interview.score)}</td>
-                      <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
-                      <td className="px-4 py-5">
+                      <td className="px-3 py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
+                      <td className="px-3 py-5 text-slate-300">{formatScore(interview.score)}</td>
+                      <td className="px-3 py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
+                      <td className="px-3 py-5">
                         {interview.recruiterDecisionStatus ? (
                           <DecisionPill status={interview.recruiterDecisionStatus} />
                         ) : isCompleted && !isEarlyExit ? (
@@ -1114,8 +1121,8 @@ export default function InterviewsPage() {
                           <span className="text-slate-600">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-5 text-slate-400"><span className="block truncate">{formatDateTime(getInterviewActivityValue(interview))}</span></td>
-                      <td className="px-4 py-5 align-middle">
+                      <td className="whitespace-nowrap px-3 py-5 text-[13px] text-slate-400">{formatLatestActivity(getInterviewActivityValue(interview))}</td>
+                      <td className="px-3 py-5 align-middle">
                         <div className="flex items-center justify-center gap-2">
                           {hasHiringActions ? (
                             <DropdownMenu>
