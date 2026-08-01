@@ -7,20 +7,20 @@ alter table public.hireveri_plans
 
 update public.hireveri_plans
 set price_inr = coalesce(price_inr, price),
-    price_usd = coalesce(price_usd, case slug
+    price_usd = case slug
       when 'starter' then 199
       when 'growth' then 349
       when 'scale' then 699
-      when 'expansion' then 1299
+      when 'expansion' then 1599
       when 'screening-starter' then 15
-      when 'screening-growth' then 29
+      when 'screening-growth' then 39
       when 'screening-scale' then 99
       when 'practice-starter' then 5
       when 'practice-professional' then 12
       when 'practice-advanced' then 18
       when 'practice-career-accelerator' then 29
-      else price
-    end);
+      else coalesce(price_usd, price)
+    end;
 
 alter table public.hireveri_plans
   alter column price_inr set not null,

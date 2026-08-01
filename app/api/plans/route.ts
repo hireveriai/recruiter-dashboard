@@ -21,7 +21,10 @@ export async function GET(request: Request) {
       },
     })
 
-    response.headers.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600")
+    // The response varies by visitor country. Do not let a shared CDN cache serve
+    // the first visitor's currency to users in other countries.
+    response.headers.set("Cache-Control", "private, no-store")
+    response.headers.set("Vary", "x-vercel-ip-country, cf-ipcountry")
     return response
   } catch (error) {
     return errorResponse(error)
