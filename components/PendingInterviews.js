@@ -283,9 +283,9 @@ function GuidedInterviewEmptyState({ compact = false, profile = null }) {
   const canSendInterview = canAccessFeature(profile, "sendInterview")
 
   return (
-    <div className={`rounded-2xl border border-cyan-300/15 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.82),rgba(2,6,23,0.72))] text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${compact ? "px-4 py-6" : "px-6 py-8"}`}>
-      <p className="text-base font-semibold text-white">Start by creating a job and inviting candidates.</p>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
+    <div className={`hv-invited-empty-state rounded-2xl border border-cyan-300/15 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.82),rgba(2,6,23,0.72))] text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${compact ? "px-4 py-6" : "px-6 py-8"}`}>
+      <p className="hv-invited-empty-title text-base font-semibold text-white">Start by creating a job and inviting candidates.</p>
+      <p className="hv-invited-empty-copy mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
         Create a job and begin candidate evaluation.
       </p>
       {canCreateJob || canSendInterview ? (
@@ -294,7 +294,7 @@ function GuidedInterviewEmptyState({ compact = false, profile = null }) {
         <button
           type="button"
           onClick={() => openDashboardAction("hireveri:open-create-job")}
-          className="rounded-xl border border-blue-300/25 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:border-blue-300/45 hover:bg-blue-500/20"
+          className="hv-invited-empty-primary rounded-xl border border-blue-300/25 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:border-blue-300/45 hover:bg-blue-500/20"
         >
           Create Job
         </button>
@@ -303,7 +303,7 @@ function GuidedInterviewEmptyState({ compact = false, profile = null }) {
         <button
           type="button"
           onClick={() => openDashboardAction("hireveri:open-send-interview")}
-          className="rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-500/20"
+          className="hv-invited-empty-secondary rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-500/20"
         >
           Send Interview Link
         </button>
@@ -853,7 +853,7 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
     <>
       <div className="mt-10">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex flex-wrap items-center gap-2 text-xl font-semibold">
+          <h2 className="hv-invited-section-heading flex flex-wrap items-center gap-2 text-xl font-semibold">
             Invited Interviews
             <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
               Recent
