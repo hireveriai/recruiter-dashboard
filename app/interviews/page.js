@@ -396,7 +396,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
   const answerSummaries = Array.isArray(interview.answerSummaries) ? interview.answerSummaries : []
 
   return (
-    <div className="hv-preserve-dark relative max-h-[88vh] overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
+    <div className="hv-completed-summary-modal hv-theme-modal relative max-h-[88vh] overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
         <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
 
         <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
@@ -431,15 +431,15 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
 
         <div className="max-h-[74vh] overflow-auto px-6 py-6 sm:px-8">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+            <div className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Score</p>
               <p className="mt-3 text-2xl font-semibold text-white">{formatScore(interview.score)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+            <div className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Decision</p>
               <p className="mt-3 text-2xl font-semibold text-white">{interview.decision || "-"}</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+            <div className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Completed</p>
               <p className="mt-3 text-lg font-semibold text-white">{formatDateTime(interview.endedAt || interview.createdAt)}</p>
             </div>
@@ -477,7 +477,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                   const duration = answer.answerPayload?.duration
 
                   return (
-                    <article key={answer.answerId || `${answer.question}-${index}`} className="rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
+                    <article key={answer.answerId || `${answer.question}-${index}`} className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300/80">
@@ -495,7 +495,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                         </div>
                       </div>
 
-                      <div className="mt-4 rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
+                      <div className="hv-completed-summary-subcard mt-4 rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Candidate Transcript</p>
                         <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">{answer.answerText || "No response provided."}</p>
                         {duration !== null && duration !== undefined ? (
@@ -504,7 +504,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                       </div>
 
                       <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.4fr]">
-                        <div className="rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
+                        <div className="hv-completed-summary-subcard rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Result</p>
                           <div className="mt-3 flex flex-wrap gap-2">
                             {metrics.length === 0 ? (
@@ -519,7 +519,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                           </div>
                         </div>
 
-                        <div className="rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
+                        <div className="hv-completed-summary-subcard rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">VERIS Feedback</p>
                           <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">
                             {answer.feedback || evaluationText || "No VERIS feedback has been recorded for this answer."}
@@ -1103,7 +1103,7 @@ export default function InterviewsPage() {
                               <DropdownMenuTrigger asChild>
                                 <button
                                   type="button"
-                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+                                  className="hv-interview-actions-trigger inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
                                   aria-label={`Open hiring actions for ${interview.candidateName || "candidate"}`}
                                 >
                                   <Ellipsis className="h-5 w-5" aria-hidden="true" />
@@ -1112,12 +1112,13 @@ export default function InterviewsPage() {
                               <DropdownMenuContent
                                 align="end"
                                 sideOffset={6}
-                                className="min-w-48 border border-slate-700 bg-slate-900 p-1.5 text-slate-200 shadow-[0_18px_48px_rgba(2,6,23,0.55)] ring-0"
+                                className="hv-interview-actions-menu hv-theme-popover min-w-48 border border-slate-700 bg-slate-900 p-1.5 text-slate-200 shadow-[0_18px_48px_rgba(2,6,23,0.55)] ring-0"
                               >
                                 {canTakeAction ? (
                                   <DropdownMenuItem
                                     onSelect={() => setReviewInterview(interview)}
-                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-cyan-100 focus:bg-cyan-400/10 focus:text-cyan-50"
+                                    className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-cyan-100 focus:bg-cyan-400/10 focus:text-cyan-50"
+                                    data-tone="primary"
                                   >
                                     <FileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                                     Take Action
@@ -1126,7 +1127,8 @@ export default function InterviewsPage() {
                                 {canViewSummary ? (
                                   <DropdownMenuItem
                                     onSelect={() => openInterviewSummary(interview)}
-                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-emerald-100 focus:bg-emerald-400/10 focus:text-emerald-50"
+                                    className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-emerald-100 focus:bg-emerald-400/10 focus:text-emerald-50"
+                                    data-tone="success"
                                   >
                                     <FileText className="h-4 w-4 text-emerald-300" aria-hidden="true" />
                                     View Summary
@@ -1191,7 +1193,7 @@ export default function InterviewsPage() {
       />
       {summaryInterview ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6 backdrop-blur-sm"
+          className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label={`Completed interview summary for ${summaryInterview.candidateName || "candidate"}`}

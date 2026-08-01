@@ -211,7 +211,7 @@ function CandidateActionDialog({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/78 px-4 py-6 backdrop-blur-xl"
+      className="hv-theme-dialog-backdrop fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/78 px-4 py-6 backdrop-blur-xl"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -220,14 +220,14 @@ function CandidateActionDialog({
       aria-labelledby="candidate-review-title"
     >
       <motion.div
-        className="relative max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[28px] border border-cyan-300/15 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(5,12,24,0.98))] shadow-[0_30px_120px_rgba(8,145,178,0.16)]"
+        className="hv-candidate-review-modal hv-theme-modal relative max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[28px] border border-cyan-300/15 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(5,12,24,0.98))] shadow-[0_30px_120px_rgba(8,145,178,0.16)]"
         initial={{ opacity: 0, y: 18, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 14, scale: 0.98 }}
         transition={{ duration: 0.18 }}
       >
         <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 sm:px-8">
+        <div className="hv-candidate-review-header flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 sm:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/70">Hiring workflow</p>
             <h2 id="candidate-review-title" className="mt-2 text-2xl font-semibold tracking-tight text-white">
@@ -256,14 +256,14 @@ function CandidateActionDialog({
               ["Risk level", getRiskLevel(candidate)],
               ["Completion", getCompletionStatus(candidate)],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-slate-800/90 bg-white/[0.035] p-4 lg:col-span-2">
+              <div key={label} className="hv-candidate-review-meta rounded-2xl border border-slate-800/90 bg-white/[0.035] p-4 lg:col-span-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</p>
                 <p className="mt-2 truncate text-sm font-semibold text-slate-100">{value}</p>
               </div>
             ))}
           </section>
 
-          <section className="mt-5 rounded-2xl border border-slate-800/90 bg-slate-950/35 p-5">
+          <section className="hv-candidate-review-section mt-5 rounded-2xl border border-slate-800/90 bg-slate-950/35 p-5">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-400/10 text-cyan-100">
                 <BrainCircuit className="h-4 w-4" aria-hidden="true" />
@@ -276,7 +276,7 @@ function CandidateActionDialog({
             <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-300">{getSummary(candidate)}</p>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               {cards.map((card) => (
-                <div key={card.title} className="rounded-2xl border border-slate-800 bg-[#07111f]/80 p-4">
+                <div key={card.title} className="hv-candidate-review-insight-card rounded-2xl border border-slate-800 bg-[#07111f]/80 p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{card.title}</p>
                   <p className="mt-2 text-lg font-semibold text-white">{card.value}</p>
                   <p className="mt-2 text-xs leading-5 text-slate-400">{card.body}</p>
@@ -285,7 +285,7 @@ function CandidateActionDialog({
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-slate-800/90 bg-slate-950/30 p-5">
+          <section className="hv-candidate-review-section mt-5 rounded-2xl border border-slate-800/90 bg-slate-950/30 p-5">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Recruiter decision</p>
@@ -296,7 +296,7 @@ function CandidateActionDialog({
             <DecisionSelector value={decision} onChange={setDecision} disabled={isSaving} />
           </section>
 
-          <section className="mt-5 rounded-2xl border border-slate-800/90 bg-slate-950/30 p-5">
+          <section className="hv-candidate-review-section mt-5 rounded-2xl border border-slate-800/90 bg-slate-950/30 p-5">
             <div className="flex items-center gap-3">
               <FileText className="h-4 w-4 text-slate-400" aria-hidden="true" />
               <label htmlFor="candidate-review-notes" className="text-sm font-semibold text-white">
@@ -309,7 +309,7 @@ function CandidateActionDialog({
               onChange={(event) => setNotes(event.target.value)}
               disabled={isSaving}
               placeholder="Add recruiter notes... Example: validate salary range, align with hiring manager, or request one more technical review."
-              className="mt-3 min-h-28 w-full resize-y rounded-2xl border border-slate-700 bg-[#07111f]/90 px-4 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="hv-candidate-review-notes mt-3 min-h-28 w-full resize-y rounded-2xl border border-slate-700 bg-[#07111f]/90 px-4 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </section>
 
