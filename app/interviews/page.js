@@ -1003,29 +1003,29 @@ export default function InterviewsPage() {
           <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
             <table className="w-full table-fixed text-sm">
               <colgroup>
+                <col className="w-[11%]" />
+                <col className="w-[9%]" />
                 <col className="w-[12%]" />
                 <col className="w-[10%]" />
-                <col className="w-[13%]" />
-                <col className="w-[9%]" />
                 <col className="w-[8%]" />
-                <col className="w-[5%]" />
+                <col className="w-[6%]" />
                 <col className="w-[7%]" />
                 <col className="w-[11%]" />
-                <col className="w-[19%]" />
-                <col className="w-[6%]" />
+                <col className="w-[18%]" />
+                <col className="w-[8%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
-                  <th className="px-4 py-5 text-left font-medium">Candidate</th>
-                  <th className="px-4 py-5 text-center font-medium">Recording</th>
-                  <th className="px-4 py-5 text-left font-medium">Job</th>
-                  <th className="px-4 py-5 text-left font-medium">Status</th>
+                  <th className="px-4 py-5 text-left font-medium"><span className="block">Candidate</span><span className="block">Name</span></th>
+                  <th className="px-3 py-5 text-center font-medium"><span className="block">Interview</span><span className="block">Recording</span></th>
+                  <th className="px-4 py-5 text-left font-medium"><span className="block">Applied</span><span className="block">Role</span></th>
+                  <th className="px-3 py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Status</span></th>
                   <th className="px-3 py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Type</span></th>
-                  <th className="px-3 py-5 text-left font-medium">Score</th>
+                  <th className="px-3 py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Score</span></th>
                   <th className="px-3 py-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Decision</span></th>
                   <th className="px-3 py-5 text-left font-medium"><span className="block">Recruiter</span><span className="block">Decision</span></th>
                   <th className="px-3 py-5 text-left font-medium"><span className="block">Latest</span><span className="block">Activity</span></th>
-                  <th className="px-3 py-5 text-center font-medium">Actions</th>
+                  <th className="px-3 py-5 text-center font-medium"><span className="block">Hiring</span><span className="block">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -1090,7 +1090,7 @@ export default function InterviewsPage() {
                       <td className="overflow-hidden px-4 py-5">
                         <div className="flex min-w-0 items-center gap-1.5">
                           <span
-                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(recruiterStatus.key)}`}
+                            className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.08em] ${getStatusBadge(recruiterStatus.key)}`}
                             title={recruiterStatus.description}
                           >
                             {recruiterStatus.label}

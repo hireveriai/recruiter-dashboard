@@ -209,8 +209,8 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
           </Link>
         </div>
 
-      <div className="hv-theme-panel overflow-x-auto rounded-lg bg-[#111a2e]">
-          <table className="w-full min-w-[980px] table-fixed text-[13px] sm:text-sm">
+      <div className="hv-theme-panel overflow-hidden rounded-lg bg-[#111a2e]">
+          <table className="w-full table-fixed text-[13px] sm:text-sm">
             <colgroup>
               <col className="w-[18%]" />
               <col className="w-[30%]" />
@@ -220,11 +220,11 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
             </colgroup>
             <thead className="text-gray-400 border-b border-gray-700">
               <tr>
-                <th className="px-4 py-4 text-left align-middle">Candidate</th>
-                <th className="px-4 py-4 text-left align-middle">Job</th>
-                <th className="px-4 py-4 text-left align-middle">Status</th>
-                <th className="whitespace-nowrap px-4 py-4 text-left align-middle">VERIS Screening Score</th>
-                <th className="px-4 py-4 text-left align-middle">Action</th>
+                <th className="px-4 py-4 text-left align-middle"><span className="block">Candidate</span><span className="block">Name</span></th>
+                <th className="px-4 py-4 text-left align-middle"><span className="block">Applied</span><span className="block">Role</span></th>
+                <th className="px-4 py-4 text-left align-middle"><span className="block">Interview</span><span className="block">Status</span></th>
+                <th className="px-4 py-4 text-left align-middle"><span className="block">VERIS</span><span className="block">Score</span></th>
+                <th className="px-4 py-4 text-left align-middle"><span className="block">Hiring</span><span className="block">Action</span></th>
               </tr>
             </thead>
 
@@ -255,7 +255,7 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
                       ) : null}
                     </td>
                     <td className="px-4 py-4 align-middle text-gray-300"><span className="block truncate">{candidate.jobTitle}</span></td>
-                    <td className={`px-4 py-4 align-middle ${getStatusColor(candidate.status)}`}><span className="block truncate">{formatStatusLabel(candidate.status)}</span></td>
+                    <td className={`px-4 py-4 align-middle text-[12px] font-medium tracking-[0.04em] ${getStatusColor(candidate.status)}`}><span className="block whitespace-nowrap">{formatStatusLabel(candidate.status)}</span></td>
                     <td className={`px-4 py-4 align-middle ${getScoreColor(candidate.verisScreeningScore)}`}>
                       {formatScore(candidate.verisScreeningScore)}
                     </td>

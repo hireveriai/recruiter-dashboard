@@ -628,11 +628,11 @@ export default function CandidatesPage() {
                 </colgroup>
                 <thead className="bg-slate-950/20 text-slate-400">
                   <tr>
-                    <th className="p-5 text-left font-medium">Candidate</th>
-                    <th className="p-5 text-left font-medium">Job</th>
-                    <th className="p-5 text-left font-medium">Status</th>
-                    <th className="whitespace-nowrap p-5 text-left font-medium">VERIS Screening Score</th>
-                    <th className="p-5 text-left font-medium">Hiring Action</th>
+                    <th className="p-5 text-left font-medium"><span className="block">Candidate</span><span className="block">Name</span></th>
+                    <th className="p-5 text-left font-medium"><span className="block">Applied</span><span className="block">Role</span></th>
+                    <th className="p-5 text-left font-medium"><span className="block">Interview</span><span className="block">Status</span></th>
+                    <th className="p-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Score</span></th>
+                    <th className="p-5 text-left font-medium"><span className="block">Hiring</span><span className="block">Action</span></th>
                   </tr>
                 </thead>
 
@@ -679,7 +679,7 @@ export default function CandidatesPage() {
                         </td>
                         <td className="p-5 text-slate-300"><span className="block truncate">{candidate.jobTitle || "-"}</span></td>
                         <td className="p-5">
-                          <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-[0.12em] ${getStatusBadge(candidate.status)}`}>
+                          <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.08em] ${getStatusBadge(candidate.status)}`}>
                             {formatStatusText(candidate.status)}
                           </span>
                         </td>
