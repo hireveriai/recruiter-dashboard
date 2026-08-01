@@ -359,26 +359,21 @@ function isEarlyExitInterview(interview) {
   return Boolean(interview?.earlyExit) || ["EARLY_EXIT", "MANUAL_EXIT"].includes(status)
 }
 
-function getEarlyExitText(interview) {
-  const reason = String(interview?.terminationReason ?? interview?.disconnectReason ?? "").trim()
-  if (!reason) {
-    return "Exited early"
-  }
-
-  return reason
-    .toLowerCase()
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
-}
-
 function getAccessLabel(item) {
   if (String(item.accessType ?? "FLEXIBLE").toUpperCase() === "SCHEDULED") {
     return item.startTime ? `Scheduled · ${formatDateTime(item.startTime)}` : "Scheduled"
   }
 
   return "Flexible"
+}
+
+function normalizeRecruiterDecision(status) {
+  const normalized = String(status ?? "").trim().toUpperCase()
+  if (normalized === "REVIEWED") {
+    return "REVIEW_REQUIRED"
+  }
+
+  return normalized || "PENDING"
 }
 
 const tableMutedChip =
@@ -562,6 +557,7 @@ export default function InterviewsPage() {
   const [jobFilter, setJobFilter] = useState("ALL")
   const [accessFilter, setAccessFilter] = useState("ALL")
   const [evaluationFilter, setEvaluationFilter] = useState("ALL")
+  const [recruiterDecisionFilter, setRecruiterDecisionFilter] = useState("ALL")
 
   async function loadInterviews() {
     const response = await fetch(buildAuthUrl("/api/dashboard/interviews?includeAnswers=0", searchParams), {
@@ -749,6 +745,7 @@ export default function InterviewsPage() {
       const jobTitle = String(interview.jobTitle ?? "")
       const accessType = String(interview.accessType ?? "FLEXIBLE").toUpperCase()
       const evaluationState = getEvaluationState(interview)
+      const recruiterDecision = normalizeRecruiterDecision(interview.recruiterDecisionStatus)
       const searchable = [
         interview.candidateName,
         interview.jobTitle,
@@ -756,6 +753,7 @@ export default function InterviewsPage() {
         recruiterStatus.label,
         recruiterStatus.description,
         interview.decision,
+        recruiterDecision,
         interview.interviewType,
         getInterruptionReason(interview),
         getAccessLabel(interview),
@@ -768,13 +766,14 @@ export default function InterviewsPage() {
       const matchesJob = jobFilter === "ALL" || jobTitle === jobFilter
       const matchesAccess = accessFilter === "ALL" || accessType === accessFilter
       const matchesEvaluation = evaluationFilter === "ALL" || evaluationState === evaluationFilter
+      const matchesRecruiterDecision = recruiterDecisionFilter === "ALL" || recruiterDecision === recruiterDecisionFilter
 
-      return matchesSearch && matchesStatus && matchesJob && matchesAccess && matchesEvaluation
+      return matchesSearch && matchesStatus && matchesJob && matchesAccess && matchesEvaluation && matchesRecruiterDecision
     }).sort((left, right) => getInterviewActivityTime(right) - getInterviewActivityTime(left))
-  }, [interviews, searchTerm, statusFilter, jobFilter, accessFilter, evaluationFilter])
+  }, [interviews, searchTerm, statusFilter, jobFilter, accessFilter, evaluationFilter, recruiterDecisionFilter])
 
   const hasActiveFilters =
-    searchTerm || statusFilter !== "ALL" || jobFilter !== "ALL" || accessFilter !== "ALL" || evaluationFilter !== "ALL"
+    searchTerm || statusFilter !== "ALL" || jobFilter !== "ALL" || accessFilter !== "ALL" || evaluationFilter !== "ALL" || recruiterDecisionFilter !== "ALL"
   const summaryInterview = summaryInterviewId
     ? interviews.find((interview) => interview.interviewId === summaryInterviewId) ?? null
     : null
@@ -785,6 +784,7 @@ export default function InterviewsPage() {
     setJobFilter("ALL")
     setAccessFilter("ALL")
     setEvaluationFilter("ALL")
+    setRecruiterDecisionFilter("ALL")
   }
 
   async function retryPreparation(interview) {
@@ -927,7 +927,7 @@ export default function InterviewsPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 border-b border-slate-800 bg-slate-950/20 px-6 py-5 xl:grid-cols-[minmax(220px,1.2fr)_repeat(4,minmax(150px,0.7fr))_auto]">
+          <div className="grid gap-4 border-b border-slate-800 bg-slate-950/20 px-6 py-5 lg:grid-cols-2 xl:grid-cols-[minmax(210px,1.15fr)_repeat(5,minmax(132px,0.7fr))_auto]">
             <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Search
               <input
@@ -970,6 +970,19 @@ export default function InterviewsPage() {
                 { value: "PENDING", label: "Pending" },
               ]}
             />
+            <FilterSelect
+              label="Recruiter Decision"
+              value={recruiterDecisionFilter}
+              onChange={setRecruiterDecisionFilter}
+              options={[
+                { value: "ALL", label: "All Decisions" },
+                { value: "PROCEED", label: "Proceed" },
+                { value: "HOLD", label: "Hold" },
+                { value: "REJECT", label: "Reject" },
+                { value: "REVIEW_REQUIRED", label: "Escalate Review" },
+                { value: "PENDING", label: "Awaiting Decision" },
+              ]}
+            />
             <button
               type="button"
               onClick={clearFilters}
@@ -980,18 +993,19 @@ export default function InterviewsPage() {
             </button>
           </div>
 
-          <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
-            <table className="w-full table-fixed text-sm">
+          <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-auto overscroll-contain">
+            <table className="w-full min-w-[1380px] table-fixed text-sm">
               <colgroup>
-                <col className="w-[14%]" />
-                <col className="w-[12%]" />
-                <col className="w-[14%]" />
                 <col className="w-[13%]" />
                 <col className="w-[11%]" />
+                <col className="w-[13%]" />
+                <col className="w-[11%]" />
+                <col className="w-[10%]" />
                 <col className="w-[6%]" />
                 <col className="w-[7%]" />
-                <col className="w-[13%]" />
-                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+                <col className="w-[11%]" />
+                <col className="w-[6%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
@@ -1001,19 +1015,20 @@ export default function InterviewsPage() {
                   <th className="px-4 py-5 text-left font-medium">Status</th>
                   <th className="px-4 py-5 text-left font-medium">Interview Type</th>
                   <th className="px-4 py-5 text-left font-medium">Score</th>
-                  <th className="px-4 py-5 text-left font-medium">Decision</th>
+                  <th className="px-4 py-5 text-left font-medium">VERIS Decision</th>
+                  <th className="px-4 py-5 text-left font-medium">Recruiter Decision</th>
                   <th className="px-4 py-5 text-left font-medium">Latest Activity</th>
-                  <th className="px-4 py-5 text-center font-medium">Hiring Action</th>
+                  <th className="px-4 py-5 text-center font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                   {interviews.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-10 text-center text-slate-400">No interviews available</td>
+                    <td colSpan={10} className="p-10 text-center text-slate-400">No interviews available</td>
                   </tr>
                 ) : filteredInterviews.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
+                    <td colSpan={10} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
                   </tr>
                 ) : (
                   filteredInterviews.map((interview) => {
@@ -1023,6 +1038,7 @@ export default function InterviewsPage() {
                     const isEarlyExit = isEarlyExitInterview(interview)
                     const isCompleted = isCompletedInterview(interview)
                     const canTakeAction = isCompleted && !isEarlyExit && !interview.recruiterDecisionStatus
+                    const canChangeDecision = isCompleted && !isEarlyExit && Boolean(interview.recruiterDecisionStatus)
                     const canViewSummary = isCompleted && !isEarlyExit
                     const canCopyLink =
                       !isCompleted &&
@@ -1032,7 +1048,7 @@ export default function InterviewsPage() {
                     const canRetryPreparation = interviewStatus === "PREPARATION_FAILED"
                     const canRetryEmail = interviewStatus === "EMAIL_FAILED"
                     const hasHiringActions =
-                      canTakeAction || canViewSummary || canCopyLink || canRetryPreparation || canRetryEmail
+                      canTakeAction || canChangeDecision || canViewSummary || canCopyLink || canRetryPreparation || canRetryEmail
 
                     return (
                     <tr key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200">
@@ -1087,17 +1103,20 @@ export default function InterviewsPage() {
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
                       <td className="px-4 py-5 text-slate-300">{formatScore(interview.score)}</td>
                       <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
+                      <td className="px-4 py-5">
+                        {interview.recruiterDecisionStatus ? (
+                          <DecisionPill status={interview.recruiterDecisionStatus} />
+                        ) : isCompleted && !isEarlyExit ? (
+                          <span className="inline-flex rounded-full border border-slate-700 bg-slate-950/30 px-3 py-1 text-[11px] font-semibold text-slate-400">
+                            Awaiting decision
+                          </span>
+                        ) : (
+                          <span className="text-slate-600">-</span>
+                        )}
+                      </td>
                       <td className="px-4 py-5 text-slate-400"><span className="block truncate">{formatDateTime(getInterviewActivityValue(interview))}</span></td>
                       <td className="px-4 py-5 align-middle">
                         <div className="flex items-center justify-center gap-2">
-                          {isEarlyExit ? (
-                            <span className="text-xs font-semibold leading-tight text-amber-100">
-                              {getEarlyExitText(interview)}
-                            </span>
-                          ) : interview.recruiterDecisionStatus ? (
-                            <DecisionPill status={interview.recruiterDecisionStatus} />
-                          ) : null}
-
                           {hasHiringActions ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1114,14 +1133,14 @@ export default function InterviewsPage() {
                                 sideOffset={6}
                                 className="hv-interview-actions-menu hv-theme-popover min-w-48 border border-slate-700 bg-slate-900 p-1.5 text-slate-200 shadow-[0_18px_48px_rgba(2,6,23,0.55)] ring-0"
                               >
-                                {canTakeAction ? (
+                                {canTakeAction || canChangeDecision ? (
                                   <DropdownMenuItem
                                     onSelect={() => setReviewInterview(interview)}
                                     className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-cyan-100 focus:bg-cyan-400/10 focus:text-cyan-50"
                                     data-tone="primary"
                                   >
                                     <FileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                                    Take Action
+                                    {canChangeDecision ? "Change Decision" : "Take Action"}
                                   </DropdownMenuItem>
                                 ) : null}
                                 {canViewSummary ? (

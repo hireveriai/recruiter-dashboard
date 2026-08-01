@@ -209,14 +209,14 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
           </Link>
         </div>
 
-      <div className="hv-theme-panel overflow-hidden rounded-lg bg-[#111a2e]">
-          <table className="w-full table-fixed text-[13px] sm:text-sm">
+      <div className="hv-theme-panel overflow-x-auto rounded-lg bg-[#111a2e]">
+          <table className="w-full min-w-[980px] table-fixed text-[13px] sm:text-sm">
             <colgroup>
-              <col className="w-[16%]" />
-              <col className="w-[32%]" />
-              <col className="w-[15%]" />
-              <col className="w-[13%]" />
-              <col className="w-[24%]" />
+              <col className="w-[18%]" />
+              <col className="w-[30%]" />
+              <col className="w-[14%]" />
+              <col className="w-[20%]" />
+              <col className="w-[18%]" />
             </colgroup>
             <thead className="text-gray-400 border-b border-gray-700">
               <tr>

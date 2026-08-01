@@ -19,11 +19,11 @@ const DECISION_STYLES: Record<string, { label: string; className: string }> = {
     className: "border-rose-300/20 bg-rose-400/10 text-rose-100 shadow-[0_0_18px_rgba(244,63,94,0.07)]",
   },
   REVIEW_REQUIRED: {
-    label: "Review Required",
+    label: "Escalate Review",
     className: "border-sky-300/20 bg-sky-400/10 text-sky-100 shadow-[0_0_18px_rgba(56,189,248,0.06)]",
   },
   REVIEWED: {
-    label: "Review Required",
+    label: "Escalate Review",
     className: "border-sky-300/20 bg-sky-400/10 text-sky-100 shadow-[0_0_18px_rgba(56,189,248,0.06)]",
   },
 }
