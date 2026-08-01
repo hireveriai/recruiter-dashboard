@@ -31,6 +31,8 @@ type InvoiceSourceRow = {
   razorpay_order_id: string | null
   razorpay_payment_id: string | null
   payment_date: Date | null
+  customer_country_code: string
+  tax_treatment: string
 }
 
 type InvoiceRow = {
@@ -63,6 +65,8 @@ type InvoiceRow = {
   invoice_pdf_data: Buffer | Uint8Array | null
   email_sent_at: Date | null
   created_at: Date
+  customer_country_code?: string
+  tax_treatment?: string
 }
 
 const PAGE_WIDTH = 595.28
@@ -238,7 +242,7 @@ export async function generateInvoicePdf(input: InvoiceSourceRow & { invoice_num
   page.drawText("HireVeri", { x: MARGIN, y: PAGE_HEIGHT - 58, size: 30, font: bold, color: navy })
   page.drawText("Verixans Technologies Pvt Ltd", { x: MARGIN, y: PAGE_HEIGHT - 82, size: 11, font: bold, color: rgb(0.24, 0.3, 0.4) })
   page.drawText(getWebsiteUrl(), { x: MARGIN, y: PAGE_HEIGHT - 101, size: 9, font: regular, color: muted })
-  drawRightAlignedText({ page, text: "GST INVOICE", xRight: rightEdge, y: PAGE_HEIGHT - 56, size: 17, font: bold, color: navy })
+  drawRightAlignedText({ page, text: input.tax_treatment === "EXPORT_UNDER_LUT" ? "EXPORT INVOICE" : "TAX INVOICE", xRight: rightEdge, y: PAGE_HEIGHT - 56, size: 17, font: bold, color: navy })
   drawRightAlignedText({ page, text: input.invoice_number, xRight: rightEdge, y: PAGE_HEIGHT - 78, size: 11, font: bold, color: rgb(0.17, 0.27, 0.46) })
   drawRightAlignedText({ page, text: "Status: PAID", xRight: rightEdge, y: PAGE_HEIGHT - 99, size: 10, font: bold, color: rgb(0.02, 0.42, 0.26) })
 
@@ -252,7 +256,7 @@ export async function generateInvoicePdf(input: InvoiceSourceRow & { invoice_num
   page.drawText("Bill to", { x: 330, y: businessY, size: 9, font: bold, color: muted })
   page.drawText(input.organization_name, { x: 330, y: businessY - 18, size: 11, font: bold, color: navy })
   page.drawText(`Recruiter: ${input.recruiter_email || "-"}`, { x: 330, y: businessY - 38, size: 9, font: regular, color: muted })
-  page.drawText(`GSTIN: ${input.gst_number || "Pending / Not Available"}`, { x: 330, y: businessY - 55, size: 9, font: regular, color: muted })
+  page.drawText(input.customer_country_code === "IN" ? `GSTIN: ${input.gst_number || "Pending / Not Available"}` : `Country: ${input.customer_country_code}`, { x: 330, y: businessY - 55, size: 9, font: regular, color: muted })
   drawTextBlock({
     page,
     text: input.billing_address || "Billing address not provided",
@@ -307,7 +311,7 @@ export async function generateInvoicePdf(input: InvoiceSourceRow & { invoice_num
     ["Original amount", formatPaise(input.original_amount_paise, input.currency)],
     ["Coupon discount", `-${formatPaise(input.discount_amount_paise, input.currency)}`],
     ["Taxable amount", formatPaise(taxableAmountPaise, input.currency)],
-    [`GST ${Number(input.gst_percentage)}%`, formatPaise(input.gst_amount_paise, input.currency)],
+    [input.tax_treatment === "EXPORT_UNDER_LUT" ? "IGST 0% (export under LUT)" : `GST ${Number(input.gst_percentage)}%`, formatPaise(input.gst_amount_paise, input.currency)],
   ]
   totalRows.forEach(([label, value], index) => {
     const y = totalsY - index * 22
@@ -383,6 +387,8 @@ async function getInvoiceSource(paymentId: string) {
       coalesce(p."gstAmountPaise", 0) as gst_amount_paise,
       coalesce(p."finalAmountPaise", p.amount) as final_amount_paise,
       coalesce(p.currency, 'INR') as currency,
+      coalesce(p.customer_country_code, 'IN') as customer_country_code,
+      coalesce(p.tax_treatment, 'DOMESTIC_GST') as tax_treatment,
       p."couponCode" as coupon_code,
       p."razorpayOrderId" as razorpay_order_id,
       p."razorpayPaymentId" as razorpay_payment_id,
@@ -426,6 +432,8 @@ function mapInvoice(row: InvoiceRow) {
     gstAmountPaise: Number(row.gst_amount_paise ?? 0),
     finalAmountPaise: Number(row.final_amount_paise ?? 0),
     currency: row.currency,
+    customerCountryCode: row.customer_country_code ?? "IN",
+    taxTreatment: row.tax_treatment ?? "DOMESTIC_GST",
     couponCode: row.coupon_code,
     razorpayOrderId: row.razorpay_order_id,
     razorpayPaymentId: row.razorpay_payment_id,
@@ -458,6 +466,8 @@ async function getExistingInvoiceByPayment(paymentId: string) {
       gst_amount_paise,
       final_amount_paise,
       currency,
+      customer_country_code,
+      tax_treatment,
       coupon_code,
       razorpay_order_id,
       razorpay_payment_id,
@@ -550,6 +560,8 @@ export async function createAndSendInvoiceForPayment(input: { paymentId: string 
       ${Number(source.gst_amount_paise ?? 0)},
       ${Number(source.final_amount_paise ?? 0)},
       ${source.currency},
+      ${source.customer_country_code},
+      ${source.tax_treatment},
       ${source.coupon_code},
       ${source.razorpay_order_id},
       ${source.razorpay_payment_id},
@@ -719,6 +731,7 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
         billing_address: string | null
         finance_email: string | null
         invoice_recipient_email: string | null
+        billing_country_code: string
       }>
     >(Prisma.sql`
       select
@@ -727,7 +740,8 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
         gst_number,
         billing_address,
         finance_email,
-        invoice_recipient_email
+        invoice_recipient_email,
+        billing_country_code
       from public.organizations
       where organization_id = ${auth.organizationId}::uuid
       limit 1
@@ -831,6 +845,7 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
           billingAddress: organization.billing_address,
           financeEmail: organization.finance_email,
           invoiceRecipientEmail: organization.invoice_recipient_email,
+          billingCountryCode: organization.billing_country_code,
         }
       : null,
     invoices,
@@ -874,6 +889,7 @@ export async function updateOrganizationBillingSettings(input: {
   billingAddress?: string | null
   financeEmail?: string | null
   invoiceRecipientEmail?: string | null
+  billingCountryCode: string
 }) {
   const normalizeNullable = (value: string | null | undefined) => {
     if (typeof value !== "string") {
@@ -891,13 +907,15 @@ export async function updateOrganizationBillingSettings(input: {
       billing_address: string | null
       finance_email: string | null
       invoice_recipient_email: string | null
+      billing_country_code: string
     }>
   >(Prisma.sql`
     update public.organizations
     set gst_number = ${normalizeNullable(input.gstNumber)},
         billing_address = ${normalizeNullable(input.billingAddress)},
         finance_email = ${normalizeNullable(input.financeEmail)},
-        invoice_recipient_email = ${normalizeNullable(input.invoiceRecipientEmail)}
+        invoice_recipient_email = ${normalizeNullable(input.invoiceRecipientEmail)},
+        billing_country_code = ${input.billingCountryCode.trim().toUpperCase()}
     where organization_id = ${input.auth.organizationId}::uuid
       and is_active = true
     returning
@@ -906,7 +924,8 @@ export async function updateOrganizationBillingSettings(input: {
       gst_number,
       billing_address,
       finance_email,
-      invoice_recipient_email
+      invoice_recipient_email,
+      billing_country_code
   `)
 
   if (!rows[0]) {
@@ -920,6 +939,7 @@ export async function updateOrganizationBillingSettings(input: {
     billingAddress: rows[0].billing_address,
     financeEmail: rows[0].finance_email,
     invoiceRecipientEmail: rows[0].invoice_recipient_email,
+    billingCountryCode: rows[0].billing_country_code,
   }
 }
 

@@ -22,6 +22,8 @@ type PlanRow = {
   name: string
   description: string | null
   price: number
+  price_inr: number
+  price_usd: number
   interviewLimit: number
   screeningCredits: number
   planType: string
@@ -44,6 +46,7 @@ type CouponRow = {
   expires_at: Date | null
   applicable_plan_ids: string[] | null
   minimum_amount_paise: number | null
+  minimum_amount_currency: string
   metadata_json: unknown
 }
 
@@ -55,6 +58,7 @@ type BillingOrganizationRow = {
   first_name: string | null
   last_name: string | null
   email: string | null
+  billing_country_code: string
 }
 
 type PaymentRow = {
@@ -76,6 +80,8 @@ type PaymentRow = {
   razorpay_order_id: string
   razorpay_payment_id: string | null
   subscription_id: string
+  customer_country_code: string
+  tax_treatment: string
 }
 
 type RazorpayPayment = {
@@ -97,6 +103,8 @@ type CheckoutQuote = {
   gstAmountPaise: number
   finalAmountPaise: number
   currency: string
+  customerCountryCode: string
+  taxTreatment: "DOMESTIC_GST" | "EXPORT_WITH_IGST" | "EXPORT_UNDER_LUT"
 }
 
 type PaymentValidation = {
@@ -171,11 +179,13 @@ function getRazorpayClient() {
   return razorpayClient
 }
 
-function mapPlan(plan: PlanRow) {
+function mapPlan(plan: PlanRow, currency: "INR" | "USD" = "INR") {
   const features = Array.isArray(plan.features)
     ? plan.features.filter((feature): feature is string => typeof feature === "string")
     : []
-  const amountPaise = Number(plan.price) * 100
+  const amountPaise = currency === "USD"
+    ? Number(plan.price_usd ?? plan.price) * 100
+    : Number(plan.price_inr ?? plan.price) * 100
   const metadata = {
     features,
     plan_type: plan.planType ?? "INTERVIEW",
@@ -187,7 +197,7 @@ function mapPlan(plan: PlanRow) {
     name: plan.name,
     description: plan.description ?? "",
     amountPaise,
-    currency: "INR",
+    currency,
     interviewSessions: Number(plan.interviewLimit ?? 0),
     screeningReviews: Number(plan.screeningCredits ?? 0),
     planType: plan.planType ?? "INTERVIEW",
@@ -216,6 +226,7 @@ function mapCoupon(coupon: CouponRow) {
     expiresAt: coupon.expires_at,
     applicablePlanIds: Array.isArray(coupon.applicable_plan_ids) ? coupon.applicable_plan_ids : [],
     minimumAmountPaise: coupon.minimum_amount_paise === null ? null : Number(coupon.minimum_amount_paise),
+    minimumAmountCurrency: coupon.minimum_amount_currency,
     metadata: normalizeMetadata(coupon.metadata_json),
   }
 }
@@ -249,7 +260,8 @@ function buildCheckoutPlan(
 function calculateQuote(
   plan: ReturnType<typeof mapPlan>,
   coupon: ReturnType<typeof mapCoupon> | null,
-  addonPlan: ReturnType<typeof mapPlan> | null = null
+  addonPlan: ReturnType<typeof mapPlan> | null = null,
+  customerCountryCode = "IN"
 ): CheckoutQuote {
   const checkoutPlan = buildCheckoutPlan(plan, addonPlan)
   const originalAmountPaise = Number(checkoutPlan.amountPaise)
@@ -258,7 +270,15 @@ function calculateQuote(
     ? Math.min(originalAmountPaise, Math.round((originalAmountPaise * discountPercentage) / 100))
     : 0
   const taxableAmountPaise = Math.max(0, originalAmountPaise - discountAmountPaise)
-  const gstPercentage = getGstPercentage()
+  const normalizedCountry = customerCountryCode.trim().toUpperCase()
+  const isIndia = normalizedCountry === "IN"
+  const exportUnderLut = process.env.BILLING_EXPORT_UNDER_LUT === "true"
+  const gstPercentage = isIndia || !exportUnderLut ? getGstPercentage() : 0
+  const taxTreatment = isIndia
+    ? "DOMESTIC_GST"
+    : exportUnderLut
+      ? "EXPORT_UNDER_LUT"
+      : "EXPORT_WITH_IGST"
   const gstAmountPaise = Math.round((taxableAmountPaise * gstPercentage) / 100)
   const finalAmountPaise = taxableAmountPaise + gstAmountPaise
 
@@ -271,6 +291,8 @@ function calculateQuote(
     gstAmountPaise,
     finalAmountPaise,
     currency: checkoutPlan.currency,
+    customerCountryCode: normalizedCountry,
+    taxTreatment,
   }
 }
 
@@ -305,6 +327,7 @@ function mapBillingOrganization(row: BillingOrganizationRow) {
     userId: row.user_id,
     userName: row.full_name || fallbackName || "Recruiter",
     userEmail: row.email ?? "",
+    billingCountryCode: row.billing_country_code,
   }
 }
 
@@ -316,6 +339,8 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
       name,
       description,
       price,
+      price_inr,
+      price_usd,
       "interviewLimit",
       "screeningCredits",
       "planType",
@@ -329,7 +354,7 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
   `)
 }
 
-export async function getActiveBillingPlans() {
+export async function getActiveBillingPlans(currency: "INR" | "USD" = "INR") {
   const rows = await getPlanRows(
     prisma,
     Prisma.sql`
@@ -339,10 +364,10 @@ export async function getActiveBillingPlans() {
     `
   )
 
-  return rows.map(mapPlan)
+  return rows.map((row) => mapPlan(row, currency))
 }
 
-export async function getActiveBillingPlanBySlug(slug: string, client: QueryClient = prisma) {
+export async function getActiveBillingPlanBySlug(slug: string, client: QueryClient = prisma, currency: "INR" | "USD" = "INR") {
   const normalizedSlug = validatePlanSlug(slug)
   const rows = await getPlanRows(
     client,
@@ -354,17 +379,17 @@ export async function getActiveBillingPlanBySlug(slug: string, client: QueryClie
     `
   )
 
-  return rows[0] ? mapPlan(rows[0]) : null
+  return rows[0] ? mapPlan(rows[0], currency) : null
 }
 
-async function getOptionalAddonPlanBySlug(slug: string | null | undefined, client: QueryClient = prisma) {
+async function getOptionalAddonPlanBySlug(slug: string | null | undefined, client: QueryClient = prisma, currency: "INR" | "USD" = "INR") {
   const normalizedSlug = typeof slug === "string" && slug.trim() ? slug.trim().toLowerCase() : ""
 
   if (!normalizedSlug) {
     return null
   }
 
-  const addonPlan = await getActiveBillingPlanBySlug(normalizedSlug, client)
+  const addonPlan = await getActiveBillingPlanBySlug(normalizedSlug, client, currency)
 
   if (!addonPlan) {
     throw new ApiError(404, "ADDON_PLAN_NOT_FOUND", "Selected screening add-on was not found")
@@ -394,7 +419,7 @@ function assertPlanBundleAllowed(
   }
 }
 
-async function getActiveBillingPlanById(planId: string, client: QueryClient = prisma) {
+async function getActiveBillingPlanById(planId: string, client: QueryClient = prisma, currency: "INR" | "USD" = "INR") {
   const rows = await getPlanRows(
     client,
     Prisma.sql`
@@ -405,7 +430,7 @@ async function getActiveBillingPlanById(planId: string, client: QueryClient = pr
     `
   )
 
-  return rows[0] ? mapPlan(rows[0]) : null
+  return rows[0] ? mapPlan(rows[0], currency) : null
 }
 
 async function getCouponByCode(code: string, client: QueryClient = prisma, lock = false) {
@@ -429,6 +454,7 @@ async function getCouponByCode(code: string, client: QueryClient = prisma, lock 
       expires_at,
       applicable_plan_ids::text[] as applicable_plan_ids,
       minimum_amount_paise,
+      minimum_amount_currency,
       metadata_json
     from public.coupons
     where upper(code) = ${couponCode}
@@ -454,6 +480,7 @@ async function getCouponById(couponId: string, client: QueryClient = prisma, loc
       expires_at,
       applicable_plan_ids::text[] as applicable_plan_ids,
       minimum_amount_paise,
+      minimum_amount_currency,
       metadata_json
     from public.coupons
     where id = ${couponId}::uuid
@@ -506,8 +533,14 @@ function assertCouponUsable(input: {
     throw new ApiError(409, "COUPON_ALREADY_USED", "This organization has already used this coupon")
   }
 
-  if (coupon.minimumAmountPaise !== null && plan.amountPaise < coupon.minimumAmountPaise) {
-    throw new ApiError(400, "COUPON_MINIMUM_AMOUNT", "Coupon is not applicable to this plan")
+  if (coupon.minimumAmountPaise !== null) {
+    if (coupon.minimumAmountCurrency !== plan.currency) {
+      throw new ApiError(400, "COUPON_CURRENCY_NOT_APPLICABLE", "Coupon is not available for this billing currency")
+    }
+
+    if (plan.amountPaise < coupon.minimumAmountPaise) {
+      throw new ApiError(400, "COUPON_MINIMUM_AMOUNT", "Coupon is not applicable to this plan")
+    }
   }
 
   if (coupon.applicablePlanIds.length > 0 && !coupon.applicablePlanIds.includes(plan.id)) {
@@ -555,7 +588,8 @@ export async function getBillingOrganization(auth: RecruiterRequestContext) {
       u.full_name,
       u.first_name,
       u.last_name,
-      u.email
+      u.email,
+      o.billing_country_code
     from public.organizations o
     inner join public.users u
       on u.organization_id = o.organization_id
@@ -581,13 +615,14 @@ export async function getCheckoutQuote(input: {
   couponCode?: string | null
 }) {
   const organization = await getBillingOrganization(input.auth)
-  const plan = await getActiveBillingPlanBySlug(input.planSlug)
+  const currency = organization.billingCountryCode === "IN" ? "INR" : "USD"
+  const plan = await getActiveBillingPlanBySlug(input.planSlug, prisma, currency)
 
   if (!plan) {
     throw new ApiError(404, "PLAN_NOT_FOUND", "Selected plan was not found")
   }
 
-  const addonPlan = await getOptionalAddonPlanBySlug(input.addonPlanSlug)
+  const addonPlan = await getOptionalAddonPlanBySlug(input.addonPlanSlug, prisma, currency)
   assertPlanBundleAllowed(plan, addonPlan)
   const checkoutPlan = buildCheckoutPlan(plan, addonPlan)
   const coupon = await resolveCouponForPlan({
@@ -595,7 +630,7 @@ export async function getCheckoutQuote(input: {
     couponCode: input.couponCode,
     organizationId: organization.organizationId,
   })
-  const quote = calculateQuote(plan, coupon, addonPlan)
+  const quote = calculateQuote(plan, coupon, addonPlan, organization.billingCountryCode)
 
   return buildPublicQuoteResponse({
     plan,
@@ -623,13 +658,14 @@ export async function createRazorpayOrder(input: {
   couponCode?: string | null
 }) {
   const organization = await getBillingOrganization(input.auth)
-  const plan = await getActiveBillingPlanBySlug(input.planSlug)
+  const currency = organization.billingCountryCode === "IN" ? "INR" : "USD"
+  const plan = await getActiveBillingPlanBySlug(input.planSlug, prisma, currency)
 
   if (!plan) {
     throw new ApiError(404, "PLAN_NOT_FOUND", "Selected plan was not found")
   }
 
-  const addonPlan = await getOptionalAddonPlanBySlug(input.addonPlanSlug)
+  const addonPlan = await getOptionalAddonPlanBySlug(input.addonPlanSlug, prisma, currency)
   assertPlanBundleAllowed(plan, addonPlan)
   const checkoutPlan = buildCheckoutPlan(plan, addonPlan)
   const coupon = await resolveCouponForPlan({
@@ -637,7 +673,7 @@ export async function createRazorpayOrder(input: {
     couponCode: input.couponCode,
     organizationId: organization.organizationId,
   })
-  const quote = calculateQuote(plan, coupon, addonPlan)
+  const quote = calculateQuote(plan, coupon, addonPlan, organization.billingCountryCode)
 
   ensureRazorpayPayableAmount(quote.finalAmountPaise)
 
@@ -735,6 +771,8 @@ export async function createRazorpayOrder(input: {
       "gstAmountPaise",
       "finalAmountPaise",
       currency,
+      customer_country_code,
+      tax_treatment,
       "razorpayOrderId"
     )
     values (
@@ -758,6 +796,8 @@ export async function createRazorpayOrder(input: {
       ${quote.gstAmountPaise},
       ${quote.finalAmountPaise},
       ${quote.currency},
+      ${quote.customerCountryCode},
+      ${quote.taxTreatment},
       ${order.id}
     )
   `)
@@ -818,6 +858,8 @@ async function getPaymentByOrderForAuth(input: {
       "gstAmountPaise" as gst_amount_paise,
       "finalAmountPaise" as final_amount_paise,
       currency,
+      customer_country_code,
+      tax_treatment,
       status::text as status,
       "razorpayOrderId" as razorpay_order_id,
       "razorpayPaymentId" as razorpay_payment_id,
@@ -855,7 +897,9 @@ function assertPaymentAmountsMatch(payment: PaymentRow, validation: PaymentValid
     payment.gst_amount_paise !== quote.gstAmountPaise ||
     Number(payment.gst_percentage) !== Number(quote.gstPercentage) ||
     payment.final_amount_paise !== quote.finalAmountPaise ||
-    payment.currency !== quote.currency
+    payment.currency !== quote.currency ||
+    payment.customer_country_code !== quote.customerCountryCode ||
+    payment.tax_treatment !== quote.taxTreatment
   ) {
     throw new ApiError(400, "AMOUNT_MISMATCH", "Payment amount no longer matches current billing data")
   }
@@ -866,13 +910,14 @@ async function validatePendingPaymentAgainstCurrentDb(
   client: QueryClient = prisma,
   lockCoupon = false
 ): Promise<PaymentValidation> {
-  const plan = await getActiveBillingPlanById(payment.plan_id, client)
+  const paymentCurrency = payment.currency === "USD" ? "USD" : "INR"
+  const plan = await getActiveBillingPlanById(payment.plan_id, client, paymentCurrency)
 
   if (!plan) {
     throw new ApiError(400, "PLAN_INACTIVE", "Selected plan is no longer active")
   }
 
-  const addonPlan = payment.addon_plan_id ? await getActiveBillingPlanById(payment.addon_plan_id, client) : null
+  const addonPlan = payment.addon_plan_id ? await getActiveBillingPlanById(payment.addon_plan_id, client, paymentCurrency) : null
 
   if (payment.addon_plan_id && !addonPlan) {
     throw new ApiError(400, "ADDON_PLAN_INACTIVE", "Selected screening add-on is no longer active")
@@ -888,7 +933,7 @@ async function validatePendingPaymentAgainstCurrentDb(
     organizationId: payment.organization_id,
     lock: lockCoupon,
   })
-  const quote = calculateQuote(plan, coupon, addonPlan)
+  const quote = calculateQuote(plan, coupon, addonPlan, payment.customer_country_code)
   const validation = { plan, addonPlan, coupon, quote }
 
   assertPaymentAmountsMatch(payment, validation)

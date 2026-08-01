@@ -64,6 +64,7 @@ type BillingData = {
     billingAddress: string | null
     financeEmail: string | null
     invoiceRecipientEmail: string | null
+    billingCountryCode: string
   } | null
   invoices: Invoice[]
   payments: Payment[]
@@ -217,6 +218,7 @@ export default function BillingPage() {
     billingAddress: "",
     financeEmail: "",
     invoiceRecipientEmail: "",
+    billingCountryCode: "IN",
   })
   const [loading, setLoading] = useState(true)
   const [savingSettings, setSavingSettings] = useState(false)
@@ -284,6 +286,7 @@ export default function BillingPage() {
           billingAddress: cached.organization?.billingAddress ?? "",
           financeEmail: cached.organization?.financeEmail ?? "",
           invoiceRecipientEmail: cached.organization?.invoiceRecipientEmail ?? "",
+          billingCountryCode: cached.organization?.billingCountryCode ?? "IN",
         })
         setLoading(false)
       })
@@ -318,6 +321,7 @@ export default function BillingPage() {
           billingAddress: payload.data.organization?.billingAddress ?? "",
           financeEmail: payload.data.organization?.financeEmail ?? "",
           invoiceRecipientEmail: payload.data.organization?.invoiceRecipientEmail ?? "",
+          billingCountryCode: payload.data.organization?.billingCountryCode ?? "IN",
         })
         setError("")
       } catch (loadError) {
@@ -680,6 +684,17 @@ export default function BillingPage() {
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-medium text-slate-300">Billing country</span>
+                <input
+                  value={settings.billingCountryCode}
+                  onChange={(event) => setSettings((current) => ({ ...current, billingCountryCode: event.target.value.toUpperCase().slice(0, 2) }))}
+                  placeholder="IN"
+                  maxLength={2}
+                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm uppercase text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400"
+                />
+                <span className="mt-2 block text-xs text-slate-500">ISO country code used for currency and tax treatment (for example IN, US, GB).</span>
+              </label>
               <label className="block">
                 <span className="text-sm font-medium text-slate-300">GSTIN</span>
                 <input

@@ -23,6 +23,7 @@ const billingSettingsSchema = z.object({
   billingAddress: z.string().trim().max(1000).optional().nullable(),
   financeEmail: z.string().trim().email().optional().nullable().or(z.literal("")),
   invoiceRecipientEmail: z.string().trim().email().optional().nullable().or(z.literal("")),
+  billingCountryCode: z.string().trim().length(2).transform((value) => value.toUpperCase()),
 })
 
 export async function PATCH(request: Request) {
@@ -36,6 +37,7 @@ export async function PATCH(request: Request) {
       billingAddress: input.billingAddress,
       financeEmail: input.financeEmail,
       invoiceRecipientEmail: input.invoiceRecipientEmail,
+      billingCountryCode: input.billingCountryCode,
     })
 
     return successResponse({ organization })

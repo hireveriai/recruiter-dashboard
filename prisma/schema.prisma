@@ -30,6 +30,7 @@ model Organization {
   billingAddress   String?   @map("billing_address")
   financeEmail     String?   @map("finance_email")
   invoiceRecipientEmail String? @map("invoice_recipient_email")
+  billingCountryCode String @default("IN") @db.Char(2) @map("billing_country_code")
   isActive         Boolean   @default(true) @map("is_active")
   createdAt        DateTime  @default(now()) @db.Timestamptz(6) @map("created_at")
 
@@ -311,6 +312,8 @@ model Plan {
   name             String
   slug             String   @unique
   price            Int
+  priceInr         Int      @map("price_inr")
+  priceUsd         Int      @map("price_usd")
   interviewLimit   Int
   screeningCredits Int      @default(0)
   planType         String   @default("INTERVIEW")
@@ -337,6 +340,7 @@ model Coupon {
   expiresAt          DateTime? @db.Timestamptz(6) @map("expires_at")
   applicablePlanIds  String[]  @default([]) @map("applicable_plan_ids")
   minimumAmountPaise Int?      @map("minimum_amount_paise")
+  minimumAmountCurrency String @default("INR") @db.Char(3) @map("minimum_amount_currency")
   metadataJson       Json      @default("{}") @map("metadata_json")
   createdAt          DateTime  @default(now()) @db.Timestamptz(6) @map("created_at")
   updatedAt          DateTime  @updatedAt @db.Timestamptz(6) @map("updated_at")
@@ -384,6 +388,8 @@ model Payment {
   razorpayPaymentStatus String?
   razorpayPaymentPayload Json?
   failureReason         String?
+  customerCountryCode   String   @default("IN") @db.Char(2) @map("customer_country_code")
+  taxTreatment          String   @default("DOMESTIC_GST") @map("tax_treatment")
 
   @@index([organizationId, createdAt], map: "hireveri_payments_org_created_at_idx")
   @@index([userId, createdAt], map: "hireveri_payments_user_id_created_at_idx")
@@ -435,6 +441,8 @@ model Invoice {
   gstAmountPaise      Int      @default(0) @map("gst_amount_paise")
   finalAmountPaise    Int      @map("final_amount_paise")
   currency            String   @default("INR")
+  customerCountryCode String   @default("IN") @db.Char(2) @map("customer_country_code")
+  taxTreatment        String   @default("DOMESTIC_GST") @map("tax_treatment")
   couponCode          String?  @map("coupon_code")
   razorpayOrderId     String?  @map("razorpay_order_id")
   razorpayPaymentId   String?  @map("razorpay_payment_id")

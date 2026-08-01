@@ -31,6 +31,8 @@ type Quote = {
   gstAmountPaise: number
   finalAmountPaise: number
   currency: string
+  customerCountryCode: string
+  taxTreatment: "DOMESTIC_GST" | "EXPORT_WITH_IGST" | "EXPORT_UNDER_LUT"
 }
 
 type Organization = {
@@ -101,7 +103,7 @@ declare global {
 
 const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js"
 const TRUST_INDICATORS = [
-  "GST Invoice Available",
+  "Tax Invoice Available",
   "Secure Razorpay Processing",
   "Organization Billing",
   "Audit-ready payment records",
@@ -515,7 +517,7 @@ export default function BillingCheckoutPage() {
             Activate HireVeri for your organization
           </h1>
           <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-            A server-verified procurement flow for organization billing, GST-ready records, and controlled subscription activation.
+            A server-verified procurement flow for organization billing, country-aware tax records, and controlled subscription activation.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -734,7 +736,9 @@ export default function BillingCheckoutPage() {
               </span>
             </div>
             <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-slate-400">GST {summary ? `${summary.quote.gstPercentage}%` : ""}</span>
+              <span className="text-slate-400">
+                {summary?.quote.taxTreatment === "EXPORT_UNDER_LUT" ? "Export under LUT (zero-rated)" : `GST ${summary ? `${summary.quote.gstPercentage}%` : ""}`}
+              </span>
               <span className="font-medium text-slate-100">
                 {summary ? formatPaise(summary.quote.gstAmountPaise, summary.quote.currency) : "--"}
               </span>
