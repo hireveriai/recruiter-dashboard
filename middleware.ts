@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { getMarketingDemoResponse } from "./lib/server/marketing-demo"
 
 const LOGIN_URL =
   process.env.NEXT_PUBLIC_RECRUITER_LOGIN_URL ||
@@ -84,6 +85,11 @@ function getRecruiterAccessUrl() {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  const marketingDemoResponse = getMarketingDemoResponse(request)
+  if (marketingDemoResponse) {
+    return marketingDemoResponse
+  }
 
   if (!isProtectedPage(pathname) && !isProtectedApi(pathname)) {
     return NextResponse.next()

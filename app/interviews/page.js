@@ -7,7 +7,7 @@ import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { copyText } from "@/lib/client/copy-to-clipboard"
-import { formatDateTime } from "@/lib/client/date-format"
+import { formatDate, formatDateTime, formatTime } from "@/lib/client/date-format"
 import { isSessionJsonCacheFresh, readSessionJsonCache, writeSessionJsonCache } from "@/lib/client/session-json-cache"
 
 import BackToDashboardLink from "../../components/BackToDashboardLink"
@@ -377,10 +377,14 @@ function normalizeRecruiterDecision(status) {
 }
 
 function formatLatestActivity(value) {
-  return formatDateTime(value, undefined, { withTimezone: false })
-    .replace(" â€¢ ", " ")
+  const time = formatTime(value, undefined, { withTimezone: false })
     .replace(/\bAM\b/, "A.M.")
     .replace(/\bPM\b/, "P.M.")
+
+  return {
+    date: formatDate(value),
+    time,
+  }
 }
 
 const tableMutedChip =
@@ -1003,7 +1007,7 @@ export default function InterviewsPage() {
           <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
             <table className="w-full table-fixed text-sm">
               <colgroup>
-                <col className="w-[10%]" />
+                <col className="w-[13%]" />
                 <col className="w-[9%]" />
                 <col className="w-[11%]" />
                 <col className="w-[10%]" />
@@ -1011,7 +1015,7 @@ export default function InterviewsPage() {
                 <col className="w-[7%]" />
                 <col className="w-[9%]" />
                 <col className="w-[11%]" />
-                <col className="w-[17%]" />
+                <col className="w-[14%]" />
                 <col className="w-[8%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
@@ -1056,11 +1060,12 @@ export default function InterviewsPage() {
                     const canRetryEmail = interviewStatus === "EMAIL_FAILED"
                     const hasHiringActions =
                       canTakeAction || canChangeDecision || canViewSummary || canCopyLink || canRetryPreparation || canRetryEmail
+                    const latestActivity = formatLatestActivity(getInterviewActivityValue(interview))
 
                     return (
                     <tr key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200">
                       <td className="px-4 py-5 font-medium text-white">
-                        <span className="block truncate" title={interview.candidateName || "Candidate"}>
+                        <span className="block break-words leading-snug" title={interview.candidateName || "Candidate"}>
                           {interview.candidateName}
                         </span>
                       </td>
@@ -1124,7 +1129,10 @@ export default function InterviewsPage() {
                           <span className="text-slate-600">-</span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-5 text-[13px] text-slate-400">{formatLatestActivity(getInterviewActivityValue(interview))}</td>
+                      <td className="px-3 py-5 text-[13px] leading-snug text-slate-400">
+                        <span className="block whitespace-nowrap">{latestActivity.date}</span>
+                        <span className="mt-0.5 block whitespace-nowrap text-slate-500">{latestActivity.time}</span>
+                      </td>
                       <td className="px-3 py-5 align-middle">
                         <div className="flex items-center justify-center gap-2">
                           {hasHiringActions ? (
