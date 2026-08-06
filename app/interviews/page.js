@@ -402,10 +402,10 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
   const answerSummaries = Array.isArray(interview.answerSummaries) ? interview.answerSummaries : []
 
   return (
-    <div className="hv-completed-summary-modal hv-theme-modal relative max-h-[88vh] overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
+    <div className="hv-completed-summary-modal hv-theme-modal relative flex max-h-[88vh] flex-col overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
         <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
 
-        <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div className="flex shrink-0 flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <div>
             <h3 className="text-2xl font-semibold text-white">Completed Interview Summary</h3>
             <p className="mt-2 text-sm text-slate-400">
@@ -435,7 +435,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
           </div>
         </div>
 
-        <div className="max-h-[74vh] overflow-auto px-6 py-6 sm:px-8">
+        <div className="min-h-0 flex-1 overflow-auto px-6 py-6 sm:px-8">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Score</p>
@@ -1230,7 +1230,7 @@ export default function InterviewsPage() {
       />
       {summaryInterview ? (
         <div
-          className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6 backdrop-blur-sm"
+          className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/75 px-4 py-6 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label={`Completed interview summary for ${summaryInterview.candidateName || "candidate"}`}
@@ -1240,7 +1240,7 @@ export default function InterviewsPage() {
             }
           }}
         >
-          <div className="w-full max-w-6xl">
+          <div className="my-auto w-full max-w-6xl">
             <CompletedInterviewDetails
               interview={summaryInterview}
               onClose={() => setSummaryInterviewId("")}

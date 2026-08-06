@@ -195,31 +195,55 @@ function drawSectionTitle(ctx: PdfContext, title: string) {
   ctx.y -= 22
 }
 
-function drawMetric(ctx: PdfContext, label: string, value: string, x: number, width: number) {
-  const height = 68
+const METRIC_VALUE_SIZE = 18
+const METRIC_VALUE_LINE_HEIGHT = 21
+const METRIC_TOP_PADDING = 24
+const METRIC_LABEL_GAP = 14
+const METRIC_BOTTOM_PADDING = 10
+
+// A metric's value (e.g. a long formatted date) can wrap to more than one
+// line in a narrow column. The label position and box height must be
+// derived from the actual wrapped line count, not a fixed offset — otherwise
+// a wrapped second line collides with the label drawn underneath it.
+function measureMetricHeight(ctx: PdfContext, value: string, width: number) {
+  const valueLines = wrapText(value, ctx.bold, METRIC_VALUE_SIZE, width - 28)
+  return (
+    METRIC_TOP_PADDING +
+    valueLines.length * METRIC_VALUE_LINE_HEIGHT +
+    METRIC_LABEL_GAP +
+    METRIC_BOTTOM_PADDING
+  )
+}
+
+function drawMetric(ctx: PdfContext, label: string, value: string, x: number, width: number, height: number) {
   ensureSpace(ctx, height)
+  const boxTop = ctx.y
   ctx.page.drawRectangle({
     x,
-    y: ctx.y - height + 10,
+    y: boxTop - height,
     width,
     height,
     borderColor: LINE,
     borderWidth: 0.75,
     color: rgb(0.97, 0.98, 0.99),
   })
+
+  const valueLines = wrapText(value, ctx.bold, METRIC_VALUE_SIZE, width - 28)
+  let lastLineY = boxTop - METRIC_TOP_PADDING
+  for (const line of valueLines) {
+    ctx.page.drawText(line, { x: x + 14, y: lastLineY, size: METRIC_VALUE_SIZE, font: ctx.bold, color: INK })
+    lastLineY -= METRIC_VALUE_LINE_HEIGHT
+  }
+  // lastLineY has already advanced one line height past the final value
+  // line; step back up to that line's baseline before applying the gap.
+  const labelY = lastLineY + METRIC_VALUE_LINE_HEIGHT - METRIC_LABEL_GAP
+
   ctx.page.drawText(label.toUpperCase(), {
     x: x + 14,
-    y: ctx.y - 15,
+    y: labelY,
     size: 8,
     font: ctx.bold,
     color: MUTED,
-  })
-  drawTextBlock(ctx, value, {
-    x: x + 14,
-    size: 18,
-    font: ctx.bold,
-    maxWidth: width - 28,
-    lineHeight: 21,
   })
 }
 
@@ -345,13 +369,23 @@ export async function generateCandidateReportPdf(organizationId: string, intervi
   ctx.y -= 12
 
   const metricWidth = (CONTENT_WIDTH - 24) / 3
+  const metrics: Array<[string, string]> = [
+    ["Score", formatScore(payload.score)],
+    ["Decision", payload.decision || "-"],
+    ["Completed", formatDate(payload.interview.endedAt || payload.interview.createdAt)],
+  ]
+  // All three boxes in the row share one height, sized to whichever value
+  // needs the most lines, so the row stays aligned and nothing overlaps
+  // regardless of which value (e.g. a long date) happens to wrap.
+  const metricHeight = Math.max(
+    ...metrics.map(([, value]) => measureMetricHeight(ctx, value, metricWidth)),
+  )
   const metricTop = ctx.y
-  drawMetric(ctx, "Score", formatScore(payload.score), MARGIN, metricWidth)
-  ctx.y = metricTop
-  drawMetric(ctx, "Decision", payload.decision || "-", MARGIN + metricWidth + 12, metricWidth)
-  ctx.y = metricTop
-  drawMetric(ctx, "Completed", formatDate(payload.interview.endedAt || payload.interview.createdAt), MARGIN + metricWidth * 2 + 24, metricWidth)
-  ctx.y = metricTop - 88
+  metrics.forEach(([label, value], index) => {
+    ctx.y = metricTop
+    drawMetric(ctx, label, value, MARGIN + index * (metricWidth + 12), metricWidth, metricHeight)
+  })
+  ctx.y = metricTop - metricHeight - 20
 
   drawSectionTitle(ctx, "Executive Summary")
   drawTextBlock(ctx, payload.summary, { size: 10.5, lineHeight: 16 })

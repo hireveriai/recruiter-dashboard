@@ -149,7 +149,7 @@ export default function ContactUsPage() {
   }
 
   return (
-    <main className="hv-preserve-dark min-h-screen overflow-x-hidden bg-[#050b16] text-white">
+    <main className="min-h-screen overflow-x-hidden bg-slate-950 text-white">
       <section className="relative px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(14,165,233,0.08)_1px,transparent_1px),linear-gradient(rgba(14,165,233,0.07)_1px,transparent_1px)] bg-[size:54px_54px]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_50%_0%,rgba(20,184,166,0.18),transparent_48%)]" />
