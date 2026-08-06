@@ -290,7 +290,14 @@ export async function getCandidatesDashboard(
         : row.final_score === null || row.final_score === undefined
           ? calculatedResult.score
         : Number(row.final_score)
-    const generatedRecruiterBrief = buildAnswerFallbackSummary(answerSummaries)
+    // Only fall back to a recomputed summary/score when there is no
+    // authoritative final_score for this interview — otherwise a recruiter
+    // sees two different percentages for the same candidate (the real score
+    // above, and this fallback's own independently-weighted recompute).
+    const hasAuthoritativeScore = row.final_score !== null && row.final_score !== undefined
+    const generatedRecruiterBrief = hasAuthoritativeScore
+      ? null
+      : buildAnswerFallbackSummary(answerSummaries)
     const aiSummaryFull = hasEvaluation
       ? [row.ai_summary, generatedRecruiterBrief].filter(Boolean).join("\n\n") || null
       : null

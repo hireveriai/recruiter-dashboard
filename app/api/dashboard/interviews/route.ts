@@ -333,22 +333,19 @@ function buildAnswerFallbackSummary(rows: Array<ReturnType<typeof mapAnswerSumma
     return null
   }
 
-  const scoredRows = rows
-    .map((row) => row.score)
-    .filter((score) => score !== null && score !== undefined)
-    .map((score) => toPercentScore(Number(score)))
-  const averageScore =
-    scoredRows.length > 0
-      ? Math.round(scoredRows.reduce((total, score) => total + Number(score), 0) / scoredRows.length)
-      : null
+  // This is a fallback summary shown ONLY when no authoritative score exists
+  // for the interview (see the aiSummary assembly below) — it must never be
+  // shown alongside the real score card, and it must report the exact same
+  // number used for that card (calculatedResult.score), not a second,
+  // differently-weighted average, or a non-technical recruiter sees two
+  // conflicting percentages for one interview.
   const answeredCount = rows.filter((row) => row.answerText && row.answerText !== "No response provided.").length
   const result = deriveResultFromAnswerSummaries(rows)
 
   return [
-    `Transcript captured ${rows.length} question${rows.length === 1 ? "" : "s"} with ${answeredCount} substantive answer${answeredCount === 1 ? "" : "s"}.`,
-    averageScore !== null ? `Average raw answer score from AI evaluation rows: ${averageScore}%.` : null,
-    result.score !== null ? `Final calculated result: ${result.score}% (${result.decision}).` : null,
-    "Review the transcript and per-answer AI feedback below for the detailed result.",
+    `The candidate answered ${answeredCount} of ${rows.length} question${rows.length === 1 ? "" : "s"}.`,
+    result.score !== null ? `Overall score: ${result.score}% (${result.decision}).` : null,
+    "Review the transcript and per-answer AI feedback below for details.",
   ].filter(Boolean).join("\n")
 }
 
@@ -909,7 +906,18 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       recordingUrl: recording?.recordingId ? `/recordings/${encodeURIComponent(recording.recordingId)}` : null,
       recordingStatus: recording?.recordingStatus ?? null,
       hasRecording: Boolean(recording?.recordingId && recording?.mediaUrl),
-      aiSummary: [evaluation?.aiSummary, buildAnswerFallbackSummary(answerSummaries)].filter(Boolean).join("\n\n") || null,
+      // buildAnswerFallbackSummary recomputes its own score from the answer
+      // rows. That's fine as a stand-in when no authoritative score exists
+      // yet, but it must never run alongside evaluation.finalScore (the
+      // number shown in the score card above) — a recruiter has no way to
+      // know which of two different percentages for the same interview is
+      // the real one.
+      aiSummary: [
+        evaluation?.aiSummary,
+        evaluation?.finalScore === null || evaluation?.finalScore === undefined
+          ? buildAnswerFallbackSummary(answerSummaries)
+          : null,
+      ].filter(Boolean).join("\n\n") || null,
       answerSummaries,
       detailsLoaded: options.includeAnswers !== false,
       createdAt: interview.createdAt,

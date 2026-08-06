@@ -137,7 +137,10 @@ function mapSessionQuestionFallbackRow(
     questionSource: row.question_source,
     skill: null,
     score: null,
-    feedback: "Recovered for display from the recording transcript because the live answer row was missing.",
+    // No evaluation row exists for this reconstructed answer, so leave
+    // feedback unset rather than surfacing an internal recovery-mechanism
+    // note as if it were AI feedback on the candidate's answer.
+    feedback: null,
     skillScore: null,
     clarityScore: null,
     depthScore: null,
