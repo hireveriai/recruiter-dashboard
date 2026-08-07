@@ -14,8 +14,8 @@ export default function InterviewReplayAction({
   compact = false,
 }: InterviewReplayActionProps) {
   const className = compact
-    ? "group/replay inline-flex w-full min-w-0 items-center gap-3 rounded-2xl border border-cyan-300/25 bg-cyan-400/10 px-4 py-3 text-left text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.08)] transition duration-200 hover:border-cyan-200/45 hover:bg-cyan-300/15 hover:shadow-[0_0_34px_rgba(34,211,238,0.14)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
-    : "group/replay inline-flex w-full min-w-0 items-center gap-4 rounded-2xl border border-cyan-300/25 bg-[linear-gradient(135deg,rgba(34,211,238,0.16),rgba(59,130,246,0.08))] px-4 py-4 text-left text-cyan-50 shadow-[0_0_34px_rgba(34,211,238,0.1)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200/50 hover:shadow-[0_0_42px_rgba(34,211,238,0.16)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
+    ? "group/replay inline-flex w-full min-w-0 items-center gap-3 rounded-2xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.55),rgba(15,23,42,0.8))] px-4 py-3 text-left text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.06)] transition duration-200 hover:border-cyan-200/35 hover:bg-cyan-500/10 hover:shadow-[0_0_34px_rgba(34,211,238,0.1)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
+    : "group/replay inline-flex w-full min-w-0 items-center gap-4 rounded-2xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.55),rgba(15,23,42,0.8))] px-4 py-4 text-left text-cyan-50 shadow-[0_0_34px_rgba(34,211,238,0.08)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200/40 hover:shadow-[0_0_42px_rgba(34,211,238,0.12)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
 
   if (!href) {
     return (
@@ -41,7 +41,7 @@ export default function InterviewReplayAction({
       className={className}
       aria-label={`Open interview replay for ${candidateName}`}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/15 text-cyan-50 transition group-hover/replay:bg-cyan-200/20">▶</span>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-200/15 bg-cyan-300/10 text-cyan-100 transition group-hover/replay:bg-cyan-300/15">▶</span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">Open Interview Replay</span>
         <span className="mt-1 hidden truncate text-xs text-cyan-100/70 sm:block">Replay video, transcript, and timeline signals</span>
