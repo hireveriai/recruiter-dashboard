@@ -41,11 +41,13 @@ export default function InterviewReplayAction({
       className={className}
       aria-label={`Open interview replay for ${candidateName}`}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white transition group-hover/replay:bg-white/20">▶</span>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-[linear-gradient(150deg,rgba(255,255,255,0.34),rgba(255,255,255,0.1))] text-white shadow-[0_2px_6px_rgba(3,50,75,0.35),inset_0_1px_0_rgba(255,255,255,0.4)] transition duration-200 group-hover/replay:border-white/45 group-hover/replay:bg-[linear-gradient(150deg,rgba(255,255,255,0.44),rgba(255,255,255,0.14))]">
+        <span className="ml-0.5 drop-shadow-[0_1px_1px_rgba(3,50,75,0.4)]">▶</span>
+      </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold">Open Interview Replay</span>
+        <span className="block truncate text-sm font-semibold text-white drop-shadow-[0_1px_2px_rgba(3,50,75,0.35)]">Open Interview Replay</span>
         <span
-          className="mt-1 hidden truncate text-xs text-white/75 sm:block"
+          className="mt-1 hidden truncate text-xs text-white/80 sm:block"
           title="Replay video, transcript, and timeline signals"
         >
           Replay video, transcript, and timeline signals
