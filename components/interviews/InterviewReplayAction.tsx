@@ -14,8 +14,8 @@ export default function InterviewReplayAction({
   compact = false,
 }: InterviewReplayActionProps) {
   const className = compact
-    ? "group/replay inline-flex w-full min-w-0 items-center gap-3 rounded-2xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.55),rgba(15,23,42,0.8))] px-4 py-3 text-left text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.06)] transition duration-200 hover:border-cyan-200/35 hover:bg-cyan-500/10 hover:shadow-[0_0_34px_rgba(34,211,238,0.1)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
-    : "group/replay inline-flex w-full min-w-0 items-center gap-4 rounded-2xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.55),rgba(15,23,42,0.8))] px-4 py-4 text-left text-cyan-50 shadow-[0_0_34px_rgba(34,211,238,0.08)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200/40 hover:shadow-[0_0_42px_rgba(34,211,238,0.12)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
+    ? "hv-preserve-dark group/replay inline-flex w-full min-w-0 items-center gap-3 rounded-2xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.55),rgba(15,23,42,0.8))] px-4 py-3 text-left text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.06)] transition duration-200 hover:border-cyan-200/35 hover:bg-cyan-500/10 hover:shadow-[0_0_34px_rgba(34,211,238,0.1)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
+    : "hv-preserve-dark group/replay inline-flex w-full min-w-0 items-center gap-4 rounded-2xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.55),rgba(15,23,42,0.8))] px-4 py-4 text-left text-cyan-50 shadow-[0_0_34px_rgba(34,211,238,0.08)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200/40 hover:shadow-[0_0_42px_rgba(34,211,238,0.12)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
 
   if (!href) {
     return (
