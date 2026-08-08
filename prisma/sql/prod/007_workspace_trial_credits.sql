@@ -1,8 +1,8 @@
 -- Workspace-scoped free trial credits for new recruiter organizations.
 create table if not exists public.workspace_trial_credits (
   organization_id uuid primary key references public.organizations(organization_id) on delete cascade,
-  interview_credits_remaining integer not null default 5,
-  screening_credits_remaining integer not null default 15,
+  interview_credits_remaining integer not null default 10,
+  screening_credits_remaining integer not null default 25,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint workspace_trial_credits_interview_non_negative check (interview_credits_remaining >= 0),
@@ -16,8 +16,8 @@ insert into public.workspace_trial_credits (
 )
 select
   o.organization_id,
-  5,
-  15
+  10,
+  25
 from public.organizations o
 where not exists (
   select 1
@@ -40,8 +40,8 @@ begin
   )
   values (
     new.organization_id,
-    5,
-    15
+    10,
+    25
   )
   on conflict (organization_id) do nothing;
 

@@ -3,8 +3,8 @@ import { Prisma } from "@prisma/client"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 
-export const FREE_TRIAL_INTERVIEW_CREDITS = 5
-export const FREE_TRIAL_SCREENING_CREDITS = 15
+export const FREE_TRIAL_INTERVIEW_CREDITS = 10
+export const FREE_TRIAL_SCREENING_CREDITS = 25
 export const FREE_TRIAL_LIMIT_MESSAGE =
   "You’ve reached your free trial limit. Upgrade your workspace to continue conducting interviews and screenings."
 
