@@ -2458,7 +2458,7 @@ export default function AiScreeningPage() {
         </div>
 
         {(notice || error) ? (
-          <section className="mt-6 rounded-2xl border border-slate-800 bg-[#0f172a] px-5 py-4">
+          <section className="hv-preserve-dark mt-6 rounded-2xl border border-slate-800 bg-[#0f172a] px-5 py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className={`text-sm font-medium ${error ? "text-rose-200" : "text-slate-200"}`}>
