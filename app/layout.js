@@ -13,10 +13,6 @@ export const metadata = {
   description:
     "Recruiter workspace for secure interview orchestration, reviewable candidate evidence, and human-controlled hiring decisions.",
   applicationName: "HireVeri Recruiter",
-  icons: {
-    icon: "/icon.svg",
-    shortcut: "/favicon.ico",
-  },
 };
 
 const GA_MEASUREMENT_ID = "G-N6GNKTH5LY";
