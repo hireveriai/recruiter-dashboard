@@ -12,6 +12,7 @@ import { logoutRecruiter } from "@/lib/client/logout";
 import { DEFAULT_RECRUITER_PERMISSION_PROFILE, canAccessFeature } from "@/lib/client/permissions";
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params";
 import ThemeSelector from "@/components/ThemeSelector";
+import { useTheme } from "@/components/ThemeProvider";
 
 const CreateJobModal = dynamic(() => import("./CreateJobModal"), {
   ssr: false,
@@ -215,6 +216,8 @@ function cacheAlerts(alerts) {
 }
 
 export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, initialProfile = null, initialAlerts = undefined }) {
+  const { resolvedTheme } = useTheme();
+  const logoSrc = resolvedTheme === "light" ? "/hireveri_logo_light.png" : "/hireveri_logo.png";
   const pathname = usePathname();
   const searchParams = useAuthSearchParams();
   const menuRef = useRef(null);
@@ -573,7 +576,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
             >
               <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm transition-all duration-200 group-hover:border-slate-500">
                 <Image
-                  src="/hireveri_logo.png"
+                  src={logoSrc}
                   alt=""
                   width={88}
                   height={88}
