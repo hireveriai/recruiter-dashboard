@@ -113,7 +113,7 @@ function JobDescriptionCell({ description }) {
       </div>
 
       {value ? (
-        <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-[520px] max-w-[42vw] rounded-2xl border border-slate-700 bg-[#1f2937] px-4 py-3 text-sm leading-7 text-slate-100 shadow-[0_18px_48px_rgba(2,6,23,0.45)] group-hover:block">
+        <div className="hv-preserve-dark pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-[520px] max-w-[42vw] rounded-2xl border border-slate-700 bg-[#1f2937] px-4 py-3 text-sm leading-7 text-slate-100 shadow-[0_18px_48px_rgba(2,6,23,0.45)] group-hover:block">
           <div className="line-clamp-[20] whitespace-pre-wrap break-words">
             {value}
           </div>
@@ -138,7 +138,7 @@ function JobSkillsCell({ skills }) {
       </div>
 
       {value ? (
-        <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-[460px] max-w-[38vw] rounded-2xl border border-slate-700 bg-[#1f2937] px-4 py-3 text-sm leading-7 text-slate-100 shadow-[0_18px_48px_rgba(2,6,23,0.45)] group-hover:block">
+        <div className="hv-preserve-dark pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-[460px] max-w-[38vw] rounded-2xl border border-slate-700 bg-[#1f2937] px-4 py-3 text-sm leading-7 text-slate-100 shadow-[0_18px_48px_rgba(2,6,23,0.45)] group-hover:block">
           <div className="line-clamp-[20] whitespace-pre-wrap break-words">
             {value}
           </div>
@@ -557,7 +557,7 @@ export default function JobsPage() {
                               </button>
 
                               {openActionMenuJobId === job.jobId ? (
-                                <div className="absolute right-0 top-[calc(100%+10px)] z-30 w-44 overflow-hidden rounded-2xl border border-slate-800 bg-[#111a2d]/98 p-2 shadow-[0_20px_60px_rgba(2,6,23,0.42)]">
+                                <div className="hv-preserve-dark absolute right-0 top-[calc(100%+10px)] z-30 w-44 overflow-hidden rounded-2xl border border-slate-800 bg-[#111a2d]/98 p-2 shadow-[0_20px_60px_rgba(2,6,23,0.42)]">
                                   {supportsJobActiveState ? (
                                     <button
                                       type="button"

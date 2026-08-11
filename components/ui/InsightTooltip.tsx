@@ -99,7 +99,7 @@ export function InsightTooltip({ text, preview, showHint = true }: InsightToolti
     <div
       id={tooltipId}
       role="tooltip"
-      className="fixed z-[9999] min-w-[300px] max-w-[380px] rounded-xl border border-white/10 bg-[#0B1220] p-4 text-[12px] leading-[1.45] text-gray-200 opacity-100 shadow-2xl shadow-slate-950/50 transition duration-150 ease-out animate-in fade-in-0 slide-in-from-bottom-1"
+      className="hv-preserve-dark fixed z-[9999] min-w-[300px] max-w-[380px] rounded-xl border border-white/10 bg-[#0B1220] p-4 text-[12px] leading-[1.45] text-gray-200 opacity-100 shadow-2xl shadow-slate-950/50 transition duration-150 ease-out animate-in fade-in-0 slide-in-from-bottom-1"
       style={{ left: position.left, top: position.top }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {

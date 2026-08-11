@@ -124,7 +124,7 @@ function NoticeModal({ open, title, message, onClose, tone = "error" }) {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-md">
-      <div className="w-full max-w-xl rounded-[28px] border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] p-6 shadow-[0_0_80px_rgba(34,211,238,0.12)]">
+      <div className="hv-preserve-dark w-full max-w-xl rounded-[28px] border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] p-6 shadow-[0_0_80px_rgba(34,211,238,0.12)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-2xl font-semibold text-white">{title}</h3>
