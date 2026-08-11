@@ -333,7 +333,7 @@ function WorkflowAction({ step, onAction, highlighted = false }) {
   const baseClass = [
     "inline-flex items-center justify-center rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition duration-200",
     highlighted
-      ? "border-white/20 bg-white text-slate-950 shadow-[0_10px_30px_rgba(255,255,255,0.12)] hover:bg-cyan-50"
+      ? "hv-preserve-dark border-white/20 bg-white text-slate-950 shadow-[0_10px_30px_rgba(255,255,255,0.12)] hover:bg-cyan-50"
       : "border-white/10 bg-white/10 text-white hover:border-white/25 hover:bg-white/15",
   ].join(" ")
 
