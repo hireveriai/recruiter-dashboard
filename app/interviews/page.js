@@ -167,27 +167,32 @@ function getRecruiterStatus(interview) {
   }
 }
 
+// Every message states who/what caused the interruption up front, so a
+// recruiter can immediately tell a candidate-side problem (their network,
+// device, browser) apart from a HireVeri platform problem (our video/camera
+// service) without needing to guess or ask engineering.
 const INTERRUPTION_REASON_LABELS = {
-  NETWORK_DISCONNECT_TIMEOUT: "Network connection was lost and could not recover in time.",
-  HEARTBEAT_TIMEOUT: "The interview connection stopped responding. Completed answers were preserved for partial evaluation.",
-  HEARTBEAT_FAILURE: "The interview connection stopped responding. Completed answers were preserved for partial evaluation.",
-  "HEARTBEAT TIMED OUT": "The interview connection stopped responding. Completed answers were preserved for partial evaluation.",
-  WATCHDOG_TIMEOUT: "The candidate session stopped responding and was closed automatically.",
-  SESSION_TIME_EXPIRED: "The interview time expired before finalization completed.",
-  TIMEOUT: "The interview timed out before it could finish.",
-  TIME_EXPIRED: "The interview time expired before it could finish.",
-  CAMERA_STREAM: "Legacy camera lifecycle signal; this may have been caused by an internal camera restart.",
-  "CAMERA STREAM INTERRUPTED.": "Legacy camera lifecycle signal; this may have been caused by an internal camera restart.",
-  CAMERA_TRACK_ENDED: "The browser reported that the candidate camera track ended unexpectedly.",
-  CAMERA_ACQUISITION_FAILED: "The browser could not access the candidate camera.",
-  LIVEKIT_ROOM: "Legacy realtime lifecycle signal; this may have been caused by an internal room restart.",
-  "REALTIME INTERVIEW LINK WAS INTERRUPTED.": "Legacy realtime lifecycle signal; this may have been caused by an internal room restart.",
-  LIVEKIT_DISCONNECTED: "The realtime interview connection ended unexpectedly after LiveKit recovery was exhausted.",
-  CAMERA_FAILURE: "The camera became unavailable during the interview.",
-  MICROPHONE_FAILURE: "The microphone became unavailable during the interview.",
-  BROWSER_CLOSE: "The browser or interview tab was closed unexpectedly.",
-  TAB_CLOSE: "The interview tab was closed unexpectedly.",
-  DISCONNECT: "The candidate lost connection during the interview.",
+  NETWORK_DISCONNECT_TIMEOUT: "Candidate-side network issue: their internet connection dropped and did not reconnect in time.",
+  HEARTBEAT_TIMEOUT: "Candidate-side connectivity issue: their device stopped responding, most likely due to a weak or unstable internet connection. Answers submitted before the drop were preserved for evaluation.",
+  HEARTBEAT_FAILURE: "Candidate-side connectivity issue: their device stopped responding, most likely due to a weak or unstable internet connection. Answers submitted before the drop were preserved for evaluation.",
+  "HEARTBEAT TIMED OUT": "Candidate-side connectivity issue: their device stopped responding, most likely due to a weak or unstable internet connection. Answers submitted before the drop were preserved for evaluation.",
+  WATCHDOG_TIMEOUT: "Candidate-side connectivity issue: their connection kept failing to recover, so HireVeri automatically closed the session after repeated reconnect attempts.",
+  EXCESSIVE_RECONNECTS: "Candidate-side connectivity issue: their connection repeatedly dropped and reconnected throughout the session (usually unstable WiFi or mobile data), so HireVeri automatically closed it rather than let it continue indefinitely.",
+  SESSION_TIME_EXPIRED: "Candidate did not finish within the scheduled interview time window.",
+  TIMEOUT: "Candidate did not finish before the allotted interview time ran out.",
+  TIME_EXPIRED: "Candidate did not finish before the allotted interview time ran out.",
+  CAMERA_STREAM: "HireVeri platform issue: an internal camera-service restart interrupted the session. Not caused by the candidate.",
+  "CAMERA STREAM INTERRUPTED.": "HireVeri platform issue: an internal camera-service restart interrupted the session. Not caused by the candidate.",
+  CAMERA_TRACK_ENDED: "Candidate-side device issue: their browser reported the camera feed ending unexpectedly (often the OS or browser revoking camera access mid-interview).",
+  CAMERA_ACQUISITION_FAILED: "Candidate-side device issue: their browser could not access the camera (often a permissions or device issue on their end).",
+  LIVEKIT_ROOM: "HireVeri platform issue: an internal realtime video-service restart interrupted the session. Not caused by the candidate.",
+  "REALTIME INTERVIEW LINK WAS INTERRUPTED.": "HireVeri platform issue: an internal realtime video-service restart interrupted the session. Not caused by the candidate.",
+  LIVEKIT_DISCONNECTED: "Connection issue (candidate network or a temporary platform issue): the realtime video connection was lost and did not recover even after automatic reconnect attempts.",
+  CAMERA_FAILURE: "Candidate-side device issue: their camera became unavailable during the interview.",
+  MICROPHONE_FAILURE: "Candidate-side device issue: their microphone became unavailable during the interview.",
+  BROWSER_CLOSE: "Candidate closed the browser or interview tab before finishing.",
+  TAB_CLOSE: "Candidate closed the interview tab before finishing.",
+  DISCONNECT: "Candidate-side network issue: they lost their internet connection during the interview.",
 }
 
 function getInterruptionReason(interview) {
