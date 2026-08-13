@@ -164,8 +164,8 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermission
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/75 px-3 py-4 backdrop-blur-sm sm:px-4" role="dialog" aria-modal="true">
-      <div className="hv-preserve-dark flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#0f172a,#0a1222)] shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+    <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/75 px-3 py-4 backdrop-blur-sm sm:px-4" role="dialog" aria-modal="true">
+      <div className="hv-theme-modal flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#0f172a,#0a1222)] shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
         <div className="shrink-0 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -273,7 +273,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermission
             type="button"
             disabled={submitting}
             onClick={() => onSubmit({ fullName, email, recruiterRoleId, permissionCodes: selectedPermissions })}
-            className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="hv-solid-action rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Saving..." : "Add User"}
           </button>
@@ -322,8 +322,8 @@ function EditUserModal({ isOpen, member, availableRoles, allPermissions, saving,
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/75 px-3 py-4 backdrop-blur-sm sm:px-4" role="dialog" aria-modal="true">
-      <div className="hv-preserve-dark flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#0f172a,#0a1222)] shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+    <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/75 px-3 py-4 backdrop-blur-sm sm:px-4" role="dialog" aria-modal="true">
+      <div className="hv-theme-modal flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#0f172a,#0a1222)] shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
         <div className="shrink-0 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -435,7 +435,7 @@ function EditUserModal({ isOpen, member, availableRoles, allPermissions, saving,
             type="button"
             disabled={saving}
             onClick={() => onSubmit({ userId: member.userId, recruiterRoleId, isActive, permissionCodes: selectedPermissions })}
-            className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="hv-solid-action rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
@@ -946,4 +946,3 @@ export default function ManageTeamPage() {
     </main>
   );
 }
-

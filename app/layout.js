@@ -22,7 +22,7 @@ const THEME_INITIALIZER = `
       const storedTheme = localStorage.getItem("hireveri-theme");
       const preference = ["dark", "light"].includes(storedTheme)
         ? storedTheme
-        : "dark";
+        : "light";
       const root = document.documentElement;
 
       if (storedTheme && storedTheme !== preference) {
@@ -34,17 +34,17 @@ const THEME_INITIALIZER = `
       root.classList.toggle("dark", preference === "dark");
       root.style.colorScheme = preference;
     } catch {
-      document.documentElement.dataset.themePreference = "dark";
-      document.documentElement.dataset.theme = "dark";
-      document.documentElement.classList.add("dark");
-      document.documentElement.style.colorScheme = "dark";
+      document.documentElement.dataset.themePreference = "light";
+      document.documentElement.dataset.theme = "light";
+      document.documentElement.classList.remove("dark");
+      document.documentElement.style.colorScheme = "light";
     }
   })();
 `;
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark" data-theme="dark" data-theme-preference="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="light" data-theme-preference="light" suppressHydrationWarning>
       <head>
         <Script id="hireveri-theme" strategy="beforeInteractive">
           {THEME_INITIALIZER}

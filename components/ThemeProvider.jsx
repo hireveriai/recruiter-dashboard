@@ -6,8 +6,8 @@ const THEME_STORAGE_KEY = "hireveri-theme";
 const THEME_VALUES = new Set(["dark", "light"]);
 
 const ThemeContext = createContext({
-  theme: "dark",
-  resolvedTheme: "dark",
+  theme: "light",
+  resolvedTheme: "light",
   setTheme: () => {},
 });
 
@@ -23,8 +23,8 @@ function applyTheme(theme) {
 }
 
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState("dark");
-  const [resolvedTheme, setResolvedTheme] = useState("dark");
+  const [theme, setThemeState] = useState("light");
+  const [resolvedTheme, setResolvedTheme] = useState("light");
 
   useEffect(() => {
     const rootPreference = document.documentElement.dataset.themePreference;
@@ -33,7 +33,7 @@ export function ThemeProvider({ children }) {
       ? storedPreference
       : THEME_VALUES.has(rootPreference)
         ? rootPreference
-        : "dark";
+        : "light";
 
     const initialResolvedTheme = applyTheme(initialTheme);
     queueMicrotask(() => {
