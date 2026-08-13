@@ -66,7 +66,7 @@ function getInviteStatusTone(status) {
 
 function PermissionSelector({ allPermissions, selectedPermissions, onToggle, onSelectAll, onClear }) {
   return (
-    <div className="mt-5 max-h-[320px] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
+    <div className="hv-team-permissions mt-5 max-h-[320px] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Permissions</p>
         <div className="flex gap-2">
@@ -96,7 +96,7 @@ function PermissionSelector({ allPermissions, selectedPermissions, onToggle, onS
             return (
               <label
                 key={permission.code}
-                className={`flex cursor-pointer gap-2 rounded-xl border px-2.5 py-2 transition ${
+                className={`hv-team-permission-card flex cursor-pointer gap-2 rounded-xl border px-2.5 py-2 transition ${
                   checked
                     ? "border-blue-400/30 bg-blue-500/10"
                     : "border-slate-700 bg-slate-900/75 hover:border-slate-500"
@@ -165,8 +165,8 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermission
 
   return (
     <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/75 px-3 py-4 backdrop-blur-sm sm:px-4" role="dialog" aria-modal="true">
-      <div className="hv-theme-modal flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#0f172a,#0a1222)] shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
-        <div className="shrink-0 px-5 pt-5 sm:px-6 sm:pt-6">
+      <div className="hv-team-modal hv-theme-modal flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#0f172a,#0a1222)] shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+        <div className="hv-team-modal-header shrink-0 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.32em] text-blue-300/80">Team Provisioning</p>
@@ -192,7 +192,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermission
             <input
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
+              className="hv-team-control w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
               placeholder="Enter full name"
             />
           </div>
@@ -203,7 +203,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermission
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
+              className="hv-team-control w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
               placeholder="user@company.com"
             />
           </div>
@@ -214,7 +214,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermission
           <select
             value={recruiterRoleId}
             onChange={(event) => handleRoleChange(event.target.value)}
-            className="w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
+            className="hv-team-control w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
           >
             <option value="">Select role</option>
             {availableRoles.map((role) => (
@@ -225,7 +225,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermission
           </select>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
+        <div className="hv-team-section mt-5 rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Role Default</p>
           {!selectedRole ? (
             <p className="mt-3 text-sm text-slate-400">Select a role to preview the permission set.</p>
@@ -261,7 +261,7 @@ function AddUserModal({ isOpen, onClose, onSubmit, availableRoles, allPermission
         ) : null}
         </div>
 
-        <div className="sticky bottom-0 z-10 flex shrink-0 justify-end gap-3 border-t border-slate-800/80 bg-slate-950/70 px-5 py-4 backdrop-blur-xl sm:px-6">
+        <div className="hv-team-modal-footer sticky bottom-0 z-10 flex shrink-0 justify-end gap-3 border-t border-slate-800/80 bg-slate-950/70 px-5 py-4 backdrop-blur-xl sm:px-6">
           <button
             type="button"
             onClick={onClose}
@@ -323,8 +323,8 @@ function EditUserModal({ isOpen, member, availableRoles, allPermissions, saving,
 
   return (
     <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/75 px-3 py-4 backdrop-blur-sm sm:px-4" role="dialog" aria-modal="true">
-      <div className="hv-theme-modal flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#0f172a,#0a1222)] shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
-        <div className="shrink-0 px-5 pt-5 sm:px-6 sm:pt-6">
+      <div className="hv-team-modal hv-theme-modal flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#0f172a,#0a1222)] shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+        <div className="hv-team-modal-header shrink-0 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.32em] text-blue-300/80">Team Access</p>
@@ -354,7 +354,7 @@ function EditUserModal({ isOpen, member, availableRoles, allPermissions, saving,
           <select
             value={recruiterRoleId}
             onChange={(event) => handleRoleChange(event.target.value)}
-            className="w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
+            className="hv-team-control w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-blue-400/40"
           >
             <option value="">Select role</option>
             {availableRoles.map((role) => (
@@ -387,7 +387,7 @@ function EditUserModal({ isOpen, member, availableRoles, allPermissions, saving,
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
+        <div className="hv-team-section mt-5 rounded-2xl border border-slate-800 bg-slate-950/35 p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Role Default</p>
           {!selectedRole ? (
             <p className="mt-3 text-sm text-slate-400">Select a role to preview the permission set.</p>
@@ -423,7 +423,7 @@ function EditUserModal({ isOpen, member, availableRoles, allPermissions, saving,
         ) : null}
         </div>
 
-        <div className="sticky bottom-0 z-10 flex shrink-0 justify-end gap-3 border-t border-slate-800/80 bg-slate-950/70 px-5 py-4 backdrop-blur-xl sm:px-6">
+        <div className="hv-team-modal-footer sticky bottom-0 z-10 flex shrink-0 justify-end gap-3 border-t border-slate-800/80 bg-slate-950/70 px-5 py-4 backdrop-blur-xl sm:px-6">
           <button
             type="button"
             onClick={onClose}

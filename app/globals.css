@@ -356,6 +356,83 @@ body {
   background-color: rgba(241, 245, 249, 0.84);
 }
 
+:root[data-theme="light"] .hv-team-modal {
+  position: relative;
+  border-color: rgba(96, 165, 250, 0.34);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(56, 189, 248, 0.13), transparent 19rem),
+    radial-gradient(circle at 92% 3%, rgba(99, 102, 241, 0.09), transparent 17rem),
+    linear-gradient(180deg, #ffffff, #f8fbff);
+  box-shadow:
+    0 38px 100px rgba(15, 23, 42, 0.24),
+    0 12px 36px rgba(37, 99, 235, 0.1),
+    inset 0 1px 0 #ffffff;
+}
+
+:root[data-theme="light"] .hv-team-modal::before {
+  position: absolute;
+  inset: 0 30px auto;
+  z-index: 2;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, #0ea5e9, #2563eb 52%, #8b5cf6);
+  content: "";
+}
+
+:root[data-theme="light"] .hv-team-modal-header {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(105deg, rgba(239, 246, 255, 0.72), rgba(255, 255, 255, 0.25));
+}
+
+:root[data-theme="light"] .hv-team-control {
+  border-color: #cbd8e8;
+  background: #ffffff;
+  box-shadow:
+    0 5px 14px rgba(15, 23, 42, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+:root[data-theme="light"] .hv-team-control:hover {
+  border-color: #9db4cf;
+}
+
+:root[data-theme="light"] .hv-team-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12), 0 8px 18px rgba(37, 99, 235, 0.08);
+}
+
+:root[data-theme="light"] .hv-team-section,
+:root[data-theme="light"] .hv-team-permissions {
+  border-color: rgba(148, 163, 184, 0.32);
+  background: rgba(248, 251, 255, 0.9);
+  box-shadow: inset 0 1px 0 #ffffff, 0 8px 22px rgba(15, 23, 42, 0.045);
+}
+
+:root[data-theme="light"] .hv-team-permission-card {
+  border-color: #d5e0ed;
+  background: #ffffff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.045);
+}
+
+:root[data-theme="light"] .hv-team-permission-card:hover {
+  border-color: #93c5fd;
+  background: #f8fbff;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.08);
+}
+
+:root[data-theme="light"] .hv-team-permission-card:has(input:checked) {
+  border-color: #60a5fa;
+  background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.11);
+}
+
+:root[data-theme="light"] .hv-team-modal-footer {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 -12px 28px rgba(15, 23, 42, 0.06);
+}
+
 :root[data-theme="light"] .hv-candidate-review-header {
   border-color: rgba(148, 163, 184, 0.28);
   background: rgba(255, 255, 255, 0.5);
