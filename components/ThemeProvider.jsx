@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const THEME_STORAGE_KEY = "hireveri-theme";
-const THEME_VALUES = new Set(["dark", "light", "system"]);
+const THEME_VALUES = new Set(["dark", "light"]);
 
 const ThemeContext = createContext({
   theme: "dark",
@@ -11,20 +11,15 @@ const ThemeContext = createContext({
   setTheme: () => {},
 });
 
-function getSystemTheme() {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 function applyTheme(theme) {
-  const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
   const root = document.documentElement;
 
   root.dataset.themePreference = theme;
-  root.dataset.theme = resolvedTheme;
-  root.classList.toggle("dark", resolvedTheme === "dark");
-  root.style.colorScheme = resolvedTheme;
+  root.dataset.theme = theme;
+  root.classList.toggle("dark", theme === "dark");
+  root.style.colorScheme = theme;
 
-  return resolvedTheme;
+  return theme;
 }
 
 export function ThemeProvider({ children }) {
@@ -46,20 +41,6 @@ export function ThemeProvider({ children }) {
       setResolvedTheme(initialResolvedTheme);
     });
   }, []);
-
-  useEffect(() => {
-    if (theme !== "system") {
-      return undefined;
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleSystemThemeChange = () => {
-      setResolvedTheme(applyTheme("system"));
-    };
-
-    mediaQuery.addEventListener("change", handleSystemThemeChange);
-    return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
-  }, [theme]);
 
   const setTheme = (nextTheme) => {
     if (!THEME_VALUES.has(nextTheme)) {

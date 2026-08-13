@@ -118,7 +118,7 @@ function getRecruiterAppUrl() {
     process.env.RECRUITER_APP_URL ||
     process.env.NEXT_PUBLIC_RECRUITER_APP_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "https://recruiter.verihireai.work"
+    "https://recruiter.hireveri.com"
   )
 }
 

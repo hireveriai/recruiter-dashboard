@@ -20,18 +20,19 @@ const THEME_INITIALIZER = `
   (() => {
     try {
       const storedTheme = localStorage.getItem("hireveri-theme");
-      const preference = ["dark", "light", "system"].includes(storedTheme)
+      const preference = ["dark", "light"].includes(storedTheme)
         ? storedTheme
         : "dark";
-      const resolvedTheme = preference === "system"
-        ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-        : preference;
       const root = document.documentElement;
 
+      if (storedTheme && storedTheme !== preference) {
+        localStorage.setItem("hireveri-theme", preference);
+      }
+
       root.dataset.themePreference = preference;
-      root.dataset.theme = resolvedTheme;
-      root.classList.toggle("dark", resolvedTheme === "dark");
-      root.style.colorScheme = resolvedTheme;
+      root.dataset.theme = preference;
+      root.classList.toggle("dark", preference === "dark");
+      root.style.colorScheme = preference;
     } catch {
       document.documentElement.dataset.themePreference = "dark";
       document.documentElement.dataset.theme = "dark";
