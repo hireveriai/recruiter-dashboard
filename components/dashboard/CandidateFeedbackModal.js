@@ -5,8 +5,19 @@ import { Mail, Sparkles } from "lucide-react"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function parseCcInput(value) {
+  return value
+    .split(/[,\n]/)
+    .map((email) => email.trim())
+    .filter(Boolean)
+}
+
 export function CandidateFeedbackModal({ interview, searchParams, onClose, onSent }) {
   const [text, setText] = useState("")
+  const [toEmail, setToEmail] = useState("")
+  const [ccInput, setCcInput] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState("")
@@ -17,12 +28,16 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
   useEffect(() => {
     if (!interview) {
       setText("")
+      setToEmail("")
+      setCcInput("")
       setError("")
       setSentAt(null)
       return
     }
 
     setSentAt(interview.candidateFeedbackSentAt || null)
+    setToEmail(interview.candidateEmail || "")
+    setCcInput("")
 
     if (interview.candidateFeedbackText) {
       setText(interview.candidateFeedbackText)
@@ -59,7 +74,21 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
   async function handleSend() {
     if (!interview || !text.trim()) return
 
-    if (!window.confirm(`Send this feedback to ${interview.candidateName || "the candidate"}${interview.candidateEmail ? ` (${interview.candidateEmail})` : ""}?`)) {
+    const trimmedTo = toEmail.trim()
+    if (!trimmedTo || !EMAIL_PATTERN.test(trimmedTo)) {
+      setError("Enter a valid recipient email before sending.")
+      return
+    }
+
+    const ccList = parseCcInput(ccInput)
+    const invalidCc = ccList.find((email) => !EMAIL_PATTERN.test(email))
+    if (invalidCc) {
+      setError(`"${invalidCc}" is not a valid email address.`)
+      return
+    }
+
+    const recipientSummary = [trimmedTo, ...ccList].join(", ")
+    if (!window.confirm(`Send this feedback to ${recipientSummary}?`)) {
       return
     }
 
@@ -72,7 +101,7 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text, to: trimmedTo, cc: ccList }),
         }
       )
       const data = await response.json()
@@ -124,16 +153,40 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
               scores, risk flags, or a hiring decision. Review and edit before sending.
             </p>
 
-            {interview?.candidateEmail ? (
-              <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2.5 text-sm text-slate-300">
-                <Mail className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
-                Will be sent to <span className="font-semibold text-white">{interview.candidateEmail}</span>
+            <div className="mb-4 grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <label htmlFor="candidate-feedback-to" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  <Mail className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
+                  To
+                </label>
+                <input
+                  id="candidate-feedback-to"
+                  type="email"
+                  value={toEmail}
+                  onChange={(event) => setToEmail(event.target.value)}
+                  placeholder="candidate@email.com"
+                  className="h-11 rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-300/10"
+                />
               </div>
-            ) : (
-              <div className="mb-4 rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-100">
-                No email is on file for this candidate -- feedback cannot be sent until one is added.
+              <div className="grid gap-1.5">
+                <label htmlFor="candidate-feedback-cc" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  CC (optional)
+                </label>
+                <input
+                  id="candidate-feedback-cc"
+                  type="text"
+                  value={ccInput}
+                  onChange={(event) => setCcInput(event.target.value)}
+                  placeholder="you@company.com, teammate@company.com"
+                  className="h-11 rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-300/10"
+                />
               </div>
-            )}
+            </div>
+            {!interview?.candidateEmail ? (
+              <p className="mb-4 -mt-2 text-xs text-amber-300/80">
+                No email was on file for this candidate -- enter one above before sending.
+              </p>
+            ) : null}
 
             {sentAt ? (
               <div className="mb-4 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm text-emerald-100">
@@ -167,7 +220,7 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
               <button
                 type="button"
                 onClick={handleSend}
-                disabled={isGenerating || isSending || !text.trim() || !interview?.candidateEmail}
+                disabled={isGenerating || isSending || !text.trim() || !toEmail.trim()}
                 className="h-12 shrink-0 rounded-2xl bg-cyan-300 px-6 text-sm font-bold text-slate-950 shadow-[0_16px_42px_rgba(34,211,238,0.18)] transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSending ? "Sending..." : "Send to Candidate"}

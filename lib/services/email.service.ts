@@ -57,6 +57,7 @@ type SupportRequestEmailParams = {
 
 type SendCandidateFeedbackEmailParams = {
   to: string;
+  cc?: string[];
   candidateName: string;
   jobTitle: string;
   feedbackText: string;
@@ -746,27 +747,80 @@ export async function sendBillingInvoiceEmail(input: BillingInvoiceEmailParams) 
   });
 }
 
+const CANDIDATE_FEEDBACK_SECTION_HEADINGS = ["strengths", "areas for improvement"];
+
+function isSectionHeadingLine(line: string) {
+  return CANDIDATE_FEEDBACK_SECTION_HEADINGS.includes(
+    line.trim().replace(/:$/, "").toLowerCase()
+  );
+}
+
+function isBulletLine(line: string) {
+  return /^[-•*]\s+/.test(line.trim());
+}
+
+// The AI prompt asks for a strict "Strengths" / "Areas for Improvement"
+// two-section bullet format, but a recruiter may hand-edit the draft into
+// something looser before sending -- so this renders known section headings
+// and bullet runs specially, and falls back to plain paragraphs for
+// anything that doesn't match rather than breaking the email.
+function renderStructuredFeedbackHtml(feedbackText: string) {
+  const lines = feedbackText.split("\n");
+  const blocks: string[] = [];
+  let bulletBuffer: string[] = [];
+
+  const flushBullets = () => {
+    if (bulletBuffer.length === 0) return;
+    const items = bulletBuffer
+      .map(
+        (item) =>
+          `<li style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#334155;">${escapeHtml(item)}</li>`
+      )
+      .join("");
+    blocks.push(`<ul style="margin:0 0 18px;padding-left:20px;">${items}</ul>`);
+    bulletBuffer = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    if (isSectionHeadingLine(line)) {
+      flushBullets();
+      blocks.push(
+        `<div style="margin:22px 0 10px;font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#0f766e;">${escapeHtml(line.replace(/:$/, ""))}</div>`
+      );
+      continue;
+    }
+
+    if (isBulletLine(line)) {
+      bulletBuffer.push(line.replace(/^[-•*]\s+/, ""));
+      continue;
+    }
+
+    flushBullets();
+    blocks.push(`<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#334155;">${escapeHtml(line)}</p>`);
+  }
+  flushBullets();
+
+  return blocks.join("");
+}
+
 export async function sendCandidateFeedbackEmail({
   to,
+  cc,
   candidateName,
   jobTitle,
   feedbackText,
 }: SendCandidateFeedbackEmailParams) {
   const safeName = escapeHtml(normalizeText(candidateName, "Candidate"));
   const safeRole = escapeHtml(normalizeText(jobTitle, "the role you applied for"));
-  const feedbackHtml = feedbackText
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-    .map(
-      (paragraph) =>
-        `<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#334155;">${escapeHtml(paragraph).replace(/\n/g, "<br />")}</p>`
-    )
-    .join("");
+  const feedbackHtml = renderStructuredFeedbackHtml(feedbackText);
 
   return sendWithRetry({
     from: getEmailFrom(),
     to,
+    ...(cc && cc.length > 0 ? { cc } : {}),
     subject: `Feedback on your interview for ${normalizeText(jobTitle, "the role")}`,
     text: [
       `Hi ${normalizeText(candidateName, "there")},`,

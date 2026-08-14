@@ -84,13 +84,21 @@ async function generateFeedbackText(input: {
             role: "system",
             content: [
               "You write short, constructive interview feedback addressed directly to a job candidate.",
-              "Write 3-5 short paragraphs, warm and professional in tone, second person ('you').",
-              "Cover: 1-2 genuine strengths from their answers, then 1-2 areas to develop, framed constructively.",
+              "Output must follow this exact structured, two-section plain-text format, with no other headings and nothing before or after it:",
+              "",
+              "Strengths",
+              "- <first strength, one sentence, second person 'you'>",
+              "- <second strength, one sentence>",
+              "",
+              "Areas for Improvement",
+              "- <first area to develop, one sentence, framed constructively>",
+              "- <second area to develop, one sentence>",
+              "",
+              "Each section must have exactly 2 to 3 bullet points. The header lines must be exactly 'Strengths' and 'Areas for Improvement' -- no colons, no markdown symbols, no numbering.",
               "Never mention scores, percentages, risk levels, fraud signals, or any internal evaluation terminology.",
               "Never state or imply a hiring decision or outcome (hired, rejected, moving forward, etc.) -- that is for the recruiter to communicate separately.",
-              "Do not fabricate specifics the transcript does not support. If the transcript is too thin to say much, keep it brief and general rather than inventing detail.",
-              "Sign off with 'Best regards,' on its own line at the end (no name after it -- the recruiter will add their own).",
-              "Return plain text only, no markdown formatting.",
+              "Do not fabricate specifics the transcript does not support. If the transcript is too thin for a full bullet, write a brief general one rather than inventing detail.",
+              "Return plain text only, no markdown formatting, no bold, no asterisks.",
             ].join("\n"),
           },
           {
@@ -153,7 +161,18 @@ export async function generateCandidateFeedback(organizationId: string, intervie
   return { text, status: "draft" as const }
 }
 
-export async function sendCandidateFeedback(organizationId: string, interviewId: string, text: string) {
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function isValidEmail(value: string) {
+  return EMAIL_PATTERN.test(value.trim())
+}
+
+export async function sendCandidateFeedback(
+  organizationId: string,
+  interviewId: string,
+  text: string,
+  options?: { to?: string; cc?: string[] }
+) {
   const trimmed = text.trim()
   if (!trimmed) {
     throw new ApiError(400, "FEEDBACK_TEXT_REQUIRED", "Feedback text is required.")
@@ -163,26 +182,46 @@ export async function sendCandidateFeedback(organizationId: string, interviewId:
   if (!context) {
     throw new ApiError(404, "INTERVIEW_NOT_FOUND", "Interview not found for this organization.")
   }
-  if (!context.candidate_email) {
-    throw new ApiError(409, "CANDIDATE_EMAIL_MISSING", "This candidate has no email on file to send feedback to.")
+
+  // The recruiter can override the destination address in the modal (e.g.
+  // the candidate's email on file is wrong or missing) and optionally add
+  // themselves or a teammate as CC -- so this is not necessarily the
+  // candidate's email on file.
+  const recipientEmail = (options?.to?.trim() || context.candidate_email || "").trim()
+  if (!recipientEmail) {
+    throw new ApiError(409, "CANDIDATE_EMAIL_MISSING", "No recipient email was provided and none is on file for this candidate.")
+  }
+  if (!isValidEmail(recipientEmail)) {
+    throw new ApiError(400, "INVALID_EMAIL", `"${recipientEmail}" is not a valid email address.`)
+  }
+
+  const ccEmails = (options?.cc ?? [])
+    .map((email) => email.trim())
+    .filter(Boolean)
+  const invalidCc = ccEmails.find((email) => !isValidEmail(email))
+  if (invalidCc) {
+    throw new ApiError(400, "INVALID_EMAIL", `"${invalidCc}" is not a valid email address.`)
   }
 
   const { sendCandidateFeedbackEmail } = await import("@/lib/services/email.service")
   await sendCandidateFeedbackEmail({
-    to: context.candidate_email,
+    to: recipientEmail,
+    cc: ccEmails.length > 0 ? ccEmails : undefined,
     candidateName: context.candidate_name,
     jobTitle: context.job_title,
     feedbackText: trimmed,
   })
+
+  const sentToLabel = [recipientEmail, ...ccEmails].join(", ")
 
   await prisma.$executeRaw`
     update public.interviews
     set candidate_feedback_text = ${trimmed},
         candidate_feedback_status = 'sent',
         candidate_feedback_sent_at = now(),
-        candidate_feedback_sent_to = ${context.candidate_email}
+        candidate_feedback_sent_to = ${sentToLabel}
     where interview_id = ${interviewId}::uuid
   `
 
-  return { sentTo: context.candidate_email, sentAt: new Date().toISOString() }
+  return { sentTo: recipientEmail, cc: ccEmails, sentAt: new Date().toISOString() }
 }
