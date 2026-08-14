@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { Download, Ellipsis, FileText, Info, Link2, RotateCw, Video } from "lucide-react"
+import { Download, Ellipsis, FileText, Info, Link2, MessageSquare, RotateCw, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -14,6 +14,7 @@ import BackToDashboardLink from "../../components/BackToDashboardLink"
 import Navbar from "../../components/Navbar"
 import SendInterviewModal from "../../components/SendInterviewModal"
 import { CandidateActionModal } from "../../components/dashboard/CandidateActionModal"
+import { CandidateFeedbackModal } from "../../components/dashboard/CandidateFeedbackModal"
 import { DecisionPill } from "../../components/dashboard/DecisionPill"
 import { VerisGlobeLoader } from "../../components/system/loaders"
 import {
@@ -562,6 +563,7 @@ export default function InterviewsPage() {
   const [interviews, setInterviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [summaryInterviewId, setSummaryInterviewId] = useState("")
+  const [feedbackInterviewId, setFeedbackInterviewId] = useState("")
   const [openSendInterview, setOpenSendInterview] = useState(false)
   const [actionBusyId, setActionBusyId] = useState("")
   const [copiedInterviewId, setCopiedInterviewId] = useState("")
@@ -793,6 +795,19 @@ export default function InterviewsPage() {
   const summaryInterview = summaryInterviewId
     ? interviews.find((interview) => interview.interviewId === summaryInterviewId) ?? null
     : null
+  const feedbackInterview = feedbackInterviewId
+    ? interviews.find((interview) => interview.interviewId === feedbackInterviewId) ?? null
+    : null
+
+  function handleCandidateFeedbackSent(interview, result) {
+    setInterviews((current) =>
+      current.map((item) =>
+        item.interviewId === interview.interviewId
+          ? { ...item, candidateFeedbackText: result.text, candidateFeedbackStatus: "sent", candidateFeedbackSentAt: result.sentAt }
+          : item
+      )
+    )
+  }
 
   function clearFilters() {
     setSearchTerm("")
@@ -1056,6 +1071,10 @@ export default function InterviewsPage() {
                     const canTakeAction = isCompleted && !isEarlyExit && !interview.recruiterDecisionStatus
                     const canChangeDecision = isCompleted && !isEarlyExit && Boolean(interview.recruiterDecisionStatus)
                     const canViewSummary = isCompleted && !isEarlyExit
+                    const canSendCandidateFeedback = isCompleted && !isEarlyExit
+                    const candidateFeedbackActionLabel = interview.candidateFeedbackText
+                      ? "Send Candidate Feedback"
+                      : "Generate Candidate Feedback"
                     const canCopyLink =
                       !isCompleted &&
                       !isEarlyExit &&
@@ -1064,7 +1083,7 @@ export default function InterviewsPage() {
                     const canRetryPreparation = interviewStatus === "PREPARATION_FAILED"
                     const canRetryEmail = interviewStatus === "EMAIL_FAILED"
                     const hasHiringActions =
-                      canTakeAction || canChangeDecision || canViewSummary || canCopyLink || canRetryPreparation || canRetryEmail
+                      canTakeAction || canChangeDecision || canViewSummary || canSendCandidateFeedback || canCopyLink || canRetryPreparation || canRetryEmail
                     const latestActivity = formatLatestActivity(getInterviewActivityValue(interview))
 
                     return (
@@ -1176,6 +1195,15 @@ export default function InterviewsPage() {
                                     View Summary
                                   </DropdownMenuItem>
                                 ) : null}
+                                {canSendCandidateFeedback ? (
+                                  <DropdownMenuItem
+                                    onSelect={() => setFeedbackInterviewId(interview.interviewId)}
+                                    className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-sky-100 focus:bg-sky-400/10 focus:text-sky-50"
+                                  >
+                                    <MessageSquare className="h-4 w-4 text-sky-300" aria-hidden="true" />
+                                    {candidateFeedbackActionLabel}
+                                  </DropdownMenuItem>
+                                ) : null}
                                 {canCopyLink ? (
                                   <DropdownMenuItem
                                     onSelect={() => copyLink(interview)}
@@ -1232,6 +1260,12 @@ export default function InterviewsPage() {
             handleDecisionSaved(reviewInterview, decision)
           }
         }}
+      />
+      <CandidateFeedbackModal
+        interview={feedbackInterview}
+        searchParams={searchParams}
+        onClose={() => setFeedbackInterviewId("")}
+        onSent={handleCandidateFeedbackSent}
       />
       {summaryInterview ? (
         <div

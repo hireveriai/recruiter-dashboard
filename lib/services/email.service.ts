@@ -55,6 +55,13 @@ type SupportRequestEmailParams = {
   attachmentContent?: string | null;
 };
 
+type SendCandidateFeedbackEmailParams = {
+  to: string;
+  candidateName: string;
+  jobTitle: string;
+  feedbackText: string;
+};
+
 type BillingInvoiceEmailParams = {
   to: string;
   recruiterName?: string | null;
@@ -731,6 +738,57 @@ export async function sendBillingInvoiceEmail(input: BillingInvoiceEmailParams) 
               <p style="margin:22px 0 0;font-size:13px;line-height:1.7;color:#64748b;">
                 For billing, GST, or procurement questions, contact ${escapeHtml(supportEmail)}.
               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+  });
+}
+
+export async function sendCandidateFeedbackEmail({
+  to,
+  candidateName,
+  jobTitle,
+  feedbackText,
+}: SendCandidateFeedbackEmailParams) {
+  const safeName = escapeHtml(normalizeText(candidateName, "Candidate"));
+  const safeRole = escapeHtml(normalizeText(jobTitle, "the role you applied for"));
+  const feedbackHtml = feedbackText
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map(
+      (paragraph) =>
+        `<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#334155;">${escapeHtml(paragraph).replace(/\n/g, "<br />")}</p>`
+    )
+    .join("");
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to,
+    subject: `Feedback on your interview for ${normalizeText(jobTitle, "the role")}`,
+    text: [
+      `Hi ${normalizeText(candidateName, "there")},`,
+      "",
+      `Thank you for taking the time to interview for the ${normalizeText(jobTitle, "role")} position. Here is some feedback on your interview:`,
+      "",
+      feedbackText,
+    ].join("\n"),
+    html: `
+      <div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+        <div style="max-width:640px;margin:0 auto;padding:32px 18px;">
+          <div style="border:1px solid #dbe3ee;border-radius:22px;overflow:hidden;background:#ffffff;box-shadow:0 18px 48px rgba(15,23,42,0.10);">
+            <div style="padding:26px 28px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+              <div style="font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:#2563eb;">Interview Feedback</div>
+              <h1 style="margin:10px 0 0;font-size:22px;line-height:1.3;color:#0f172a;">${safeRole}</h1>
+            </div>
+            <div style="padding:28px;">
+              <p style="margin:0 0 18px;font-size:16px;line-height:26px;color:#334155;">Hi ${safeName},</p>
+              <p style="margin:0 0 22px;font-size:15px;line-height:24px;color:#475569;">
+                Thank you for taking the time to interview for the ${safeRole} position. Here is some feedback on your interview:
+              </p>
+              ${feedbackHtml}
             </div>
           </div>
         </div>

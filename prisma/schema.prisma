@@ -211,6 +211,11 @@ model Interview {
   questionsGeneratedAt DateTime?      @db.Timestamptz(6) @map("questions_generated_at")
   emailSentAt       DateTime?         @db.Timestamptz(6) @map("email_sent_at")
   idempotencyKey    String?           @map("idempotency_key")
+  candidateFeedbackText       String?   @map("candidate_feedback_text")
+  candidateFeedbackStatus     String?   @map("candidate_feedback_status")
+  candidateFeedbackGeneratedAt DateTime? @db.Timestamptz(6) @map("candidate_feedback_generated_at")
+  candidateFeedbackSentAt     DateTime? @db.Timestamptz(6) @map("candidate_feedback_sent_at")
+  candidateFeedbackSentTo     String?   @map("candidate_feedback_sent_to")
   job               JobPosition       @relation(fields: [jobId], references: [jobId])
   candidate         Candidate         @relation(fields: [candidateId], references: [candidateId])
   attempts          InterviewAttempt[]
