@@ -6,7 +6,8 @@
     "dev": "next dev",
     "dev:backend": "node backend/src/server.js",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:backend\"",
-    "build": "next build",
+    "build": "node scripts/prisma-generate-if-possible.js && next build",
+    "postinstall": "node scripts/prisma-generate-if-possible.js",
     "start": "next start",
     "lint": "eslint",
     "backend:start": "node backend/src/server.js",
@@ -14,7 +15,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1018.0",
-    "@prisma/client": "^6.6.0",
+    "@prisma/client": "^6.19.2",
     "@streamdown/cjk": "^1.0.3",
     "@streamdown/code": "^1.1.1",
     "@streamdown/math": "^1.0.2",
@@ -57,7 +58,7 @@
     "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "prisma": "^6.6.0",
+    "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "typescript": "^5.8.3"
   }
