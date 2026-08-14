@@ -26,6 +26,7 @@ export async function GET(request: Request) {
     const hireveriSession = getHireveriSessionFromRequest(request)
     const requestUrl = new URL(request.url)
     const orgId = requestUrl.searchParams.get("orgId")?.trim() || ""
+    const theme = requestUrl.searchParams.get("theme")?.trim() || ""
 
     if ((!token && !hireveriSession) || !orgId) {
       return NextResponse.json(
@@ -42,6 +43,10 @@ export async function GET(request: Request) {
 
     const redirectUrl = new URL(`${WAR_APP_URL}${WAR_ROOM_PATH}`)
     redirectUrl.searchParams.set("orgId", orgId)
+
+    if (theme === "light" || theme === "dark") {
+      redirectUrl.searchParams.set("theme", theme)
+    }
 
     const response = NextResponse.redirect(redirectUrl)
 
