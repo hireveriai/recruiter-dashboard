@@ -281,6 +281,7 @@ declare
   v_interview_id uuid;
   v_token uuid;
   v_expires_at timestamptz;
+  v_max_attempts integer;
 begin
   select c.organization_id
   into v_candidate_org_id
@@ -404,7 +405,8 @@ begin
     p_candidate_id,
     'COMPANY_INTERVIEW',
     'PENDING'
-  );
+  )
+  returning max_attempts into v_max_attempts;
 
   insert into public.interview_invites (
     interview_id,
@@ -423,7 +425,11 @@ begin
     v_expires_at,
     'ACTIVE',
     0,
-    1,
+    -- Inherit the interview's retry budget. Hardcoding 1 here silently capped
+    -- every candidate at a single attempt, because start_interview_session
+    -- resolves coalesce(invite.max_attempts, interview.max_attempts, 1) and the
+    -- invite value always won.
+    greatest(coalesce(v_max_attempts, 1), 1),
     upper(coalesce(p_access_type, 'FLEXIBLE')),
     p_start_time,
     p_end_time
@@ -737,9 +743,10 @@ declare
   v_actual_candidate_id uuid;
   v_token uuid;
   v_expires_at timestamptz := now() + interval '24 hours';
+  v_max_attempts integer;
 begin
-  select i.candidate_id
-  into v_actual_candidate_id
+  select i.candidate_id, i.max_attempts
+  into v_actual_candidate_id, v_max_attempts
   from public.interviews i
   where i.interview_id = p_interview_id
   limit 1;
@@ -769,7 +776,9 @@ begin
     v_expires_at,
     'ACTIVE',
     0,
-    1,
+    -- See fn_create_interview_link: inherit the interview's retry budget rather
+    -- than pinning every invite to a single attempt.
+    greatest(coalesce(v_max_attempts, 1), 1),
     'FLEXIBLE'
   );
 

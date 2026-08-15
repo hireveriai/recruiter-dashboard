@@ -210,6 +210,7 @@ declare
   v_interview_id uuid;
   v_token uuid;
   v_expires_at timestamptz;
+  v_max_attempts integer;
 begin
   select c.organization_id
   into v_candidate_org_id
@@ -366,7 +367,8 @@ begin
     'COMPANY_INTERVIEW',
     v_total_duration,
     'PENDING'
-  );
+  )
+  returning max_attempts into v_max_attempts;
 
   insert into public.interview_invites (
     interview_id,
@@ -385,7 +387,11 @@ begin
     v_expires_at,
     'ACTIVE',
     0,
-    1,
+    -- Inherit the interview's retry budget. Hardcoding 1 here silently capped
+    -- every candidate at a single attempt, because start_interview_session
+    -- resolves coalesce(invite.max_attempts, interview.max_attempts, 1) and the
+    -- invite value always won.
+    greatest(coalesce(v_max_attempts, 1), 1),
     upper(coalesce(p_access_type, 'FLEXIBLE')),
     case when upper(coalesce(p_access_type, 'FLEXIBLE')) = 'SCHEDULED' then p_start_time else null end,
     case when upper(coalesce(p_access_type, 'FLEXIBLE')) = 'SCHEDULED' then p_end_time else null end
