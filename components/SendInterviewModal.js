@@ -718,6 +718,10 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
     handleClose()
   }
 
+  const hasSelectedDuplicate = Boolean(
+    duplicateWarning?.candidates.some((candidate) => duplicateResendEmails.includes(candidate.email))
+  )
+
   if (!isOpen) return null
 
   return (
@@ -804,6 +808,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
               </button>
               <button
                 type="button"
+                disabled={!hasSelectedDuplicate}
                 onClick={() => {
                   const skippedEmails = duplicateWarning.candidates
                     .map((candidate) => candidate.email)
@@ -811,7 +816,11 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                   setDuplicateWarning(null)
                   void handleSubmit({ confirmedDuplicate: true, skippedEmails })
                 }}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                  hasSelectedDuplicate
+                    ? "hv-solid-action border-[#2563eb] bg-[#2563eb] text-white shadow-sm hover:border-[#1d4ed8] hover:bg-[#1d4ed8]"
+                    : "cursor-not-allowed border-[#cbd5e1] bg-[#e2e8f0] text-[#64748b]"
+                }`}
               >
                 Continue with selected
               </button>
