@@ -5,6 +5,10 @@ import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse } from "@/lib/server/response"
 import { fillMissingAnswersFromTranscript } from "@/lib/server/services/transcript-fallback"
+import {
+  inferSessionBaselineMs,
+  placeMarkerInRecording,
+} from "@/lib/server/services/recording-timeline"
 
 type RecordingRow = {
   recording_id: string
@@ -329,16 +333,41 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
       }
     }), recording.transcript)
 
+    // `recordingOffsetMs` is measured from one session-wide baseline, but an
+    // attempt owns many recordings (a full LiveKit egress plus rolling browser
+    // segments). Rebase every marker onto the recording actually being viewed,
+    // and drop the ones belonging to a different stretch of the interview,
+    // instead of drawing a 30-minute interview's markers onto a 2-minute clip.
+    const sessionBaselineMs = inferSessionBaselineMs(
+      signalRows.map((row) => ({
+        occurredAt: row.created_at,
+        recordingOffsetMs: readSignalOffset(row.value),
+      }))
+    )
+
     const signals = signalRows.reduce<ReviewSignal[]>((items, row) => {
       if (!isActionableSignal(row.type, row.value)) {
         return items
       }
 
-      const fallbackOffset = offsetMs(recording.started_at, row.created_at)
       const sessionQuestionId = readObjectString(row.value, "sessionQuestionId")
       const matchingQuestion = sessionQuestionId
         ? timeline.find((item) => item.id === sessionQuestionId)
         : null
+
+      const placedOffsetMs = placeMarkerInRecording(
+        {
+          occurredAt: row.created_at,
+          recordingOffsetMs: readSignalOffset(row.value),
+          questionOffsetMs: matchingQuestion?.answerOffsetMs ?? matchingQuestion?.offsetMs ?? null,
+        },
+        { startedAt: recording.started_at, endedAt: recording.ended_at },
+        { sessionBaselineMs }
+      )
+
+      if (placedOffsetMs === null) {
+        return items
+      }
 
       items.push({
         id: row.signal_id,
@@ -347,12 +376,7 @@ export async function GET(request: Request, context: { params: Promise<{ recordi
         description: getSignalDescription(row.type),
         severity: getSignalSeverity(row.type, row.value),
         occurredAt: row.created_at,
-        offsetMs:
-          readSignalOffset(row.value) ??
-          matchingQuestion?.answerOffsetMs ??
-          matchingQuestion?.offsetMs ??
-          fallbackOffset ??
-          0,
+        offsetMs: placedOffsetMs,
         value: row.value,
       })
 
