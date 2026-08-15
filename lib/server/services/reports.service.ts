@@ -923,12 +923,72 @@ async function fetchRecordingRows(organizationId: string) {
   return prisma.$queryRawUnsafe<RecordingRow[]>(query, organizationId).catch(() => [] as RecordingRow[])
 }
 
+/**
+ * public.interview_signals is an event log -- one row per signal, carrying
+ * `type` and a jsonb `value`. It has never had the pre-aggregated *_count
+ * columns this service used to ask for, so every count silently resolved to
+ * its 0 fallback and every focus metric to null. The visible effect was that
+ * no candidate ever showed a behavioural flag, and every candidate earned
+ * "Stable response patterns" because that strength tests those same zeroes.
+ *
+ * Aggregates are derived from the event log here. The legacy pre-aggregated
+ * shape is still honoured if an environment actually has those columns.
+ */
+function isSignalEventLog(columns: Set<string>) {
+  return columns.has("type") && columns.has("value") && !columns.has("multi_face_count")
+}
+
+function numericFromValue(key: string) {
+  // jsonb values are free-form; only fold in the ones that really are numbers.
+  return `nullif(s.value->>'${key}', '')::numeric`
+}
+
+function signalEventLogSelect() {
+  const focusOnly = `filter (where lower(s.type) = 'focus_metrics' and s.value->>'{key}' ~ '^-?[0-9]+(\\.[0-9]+)?$')`
+
+  return [
+    `s.attempt_id::text as attempt_id`,
+    `att.interview_id::text as interview_id`,
+    `count(*) filter (where lower(s.type) = 'multi_face')::int as multi_face_count`,
+    `count(*) filter (where lower(s.type) = 'tab_switch')::int as tab_switch_count`,
+    // Brief natural glances are logged as attention_loss with severity "low".
+    // Counting them flagged candidates whose focus the same pipeline rated
+    // excellent, so only sustained losses count as a behavioural signal.
+    `count(*) filter (where lower(s.type) = 'attention_loss' and lower(coalesce(s.value->>'severity', 'medium')) <> 'low')::int as attention_loss_count`,
+    `count(*) filter (where lower(s.type) = 'long_gaze_away')::int as long_gaze_away_count`,
+    `count(*) filter (where lower(s.type) = 'no_face')::int as no_face_count`,
+    `count(*) filter (where lower(s.type) = 'focus_metrics')::int as focus_metrics_count`,
+    `avg(${numericFromValue("focusRatio")}) ${focusOnly.replace("{key}", "focusRatio")} as avg_focus_ratio`,
+    `max(${numericFromValue("maxLookAwayDuration")}) ${focusOnly.replace("{key}", "maxLookAwayDuration")} as max_look_away_duration`,
+    `avg(${numericFromValue("lookAwayEvents")}) ${focusOnly.replace("{key}", "lookAwayEvents")} as avg_look_away_events`,
+  ]
+}
+
+const SIGNAL_EVENT_LOG_FROM = `
+    from public.interview_signals s
+    join public.interview_attempts att on att.attempt_id = s.attempt_id
+    join public.interviews i on i.interview_id = att.interview_id
+`
+
 async function fetchSignalRows(organizationId: string) {
   if (!(await tableExists("interview_signals"))) {
     return [] as SignalAggRow[]
   }
 
   const columns = await getTableColumns("interview_signals")
+
+  if (isSignalEventLog(columns)) {
+    const query = `
+      select
+        ${signalEventLogSelect().join(",\n        ")}
+      ${SIGNAL_EVENT_LOG_FROM}
+      where i.organization_id = $1::uuid
+      group by 1, 2
+    `
+
+    return prisma.$queryRawUnsafe<SignalAggRow[]>(query, organizationId).catch(() => [] as SignalAggRow[])
+  }
+
   const selectParts = [
     columns.has("attempt_id") ? `attempt_id::text as attempt_id` : `null::text as attempt_id`,
     columns.has("interview_id") ? `interview_id::text as interview_id` : `null::text as interview_id`,
@@ -963,6 +1023,27 @@ async function fetchSignalRowsForAttempts(organizationId: string, attemptIds: st
   }
 
   const columns = await getTableColumns("interview_signals")
+
+  if (isSignalEventLog(columns)) {
+    const scopeFilters = [
+      attemptIds.length > 0 ? `s.attempt_id = any($2::uuid[])` : null,
+      interviewIds.length > 0 ? `att.interview_id = any($3::uuid[])` : null,
+    ].filter(Boolean)
+
+    const query = `
+      select
+        ${signalEventLogSelect().join(",\n        ")}
+      ${SIGNAL_EVENT_LOG_FROM}
+      where i.organization_id = $1::uuid
+        and (${scopeFilters.join(" or ")})
+      group by 1, 2
+    `
+
+    return prisma
+      .$queryRawUnsafe<SignalAggRow[]>(query, organizationId, attemptIds, interviewIds)
+      .catch(() => [] as SignalAggRow[])
+  }
+
   const selectParts = [
     columns.has("attempt_id") ? `attempt_id::text as attempt_id` : `null::text as attempt_id`,
     columns.has("interview_id") ? `interview_id::text as interview_id` : `null::text as interview_id`,
