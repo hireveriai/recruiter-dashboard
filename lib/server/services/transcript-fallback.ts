@@ -72,7 +72,10 @@ function splitLabeledTranscript(transcript: string) {
     return []
   }
 
-  const markerPattern = /(?:^|\n)\s*((?:candidate|answer|a)\s*\d*|veris\s*q?\s*\d*|(?:question|q)\s*\d*)\s*[:\-]\s*/gi
+  // `candidate\s*a?\s*\d*` also covers the "Candidate A1:" form, which the
+  // earlier pattern silently failed to match: it consumed "Candidate", then
+  // required a colon where the "A" sat.
+  const markerPattern = /(?:^|\n)\s*((?:candidate|answer)\s*a?\s*\d*|a\s*\d+|veris\s*q?\s*\d*|(?:question|q)\s*\d*)\s*[:\-]\s*/gi
   const markers = [...normalized.matchAll(markerPattern)]
 
   if (markers.length === 0) {
@@ -118,28 +121,139 @@ export function extractCandidateAnswersFromTranscript(transcript: string | null 
   return []
 }
 
+function isQuestionLabel(label: string) {
+  return /^(veris|question|q)\b/i.test(label)
+}
+
+function readLabelNumber(label: string) {
+  const match = label.match(/(\d+)\s*$/)
+  if (!match) {
+    return null
+  }
+
+  const parsed = Number(match[1])
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+/**
+ * Recovers answers from the transcript shape LiveKit recordings actually
+ * produce, where only the interviewer turns carry a label:
+ *
+ *   VERIS Q1: <question text>
+ *
+ *   <candidate answer>
+ *
+ *   VERIS Q2: ...
+ *
+ * The candidate's speech is present and cleanly delimited, but it has no label
+ * of its own, so the strict candidate-label extractor discards all of it. Here
+ * each labelled question segment is paired with the interview's known question
+ * text, the restated question is stripped off the front, and whatever remains
+ * is the candidate's answer -- positioned by question order rather than by
+ * consuming a flat list.
+ *
+ * Returns answers aligned to the order the question markers appear in.
+ */
+export function extractAnswersByQuestionMarker(
+  transcript: string | null | undefined,
+  questions: Array<string | null | undefined>
+) {
+  const value = String(transcript ?? "").trim()
+  if (!value) {
+    return [] as Array<string | null>
+  }
+
+  const segments = splitLabeledTranscript(value)
+  if (segments.length === 0) {
+    return [] as Array<string | null>
+  }
+
+  const answers: Array<string | null> = questions.map(() => null)
+  let cursor = -1
+
+  const assign = (index: number, answer: string | null) => {
+    if (answer && index >= 0 && index < answers.length && !answers[index]) {
+      answers[index] = answer
+    }
+  }
+
+  for (const segment of segments) {
+    const labelNumber = readLabelNumber(segment.label)
+
+    if (isQuestionLabel(segment.label)) {
+      cursor = labelNumber !== null ? labelNumber - 1 : cursor + 1
+      const questionText = questions[cursor] ?? null
+      const normalizedQuestion = normalizeForComparison(questionText)
+
+      const paragraphs = segment.text
+        .split(/\n\s*\n/)
+        .map((paragraph) => normalizeWhitespace(paragraph))
+        .filter(Boolean)
+
+      // Drop the leading paragraphs that merely restate the question.
+      while (paragraphs.length > 0 && normalizedQuestion) {
+        const candidate = normalizeForComparison(paragraphs[0])
+        const isRestatement =
+          candidate === normalizedQuestion ||
+          normalizedQuestion.startsWith(candidate) ||
+          candidate.startsWith(normalizedQuestion)
+
+        if (!isRestatement) {
+          break
+        }
+
+        paragraphs.shift()
+      }
+
+      assign(cursor, cleanRecoveredCandidateAnswer(paragraphs.join(" "), questionText))
+      continue
+    }
+
+    // A candidate turn belongs to the question it follows, or to the question
+    // its own label numbers it against ("Candidate A3" -> question 3).
+    const index = labelNumber !== null ? labelNumber - 1 : cursor
+    assign(index, cleanRecoveredCandidateAnswer(segment.text, questions[index] ?? null))
+  }
+
+  return answers
+}
+
 export function fillMissingAnswersFromTranscript<T extends { answer?: string; answerText?: string | null; question?: string | null }>(
   rows: T[],
   transcript: string | null | undefined
 ) {
-  const fallbackAnswers = extractCandidateAnswersFromTranscript(transcript)
+  // Question-marker recovery is positioned, so an unanswered question never
+  // shifts a later answer onto an earlier one. It wins whenever the transcript
+  // carries markers at all; the flat candidate list is only for transcripts
+  // that label answers without ever labelling the questions.
+  const answersByQuestion = extractAnswersByQuestionMarker(
+    transcript,
+    rows.map((row) => row.question ?? null)
+  )
+  const usePositioned = answersByQuestion.length > 0
+  const fallbackAnswers = usePositioned ? [] : extractCandidateAnswersFromTranscript(transcript)
 
-  if (fallbackAnswers.length === 0) {
+  if (!usePositioned && fallbackAnswers.length === 0) {
     return rows
   }
 
   let fallbackIndex = 0
 
-  return rows.map((row) => {
+  return rows.map((row, index) => {
     const currentAnswer = "answer" in row ? row.answer : row.answerText
     if (!isEmptyAnswer(currentAnswer)) {
       return row
     }
 
-    const fallbackAnswer = fallbackAnswers[fallbackIndex]
-    fallbackIndex += 1
+    let cleanedFallbackAnswer: string | null
 
-    const cleanedFallbackAnswer = cleanRecoveredCandidateAnswer(fallbackAnswer, row.question)
+    if (usePositioned) {
+      cleanedFallbackAnswer = answersByQuestion[index] ?? null
+    } else {
+      const fallbackAnswer = fallbackAnswers[fallbackIndex]
+      fallbackIndex += 1
+      cleanedFallbackAnswer = cleanRecoveredCandidateAnswer(fallbackAnswer, row.question)
+    }
 
     if (!cleanedFallbackAnswer) {
       return row
