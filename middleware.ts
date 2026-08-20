@@ -19,6 +19,7 @@ const PROTECTED_PAGE_PREFIXES = [
   "/contact-us",
   "/billing",
   "/subscription",
+  "/admin",
 ]
 
 const PROTECTED_API_PREFIXES = [
@@ -42,6 +43,10 @@ const PROTECTED_API_PREFIXES = [
   "/api/payment-failed",
   "/api/billing",
   "/api/trial-credits",
+  "/api/trial-requests",
+  // Platform-admin surface. Middleware only enforces "signed in"; the route
+  // handlers additionally enforce platform-admin membership.
+  "/api/admin",
 ]
 
 function hasSupabaseAuthCookie(request: NextRequest) {

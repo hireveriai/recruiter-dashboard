@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import Navbar from "@/components/Navbar"
-import FreeTrialUsage from "@/components/FreeTrialUsage"
+import TrialStatusCard from "@/components/TrialStatusCard"
 import BackToDashboardLink from "@/components/BackToDashboardLink"
 import { InsightTooltip } from "@/components/ui/InsightTooltip"
 import { ProcessingTimeline, type TimelineStep } from "@/components/ui/ProcessingTimeline"
@@ -2470,7 +2470,7 @@ export default function AiScreeningPage() {
         ) : null}
 
         <div className="mt-6">
-          <FreeTrialUsage credits={trialCredits} />
+          <TrialStatusCard credits={trialCredits} />
         </div>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">

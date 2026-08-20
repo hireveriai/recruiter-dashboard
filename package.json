@@ -10,6 +10,9 @@
     "postinstall": "node scripts/prisma-generate-if-possible.js",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --import ./test/register.mjs --test \"lib/**/*.test.ts\" \"test/**/*.test.mjs\"",
+    "test:unit": "node --import ./test/register.mjs --test \"lib/**/*.test.ts\"",
+    "test:db": "node --test \"test/**/*.test.mjs\"",
     "backend:start": "node backend/src/server.js",
     "prisma:generate": "prisma generate"
   },

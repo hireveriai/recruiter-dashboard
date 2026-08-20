@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 
 import Navbar from "../components/Navbar";
 import DashboardIntelligenceBanner from "../components/DashboardIntelligenceBanner";
-import FreeTrialUsage from "../components/FreeTrialUsage";
+import TrialStatusCard from "../components/TrialStatusCard";
 import RecruiterDashboardBootstrap from "../components/RecruiterDashboardBootstrap";
 import { VerisGlobeLoader } from "../components/system/loaders";
 import { DEFAULT_RECRUITER_PERMISSION_PROFILE, canAccessFeature } from "../lib/client/permissions";
@@ -259,7 +259,7 @@ function DashboardContent({ profile, overview, isLoading }) {
             onCreateJob={canCreateJob ? () => window.dispatchEvent(new CustomEvent("hireveri:open-create-job")) : undefined}
             onSendInterview={canSendInterview ? () => setIsModalOpen(true) : undefined}
           />
-          <FreeTrialUsage credits={trialCredits} />
+          <TrialStatusCard credits={trialCredits} />
 
           <Suspense fallback={null}>
             <Pipeline initialPipeline={fullOverview?.pipeline} isLoading={false} />

@@ -850,3 +850,157 @@ export async function sendCandidateFeedbackEmail({
     `,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Free entitlement (trial / practice) notifications
+//
+// Reuses the same Resend transport, sender and retry policy as every other
+// recruiter email above.
+// ---------------------------------------------------------------------------
+
+type TrialAudience = "RECRUITER" | "CANDIDATE";
+
+type TrialRequestEmailParams = {
+  kind: TrialAudience;
+  status: string;
+  to: string;
+  name?: string | null;
+  companyName?: string | null;
+  requestId?: string | null;
+};
+
+type TrialDecisionEmailParams = {
+  kind: TrialAudience;
+  decision: "APPROVE" | "REJECT";
+  to: string;
+  name?: string | null;
+  companyName?: string | null;
+  requestId?: string | null;
+};
+
+function trialShellHtml(heading: string, content: string) {
+  return `
+    <div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+      <div style="max-width:640px;margin:0 auto;padding:32px 18px;">
+        <div style="border:1px solid #dbe3ee;border-radius:24px;overflow:hidden;background:#ffffff;box-shadow:0 18px 48px rgba(15,23,42,0.10);">
+          <div style="padding:26px 28px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+            <div style="font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#2563eb;">HireVeri</div>
+            <h1 style="margin:12px 0 0;font-size:24px;line-height:1.25;color:#0f172a;">${escapeHtml(heading)}</h1>
+          </div>
+          <div style="padding:28px;">
+            ${content}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Sent immediately after a free-entitlement request is submitted. When the
+ * automated company validation already approved it, this doubles as the
+ * activation email.
+ */
+export async function sendTrialRequestEmails(params: TrialRequestEmailParams) {
+  if (params.status === "APPROVED") {
+    return sendTrialDecisionEmail({
+      kind: params.kind,
+      decision: "APPROVE",
+      to: params.to,
+      name: params.name,
+      companyName: params.companyName,
+      requestId: params.requestId,
+    });
+  }
+
+  const isRecruiter = params.kind === "RECRUITER";
+  const safeName = escapeHtml(params.name || (isRecruiter ? "there" : "there"));
+  const heading = isRecruiter ? "Free trial request received" : "Free practice request received";
+  const offer = isRecruiter
+    ? "10 AI Interviews + 25 VERIS Screenings"
+    : "1 free VERIS AI practice interview";
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to: params.to,
+    subject: heading,
+    text: [
+      `Hi ${params.name || "there"},`,
+      `We received your request for ${offer}.`,
+      isRecruiter
+        ? "We're verifying your company details. Requests are usually reviewed within 24 hours."
+        : "We're running a quick eligibility check. Requests are usually reviewed within 24 hours.",
+      params.requestId ? `Reference: ${params.requestId}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    html: trialShellHtml(
+      heading,
+      `
+      <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">Hi ${safeName},</p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        We received your request for <strong style="color:#0f172a;">${escapeHtml(offer)}</strong>.
+      </p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        ${
+          isRecruiter
+            ? "We&rsquo;re verifying your company details now. Requests are usually reviewed within 24 hours, and we&rsquo;ll email you as soon as your trial is active."
+            : "We&rsquo;re running a quick eligibility check. Requests are usually reviewed within 24 hours, and we&rsquo;ll email you as soon as your free practice interview is ready."
+        }
+      </p>
+      ${
+        params.requestId
+          ? `<p style="margin:0;color:#64748b;font-size:12px;">Reference: ${escapeHtml(params.requestId)}</p>`
+          : ""
+      }
+    `
+    ),
+  });
+}
+
+export async function sendTrialDecisionEmail(params: TrialDecisionEmailParams) {
+  const isRecruiter = params.kind === "RECRUITER";
+  const approved = params.decision === "APPROVE";
+  const safeName = escapeHtml(params.name || "there");
+  const offer = isRecruiter
+    ? "10 AI Interviews + 25 VERIS Screenings"
+    : "1 free VERIS AI practice interview";
+
+  const heading = approved
+    ? isRecruiter
+      ? "Your free recruiter trial is active"
+      : "Your free practice interview is ready"
+    : isRecruiter
+      ? "About your free trial request"
+      : "About your free practice request";
+
+  const body = approved
+    ? `Your ${isRecruiter ? "workspace" : "account"} now has ${offer}. You can start right away from your dashboard.`
+    : "We weren't able to approve this request automatically. If you think this is a mistake, reply to this email and a person will take a look.";
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to: params.to,
+    subject: heading,
+    text: [`Hi ${params.name || "there"},`, body, params.requestId ? `Reference: ${params.requestId}` : ""]
+      .filter(Boolean)
+      .join("\n"),
+    html: trialShellHtml(
+      heading,
+      `
+      <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">Hi ${safeName},</p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">${escapeHtml(body)}</p>
+      ${
+        params.companyName
+          ? `<p style="margin:0 0 18px;color:#64748b;font-size:13px;">Workspace: ${escapeHtml(params.companyName)}</p>`
+          : ""
+      }
+      ${
+        params.requestId
+          ? `<p style="margin:0;color:#64748b;font-size:12px;">Reference: ${escapeHtml(params.requestId)}</p>`
+          : ""
+      }
+    `
+    ),
+  });
+}

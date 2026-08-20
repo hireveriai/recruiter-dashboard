@@ -3,13 +3,29 @@ import { Prisma } from "@prisma/client"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 
-export const FREE_TRIAL_INTERVIEW_CREDITS = 10
-export const FREE_TRIAL_SCREENING_CREDITS = 25
-export const FREE_TRIAL_LIMIT_MESSAGE =
-  "You’ve reached your free trial limit. Upgrade your workspace to continue conducting interviews and screenings."
+import {
+  evaluateEntitlementGate,
+  FREE_TRIAL_INTERVIEW_CREDITS,
+  FREE_TRIAL_LIMIT_MESSAGE,
+  FREE_TRIAL_NOT_ACTIVE_MESSAGE,
+  FREE_TRIAL_PENDING_MESSAGE,
+  FREE_TRIAL_SCREENING_CREDITS,
+  normalizeTrialStatus,
+  resolveVisibleCredits,
+  type CreditBalanceSource,
+  type RecruiterTrialStatus,
+} from "@/lib/server/services/trial-entitlement-policy"
+
+export {
+  FREE_TRIAL_INTERVIEW_CREDITS,
+  FREE_TRIAL_SCREENING_CREDITS,
+  FREE_TRIAL_LIMIT_MESSAGE,
+  FREE_TRIAL_NOT_ACTIVE_MESSAGE,
+  FREE_TRIAL_PENDING_MESSAGE,
+}
+export type { CreditBalanceSource, RecruiterTrialStatus }
 
 export type TrialCreditKind = "INTERVIEW" | "SCREENING"
-export type CreditBalanceSource = "trial" | "subscription"
 
 export type TrialCreditSnapshot = {
   organizationId: string
@@ -19,6 +35,13 @@ export type TrialCreditSnapshot = {
   canStartScreening: boolean
   upgradeMessage: string
   source: CreditBalanceSource
+  /**
+   * Lifecycle of the organization's free trial. Only "APPROVED" makes free
+   * trial credits consumable; every other value means the workspace has no
+   * free entitlement, whatever the balance column happens to say.
+   */
+  trialStatus: RecruiterTrialStatus
+  trialActive: boolean
   subscriptionId?: string | null
   planId?: string | null
   subscriptionStatus?: string | null
@@ -29,6 +52,7 @@ type TrialCreditRow = {
   organization_id: string
   interview_credits_remaining: number
   screening_credits_remaining: number
+  trial_status?: string | null
 }
 
 type SubscriptionCreditRow = {
@@ -73,17 +97,28 @@ function normalizeCount(value: unknown) {
 }
 
 function mapTrialCreditRow(row: TrialCreditRow): TrialCreditSnapshot {
-  const interviewCreditsRemaining = normalizeCount(row.interview_credits_remaining)
-  const screeningCreditsRemaining = normalizeCount(row.screening_credits_remaining)
+  const trialStatus = normalizeTrialStatus(row.trial_status)
+  const visible = resolveVisibleCredits({
+    source: "trial",
+    trialStatus,
+    interviewCreditsRemaining: row.interview_credits_remaining,
+    screeningCreditsRemaining: row.screening_credits_remaining,
+  })
 
   return {
     organizationId: row.organization_id,
-    interviewCreditsRemaining,
-    screeningCreditsRemaining,
-    canSendInterview: interviewCreditsRemaining > 0,
-    canStartScreening: screeningCreditsRemaining > 0,
-    upgradeMessage: FREE_TRIAL_LIMIT_MESSAGE,
+    interviewCreditsRemaining: visible.interviewCreditsRemaining,
+    screeningCreditsRemaining: visible.screeningCreditsRemaining,
+    canSendInterview: visible.canSendInterview,
+    canStartScreening: visible.canStartScreening,
+    upgradeMessage: visible.trialActive
+      ? FREE_TRIAL_LIMIT_MESSAGE
+      : trialStatus === "PENDING_REVIEW"
+        ? FREE_TRIAL_PENDING_MESSAGE
+        : FREE_TRIAL_NOT_ACTIVE_MESSAGE,
     source: "trial",
+    trialStatus,
+    trialActive: visible.trialActive,
   }
 }
 
@@ -99,6 +134,9 @@ function mapSubscriptionCreditRow(row: SubscriptionCreditRow): TrialCreditSnapsh
     canStartScreening: screeningCreditsRemaining > 0,
     upgradeMessage: "",
     source: "subscription",
+    // Paid workspaces are not gated by the free-trial lifecycle at all.
+    trialStatus: "APPROVED",
+    trialActive: true,
     subscriptionId: row.id,
     planId: row.plan_id,
     subscriptionStatus: row.status,
@@ -106,15 +144,21 @@ function mapSubscriptionCreditRow(row: SubscriptionCreditRow): TrialCreditSnapsh
   }
 }
 
+/**
+ * A brand new workspace starts with nothing. Free credits only appear after a
+ * trial request has been reviewed and approved.
+ */
 export function createInitialTrialCreditSnapshot(organizationId: string): TrialCreditSnapshot {
   return {
     organizationId,
-    interviewCreditsRemaining: FREE_TRIAL_INTERVIEW_CREDITS,
-    screeningCreditsRemaining: FREE_TRIAL_SCREENING_CREDITS,
-    canSendInterview: true,
-    canStartScreening: true,
-    upgradeMessage: FREE_TRIAL_LIMIT_MESSAGE,
+    interviewCreditsRemaining: 0,
+    screeningCreditsRemaining: 0,
+    canSendInterview: false,
+    canStartScreening: false,
+    upgradeMessage: FREE_TRIAL_NOT_ACTIVE_MESSAGE,
     source: "trial",
+    trialStatus: "NOT_REQUESTED",
+    trialActive: false,
   }
 }
 
@@ -124,11 +168,13 @@ export async function ensureTrialCreditSchema(client: QueryClient = prisma) {
   }
 
   const ensurePromise = (async () => {
+    // New workspaces start at zero. Credits are only ever written by an
+    // approved trial grant or by a paid subscription.
     await client.$executeRaw(Prisma.sql`
     create table if not exists public.workspace_trial_credits (
       organization_id uuid primary key references public.organizations(organization_id) on delete cascade,
-      interview_credits_remaining integer not null default ${FREE_TRIAL_INTERVIEW_CREDITS},
-      screening_credits_remaining integer not null default ${FREE_TRIAL_SCREENING_CREDITS},
+      interview_credits_remaining integer not null default 0,
+      screening_credits_remaining integer not null default 0,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now(),
       constraint workspace_trial_credits_interview_non_negative check (interview_credits_remaining >= 0),
@@ -138,11 +184,53 @@ export async function ensureTrialCreditSchema(client: QueryClient = prisma) {
 
     await client.$executeRaw(Prisma.sql`
     alter table public.workspace_trial_credits
-      add column if not exists interview_credits_remaining integer not null default ${FREE_TRIAL_INTERVIEW_CREDITS},
-      add column if not exists screening_credits_remaining integer not null default ${FREE_TRIAL_SCREENING_CREDITS},
+      add column if not exists interview_credits_remaining integer not null default 0,
+      add column if not exists screening_credits_remaining integer not null default 0,
       add column if not exists created_at timestamptz not null default now(),
       add column if not exists updated_at timestamptz not null default now()
   `)
+
+    // Introducing trial_status must not silently strip credits from workspaces
+    // that predate the request flow. If the column does not exist yet, every
+    // existing row is grandfathered to APPROVED in the same transaction that
+    // adds it — so it does not matter whether this bootstrap or migration 012
+    // runs first.
+    await client.$executeRawUnsafe(`
+    do $add_trial_status$
+    declare
+      v_column_existed boolean;
+    begin
+      select exists (
+        select 1 from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'workspace_trial_credits'
+          and column_name = 'trial_status'
+      ) into v_column_existed;
+
+      alter table public.workspace_trial_credits
+        add column if not exists trial_status text not null default 'NOT_REQUESTED',
+        add column if not exists trial_request_id uuid,
+        add column if not exists trial_granted_at timestamptz,
+        add column if not exists trial_expires_at timestamptz;
+
+      if not v_column_existed then
+        update public.workspace_trial_credits
+        set trial_status = 'APPROVED',
+            trial_granted_at = coalesce(trial_granted_at, created_at);
+      end if;
+    end
+    $add_trial_status$;
+  `)
+
+    // Deployments created before migration 012 may still carry the old
+    // defaults; make them harmless.
+    await client.$executeRaw(Prisma.sql`
+    alter table public.workspace_trial_credits
+      alter column interview_credits_remaining set default 0,
+      alter column screening_credits_remaining set default 0
+  `).catch((error) => {
+      console.warn("Trial credit default reset skipped", error)
+    })
 
     await client.$executeRaw(Prisma.sql`
       create index if not exists workspace_trial_credits_updated_at_idx
@@ -167,39 +255,13 @@ export async function ensureTrialCreditSchema(client: QueryClient = prisma) {
 }
 
 async function ensureTrialCreditOptionalSchema(client: QueryClient = prisma) {
-  await client.$executeRawUnsafe(`
-  create or replace function public.ensure_workspace_trial_credits()
-  returns trigger
-  language plpgsql
-  as $$
-  begin
-    insert into public.workspace_trial_credits (
-      organization_id,
-      interview_credits_remaining,
-      screening_credits_remaining
-    )
-    values (
-      new.organization_id,
-      ${FREE_TRIAL_INTERVIEW_CREDITS},
-      ${FREE_TRIAL_SCREENING_CREDITS}
-    )
-    on conflict (organization_id) do nothing;
-
-    return new;
-  end;
-  $$;
-`).catch((error) => {
-    console.warn("Trial credit organization trigger function setup skipped", error)
-  })
-
+  // Creating an organization must never grant credits any more. The trigger
+  // that used to seed 10 + 25 on every insert is removed here so that a stale
+  // deployment or a partially applied migration cannot resurrect it.
   await client.$executeRawUnsafe(`
   drop trigger if exists organizations_seed_workspace_trial_credits on public.organizations;
-  create trigger organizations_seed_workspace_trial_credits
-    after insert on public.organizations
-    for each row
-    execute function public.ensure_workspace_trial_credits();
 `).catch((error) => {
-    console.warn("Trial credit organization trigger setup skipped", error)
+    console.warn("Trial credit auto-seed trigger removal skipped", error)
   })
 
   await client.$executeRaw(Prisma.sql`
@@ -325,22 +387,27 @@ async function getActiveSubscriptionCredits(organizationId: string, client: Quer
 }
 
 async function upsertTrialCreditRow(organizationId: string, client: QueryClient = prisma) {
+  // Bootstrapping a balance row must not hand out anything. It only records
+  // that the workspace exists and has not requested a trial yet.
   const insertedRows = await client.$queryRaw<TrialCreditRow[]>(Prisma.sql`
     insert into public.workspace_trial_credits (
       organization_id,
       interview_credits_remaining,
-      screening_credits_remaining
+      screening_credits_remaining,
+      trial_status
     )
     values (
       ${organizationId}::uuid,
-      ${FREE_TRIAL_INTERVIEW_CREDITS},
-      ${FREE_TRIAL_SCREENING_CREDITS}
+      0,
+      0,
+      'NOT_REQUESTED'
     )
     on conflict (organization_id) do nothing
     returning
       organization_id::text,
       interview_credits_remaining,
-      screening_credits_remaining
+      screening_credits_remaining,
+      trial_status
   `)
 
   return insertedRows.length > 0
@@ -349,7 +416,8 @@ async function upsertTrialCreditRow(organizationId: string, client: QueryClient 
       select
         organization_id::text,
         interview_credits_remaining,
-        screening_credits_remaining
+        screening_credits_remaining,
+        trial_status
       from public.workspace_trial_credits
       where organization_id = ${organizationId}::uuid
       limit 1
@@ -634,6 +702,22 @@ export async function getTrialCreditsDashboardSnapshot(organizationId: string, c
   return snapshot
 }
 
+/**
+ * The single server-side gate for free entitlements. Every consumption path
+ * runs through this, so an unapproved workspace cannot spend trial credits by
+ * calling the API directly.
+ */
+function assertTrialEntitlementActive(credits: TrialCreditSnapshot) {
+  const gate = evaluateEntitlementGate({
+    source: credits.source,
+    trialStatus: credits.trialStatus,
+  })
+
+  if (!gate.allowed) {
+    throw new ApiError(gate.status, gate.code, gate.message)
+  }
+}
+
 export async function assertTrialCreditsAvailable(input: {
   organizationId: string
   kind: TrialCreditKind
@@ -644,6 +728,8 @@ export async function assertTrialCreditsAvailable(input: {
     console.error("Trial credit availability check failed", error)
     throw new ApiError(503, "TRIAL_CREDITS_UNAVAILABLE", "Unable to verify free trial credits. Please try again.")
   })
+
+  assertTrialEntitlementActive(credits)
 
   const remaining =
     input.kind === "INTERVIEW" ? credits.interviewCreditsRemaining : credits.screeningCreditsRemaining
@@ -675,6 +761,8 @@ export async function deductTrialCredits(input: {
     console.error("Trial credit deduction preflight failed", error)
     throw new ApiError(503, "TRIAL_CREDITS_UNAVAILABLE", "Unable to update free trial credits. Please try again.")
   })
+
+  assertTrialEntitlementActive(creditsBeforeDeduction)
 
   const remainingBeforeDeduction =
     input.kind === "INTERVIEW"
@@ -726,11 +814,13 @@ export async function deductTrialCredits(input: {
           interview_credits_remaining = interview_credits_remaining - ${amount},
           updated_at = now()
         where organization_id = ${input.organizationId}::uuid
+          and trial_status = 'APPROVED'
           and interview_credits_remaining >= ${amount}
         returning
           organization_id::text,
           interview_credits_remaining,
-          screening_credits_remaining
+          screening_credits_remaining,
+          trial_status
       `)
         : await tx.$queryRaw<TrialCreditRow[]>(Prisma.sql`
         update public.workspace_trial_credits
@@ -738,15 +828,20 @@ export async function deductTrialCredits(input: {
           screening_credits_remaining = screening_credits_remaining - ${amount},
           updated_at = now()
         where organization_id = ${input.organizationId}::uuid
+          and trial_status = 'APPROVED'
           and screening_credits_remaining >= ${amount}
         returning
           organization_id::text,
           interview_credits_remaining,
-          screening_credits_remaining
+          screening_credits_remaining,
+          trial_status
       `)
 
       const row = rows[0]
       if (!row) {
+        // The conditional UPDATE is the authoritative check: it fails either
+        // because the trial is not active or because the balance ran out
+        // between the preflight read and this statement.
         throw new ApiError(402, "FREE_TRIAL_LIMIT_REACHED", FREE_TRIAL_LIMIT_MESSAGE)
       }
 
