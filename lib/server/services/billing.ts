@@ -6,6 +6,7 @@ import Razorpay from "razorpay"
 import type { RecruiterRequestContext } from "@/lib/server/auth-context"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
+import { FALLBACK_CURRENCY, type CurrencyCode } from "@/lib/server/pricing/currency"
 import { createAndSendInvoiceForPayment } from "@/lib/server/services/invoices"
 
 const PLAN_SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,80}$/
@@ -24,6 +25,8 @@ type PlanRow = {
   price: number
   price_inr: number
   price_usd: number
+  price_gbp: number | null
+  price_eur: number | null
   interviewLimit: number
   screeningCredits: number
   planType: string
@@ -102,7 +105,7 @@ type CheckoutQuote = {
   gstPercentage: number
   gstAmountPaise: number
   finalAmountPaise: number
-  currency: string
+  currency: CurrencyCode
   customerCountryCode: string
   taxTreatment: "DOMESTIC_GST" | "EXPORT_WITH_IGST" | "EXPORT_UNDER_LUT"
 }
@@ -179,13 +182,35 @@ function getRazorpayClient() {
   return razorpayClient
 }
 
-function mapPlan(plan: PlanRow, currency: "INR" | "USD" = "INR") {
+/**
+ * Picks the list price column for a currency, in major units.
+ *
+ * Falls back to USD when a plan has no price in the requested currency, so a
+ * newly added plan can never be charged at zero. The legacy `price` column is
+ * the last resort only; both price_inr and price_usd are NOT NULL today, so
+ * it is unreachable in practice.
+ */
+function getPlanAmount(plan: PlanRow, currency: CurrencyCode): number {
+  const byCurrency: Record<CurrencyCode, number | null | undefined> = {
+    INR: plan.price_inr,
+    USD: plan.price_usd,
+    GBP: plan.price_gbp,
+    EUR: plan.price_eur,
+  }
+
+  const requested = byCurrency[currency]
+  const resolved = requested ?? byCurrency[FALLBACK_CURRENCY] ?? plan.price
+
+  return Number(resolved ?? 0)
+}
+
+function mapPlan(plan: PlanRow, currency: CurrencyCode = "INR") {
   const features = Array.isArray(plan.features)
     ? plan.features.filter((feature): feature is string => typeof feature === "string")
     : []
-  const amountPaise = currency === "USD"
-    ? Number(plan.price_usd ?? plan.price) * 100
-    : Number(plan.price_inr ?? plan.price) * 100
+  // Named "paise" historically; it is simply the amount in minor units, which
+  // is what Razorpay expects for every currency.
+  const amountPaise = getPlanAmount(plan, currency) * 100
   const metadata = {
     features,
     plan_type: plan.planType ?? "INTERVIEW",
@@ -341,6 +366,8 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
       price,
       price_inr,
       price_usd,
+      price_gbp,
+      price_eur,
       "interviewLimit",
       "screeningCredits",
       "planType",
@@ -354,7 +381,7 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
   `)
 }
 
-export async function getActiveBillingPlans(currency: "INR" | "USD" = "INR") {
+export async function getActiveBillingPlans(currency: CurrencyCode = "INR") {
   const rows = await getPlanRows(
     prisma,
     Prisma.sql`
@@ -367,7 +394,7 @@ export async function getActiveBillingPlans(currency: "INR" | "USD" = "INR") {
   return rows.map((row) => mapPlan(row, currency))
 }
 
-export async function getActiveBillingPlanBySlug(slug: string, client: QueryClient = prisma, currency: "INR" | "USD" = "INR") {
+export async function getActiveBillingPlanBySlug(slug: string, client: QueryClient = prisma, currency: CurrencyCode = "INR") {
   const normalizedSlug = validatePlanSlug(slug)
   const rows = await getPlanRows(
     client,
@@ -382,7 +409,7 @@ export async function getActiveBillingPlanBySlug(slug: string, client: QueryClie
   return rows[0] ? mapPlan(rows[0], currency) : null
 }
 
-async function getOptionalAddonPlanBySlug(slug: string | null | undefined, client: QueryClient = prisma, currency: "INR" | "USD" = "INR") {
+async function getOptionalAddonPlanBySlug(slug: string | null | undefined, client: QueryClient = prisma, currency: CurrencyCode = "INR") {
   const normalizedSlug = typeof slug === "string" && slug.trim() ? slug.trim().toLowerCase() : ""
 
   if (!normalizedSlug) {
@@ -419,7 +446,7 @@ function assertPlanBundleAllowed(
   }
 }
 
-async function getActiveBillingPlanById(planId: string, client: QueryClient = prisma, currency: "INR" | "USD" = "INR") {
+async function getActiveBillingPlanById(planId: string, client: QueryClient = prisma, currency: CurrencyCode = "INR") {
   const rows = await getPlanRows(
     client,
     Prisma.sql`
@@ -613,9 +640,16 @@ export async function getCheckoutQuote(input: {
   planSlug: string
   addonPlanSlug?: string | null
   couponCode?: string | null
+  /**
+   * Transaction currency, resolved server-side from the request's edge geo
+   * headers (see resolveCheckoutCurrency). Never taken from the request body,
+   * so the browser cannot pick a cheaper market. Defaults to the billing
+   * country's currency when a caller does not supply one.
+   */
+  currency?: CurrencyCode
 }) {
   const organization = await getBillingOrganization(input.auth)
-  const currency = organization.billingCountryCode === "IN" ? "INR" : "USD"
+  const currency = input.currency ?? (organization.billingCountryCode === "IN" ? "INR" : "USD")
   const plan = await getActiveBillingPlanBySlug(input.planSlug, prisma, currency)
 
   if (!plan) {
@@ -656,9 +690,11 @@ export async function createRazorpayOrder(input: {
   planSlug: string
   addonPlanSlug?: string | null
   couponCode?: string | null
+  /** See getCheckoutQuote: server-resolved from edge geo headers only. */
+  currency?: CurrencyCode
 }) {
   const organization = await getBillingOrganization(input.auth)
-  const currency = organization.billingCountryCode === "IN" ? "INR" : "USD"
+  const currency = input.currency ?? (organization.billingCountryCode === "IN" ? "INR" : "USD")
   const plan = await getActiveBillingPlanBySlug(input.planSlug, prisma, currency)
 
   if (!plan) {

@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { resolveCheckoutCurrency } from "@/lib/server/pricing/currency"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { createRazorpayOrder } from "@/lib/server/services/billing"
 
@@ -18,11 +19,15 @@ export async function POST(request: Request) {
     const auth = await getRecruiterRequestContext(request)
     const body = await request.json()
     const input = createOrderSchema.parse(body)
+    /* The schema deliberately has no currency field: the amount is resolved
+       from the database using a currency derived from edge geo headers, so a
+       crafted request body cannot change what is charged. */
     const order = await createRazorpayOrder({
       auth,
       planSlug: input.plan,
       addonPlanSlug: input.addon_plan,
       couponCode: input.coupon_code,
+      currency: resolveCheckoutCurrency(request),
     })
 
     return successResponse(order)

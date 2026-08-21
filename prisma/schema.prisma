@@ -319,6 +319,8 @@ model Plan {
   price            Int
   priceInr         Int      @map("price_inr")
   priceUsd         Int      @map("price_usd")
+  priceGbp         Int?     @map("price_gbp")
+  priceEur         Int?     @map("price_eur")
   interviewLimit   Int
   screeningCredits Int      @default(0)
   planType         String   @default("INTERVIEW")

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 
 import { VerisGlobeLoader } from "@/components/system/loaders"
 import { buildAuthUrl } from "@/lib/client/auth-query"
+import { formatMinorAmount } from "@/lib/pricing/currency"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 type Plan = {
@@ -109,12 +110,14 @@ const TRUST_INDICATORS = [
   "Audit-ready payment records",
 ]
 
+/**
+ * Delegates to the shared formatter so a price reads the same here as on the
+ * pricing page. This used to hardcode the en-IN locale for every currency,
+ * which applied Indian lakh grouping to USD/GBP/EUR and always forced two
+ * decimals ("£159.00" against the pricing page's "£159").
+ */
 function formatPaise(value: number, currency = "INR") {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(Number(value || 0) / 100)
+  return formatMinorAmount(value, currency)
 }
 
 function getErrorMessage(payload: ApiResponse<unknown> | null, fallback: string) {

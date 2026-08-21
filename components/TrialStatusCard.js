@@ -232,7 +232,7 @@ export default function TrialStatusCard({ credits }) {
       </p>
       <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-400">
         <li>No credit card required</li>
-        <li>Company verification required</li>
+        <li>We check your work email</li>
         <li>Usually reviewed within 24 hours</li>
       </ul>
 
@@ -278,7 +278,7 @@ export default function TrialStatusCard({ credits }) {
             onClick={() => setFormOpen(true)}
             className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
           >
-            Request Free Trial
+            Start Free Trial
           </button>
           {error ? <p className="mt-2 text-sm text-amber-300">{error}</p> : null}
         </div>
