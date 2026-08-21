@@ -105,12 +105,7 @@ declare global {
 }
 
 const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js"
-const TRUST_INDICATORS = [
-  "Tax Invoice Available",
-  "Secure Razorpay Processing",
-  "Organization Billing",
-  "Audit-ready payment records",
-]
+const TRUST_INDICATORS = ["Tax invoice", "Razorpay secured", "Organization billing", "Audit-ready records"]
 
 /**
  * Delegates to the shared formatter so a price reads the same here as on the
@@ -609,15 +604,18 @@ export default function BillingCheckoutPage() {
             </div>
           </div>
 
-          {/* One line at desktop: the four labels are reassurance, not content,
-              so they get the smallest readable size and no per-item padding.
-              Below lg they wrap rather than overflow. */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 lg:flex-nowrap">
-            {TRUST_INDICATORS.map((indicator) => (
-              <span key={indicator} className="whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.06em] text-slate-400">
-                {indicator}
-              </span>
-            ))}
+          {/* One statement line rather than four separate blocks. Sentence case
+              and short labels so the whole row fits the card at readable size
+              instead of overflowing it. */}
+          <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5">
+            <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-xs font-medium text-slate-400">
+              {TRUST_INDICATORS.map((indicator, index) => (
+                <span key={indicator} className="flex items-center gap-2.5 whitespace-nowrap">
+                  {index > 0 ? <span aria-hidden="true" className="text-slate-700">&middot;</span> : null}
+                  {indicator}
+                </span>
+              ))}
+            </p>
           </div>
 
           <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-950 p-5">
