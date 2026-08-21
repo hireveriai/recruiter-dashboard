@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
+import PlanComparison from "@/components/billing/plan-comparison"
 import { VerisGlobeLoader } from "@/components/system/loaders"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatMinorAmount } from "@/lib/pricing/currency"
@@ -492,7 +493,7 @@ export default function BillingCheckoutPage() {
 
   if (plansLoading || (status === "loading" && !summary)) {
     return (
-      <main className="hv-preserve-dark min-h-screen bg-[#08111f] text-slate-100">
+      <main className="min-h-screen bg-slate-950 text-slate-100">
         <VerisGlobeLoader
           eyebrow="Billing Checkout"
           steps={[
@@ -508,11 +509,11 @@ export default function BillingCheckoutPage() {
   }
 
   return (
-    <main className="hv-preserve-dark min-h-screen overflow-hidden bg-[#08111f] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
-      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(7,12,22,0.98)),radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.12),transparent_34%)]" />
+    <main className="min-h-screen overflow-hidden bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.06),transparent_38%)]" />
 
       <section className="relative mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)]">
-        <div className="rounded-2xl border border-slate-800 bg-[#0b1220]/95 p-6 shadow-[0_24px_80px_rgba(2,6,23,0.34)] sm:p-8">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-blue-200/75">
             Enterprise Billing Checkout
           </p>
@@ -553,7 +554,7 @@ export default function BillingCheckoutPage() {
             ))}
           </div>
 
-          <div className="mt-8 rounded-2xl border border-slate-800 bg-[#0f172a]/82 p-5">
+          <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-950 p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-blue-200">Selected plan</p>
@@ -594,34 +595,15 @@ export default function BillingCheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {interviewPlans.map((plan) => {
-                const isSelected = selectedPlanSlug === plan.slug
-                return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => updateCheckoutSelection(plan.slug, "")}
-                    className={`rounded-xl border p-4 text-left transition ${
-                      isSelected
-                        ? "border-blue-400/45 bg-blue-500/10"
-                        : "border-slate-800 bg-[#0b1220] hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">{plan.name}</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-400">{plan.description}</p>
-                      </div>
-                      <p className="shrink-0 text-sm font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</p>
-                    </div>
-                    <p className="mt-3 text-xs text-slate-500">
-                      {plan.interviewSessions} interviews · {plan.screeningReviews} screening reviews
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
+            <PlanComparison
+              interviewPlans={interviewPlans}
+              screeningPlans={screeningPlans}
+              selectedPlanSlug={selectedPlanSlug}
+              selectedAddonPlanSlug={selectedAddonPlanSlug}
+              onSelectPlan={updateCheckoutSelection}
+              disabled={isBusy}
+            />
+
 
             {screeningPlans.length > 0 ? (
               <div className="mt-5 border-t border-slate-800 pt-5">
@@ -638,12 +620,12 @@ export default function BillingCheckoutPage() {
                         className={`rounded-xl border p-4 text-left transition ${
                           isSelected
                             ? "border-blue-400/45 bg-blue-500/10"
-                            : "border-slate-800 bg-[#0b1220] hover:border-slate-600"
+                            : "border-slate-800 bg-slate-950 hover:border-slate-600"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-white">{plan.name}</p>
+                            <p className="text-sm font-semibold text-slate-100">{plan.name}</p>
                             <p className="mt-1 text-xs text-slate-400">{plan.screeningReviews} screening reviews</p>
                           </div>
                           <p className="shrink-0 text-sm font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</p>
@@ -664,8 +646,8 @@ export default function BillingCheckoutPage() {
                     onClick={() => updateCheckoutSelection(selectedPlan.slug, "")}
                     className={`rounded-xl border p-4 text-left text-sm transition ${
                       !selectedAddonPlanSlug
-                        ? "border-blue-400/45 bg-blue-500/10 text-white"
-                        : "border-slate-800 bg-[#0b1220] text-slate-300 hover:border-slate-600"
+                        ? "border-blue-400/45 bg-blue-500/10 text-blue-100"
+                        : "border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-600"
                     }`}
                   >
                     No add-on
@@ -678,12 +660,12 @@ export default function BillingCheckoutPage() {
                       className={`rounded-xl border p-4 text-left transition ${
                         selectedAddonPlanSlug === plan.slug
                           ? "border-blue-400/45 bg-blue-500/10"
-                          : "border-slate-800 bg-[#0b1220] hover:border-slate-600"
+                          : "border-slate-800 bg-slate-950 hover:border-slate-600"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-white">{plan.name}</p>
+                          <p className="text-sm font-semibold text-slate-100">{plan.name}</p>
                           <p className="mt-1 text-xs text-slate-400">+{plan.screeningReviews} screening reviews</p>
                         </div>
                         <p className="shrink-0 text-sm font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</p>
@@ -702,7 +684,7 @@ export default function BillingCheckoutPage() {
           </div>
         </div>
 
-        <aside className="rounded-2xl border border-slate-800 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(10,17,31,0.98))] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.38)] sm:p-7">
+        <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-7">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Payment Summary</p>
@@ -787,7 +769,7 @@ export default function BillingCheckoutPage() {
             {appliedCoupon ? (
               <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
                 <span>{appliedCoupon} active</span>
-                <button type="button" onClick={handleRemoveCoupon} disabled={isBusy} className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100/80 hover:text-white">
+                <button type="button" onClick={handleRemoveCoupon} disabled={isBusy} className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100/80 hover:text-emerald-50">
                   Remove
                 </button>
               </div>
@@ -810,7 +792,7 @@ export default function BillingCheckoutPage() {
             type="button"
             onClick={handleProceedToPayment}
             disabled={!summary || isBusy || status === "success"}
-            className="mt-6 w-full rounded-xl bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-55"
+            className="hv-solid-action mt-6 w-full rounded-xl bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-55"
           >
             {status === "paying"
               ? "Opening Razorpay..."

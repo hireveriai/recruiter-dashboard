@@ -61,20 +61,27 @@ const CURRENCY_LOCALES: Record<CurrencyCode, string> = {
  *
  * Whole amounts render without decimals so a plan price matches the pricing
  * page exactly (£159, not £159.00); tax lines carrying fractions still show
- * them.
+ * them. Pass maximumFractionDigits: 0 to round derived figures — per-unit
+ * costs, for instance — to whole currency units.
  */
-export function formatMinorAmount(minorUnits: number, currency: string): string {
+export function formatMinorAmount(
+  minorUnits: number,
+  currency: string,
+  options: { minimumFractionDigits?: number; maximumFractionDigits?: number } = {}
+): string {
   const code = normalizeCurrency(currency) ?? FALLBACK_CURRENCY
   const amount = Number(minorUnits || 0) / 100
+  const maximumFractionDigits = options.maximumFractionDigits ?? 2
+  const minimumFractionDigits = Math.min(options.minimumFractionDigits ?? 0, maximumFractionDigits)
 
   try {
     return new Intl.NumberFormat(CURRENCY_LOCALES[code], {
       style: "currency",
       currency: code,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      minimumFractionDigits,
+      maximumFractionDigits,
     }).format(amount)
   } catch {
-    return `${code} ${amount.toFixed(2)}`
+    return `${code} ${amount.toFixed(maximumFractionDigits)}`
   }
 }
