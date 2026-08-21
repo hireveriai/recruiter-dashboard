@@ -15,10 +15,10 @@ import type { CurrencyCode } from "@/lib/pricing/currency"
  * price is never displayed.
  */
 
-export const INTRODUCTORY_OFFER_LABEL = "Introductory price"
+export const INTRODUCTORY_OFFER_LABEL = "Limited Time Offer"
 
 export const INTRODUCTORY_OFFER_NOTE =
-  "Limited time offer — prices move to the regular rate when it ends."
+  "Limited Time Offer — prices move to the regular rate when it ends."
 
 type RegularPricing = Record<CurrencyCode, number>
 
