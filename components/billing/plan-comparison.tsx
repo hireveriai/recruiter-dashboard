@@ -253,7 +253,7 @@ export default function PlanComparison({
                         selected. */}
                     <span className="mb-1 flex h-[18px] items-center justify-center">
                       {plan.isPopular ? (
-                        <span className="whitespace-nowrap rounded-full bg-[#b45309] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.06em] text-white">
+                        <span className="whitespace-nowrap rounded-full bg-[#7c3aed] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-white shadow-sm">
                           Most popular
                         </span>
                       ) : null}
