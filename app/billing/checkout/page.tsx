@@ -203,6 +203,19 @@ export default function BillingCheckoutPage() {
     )
   }, [summary])
 
+  /** Regular price of the selected plan alone, for the headline price display. */
+  const selectedPlanRegularPaise = useMemo(() => {
+    if (!summary) {
+      return null
+    }
+
+    return getRegularAmountPaise(
+      summary.plan.slug,
+      summary.quote.currency,
+      summary.plan.amountPaise
+    )
+  }, [summary])
+
   /* Introductory saving and any coupon saving, as one number the buyer sees. */
   const totalSavingPaise = useMemo(() => {
     if (!summary) {
@@ -600,6 +613,37 @@ export default function BillingCheckoutPage() {
               <div>
                 <p className="text-sm font-semibold text-blue-200">Selected plan</p>
                 <h2 className="mt-2 text-3xl font-semibold text-slate-100">{summary?.plan.name || selectedPlan?.name || "Choose a plan"}</h2>
+                {/* The plan's price belongs beside its name: the payment summary
+                    is a tax breakdown, and the comparison table sits far below
+                    the fold on a laptop. */}
+                {summary ? (
+                  <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    {selectedPlanRegularPaise !== null ? (
+                      <span className="text-lg font-medium text-slate-500 line-through">
+                        {formatPaise(selectedPlanRegularPaise, summary.quote.currency)}
+                      </span>
+                    ) : null}
+                    <span className="text-3xl font-semibold text-slate-100">
+                      {formatPaise(summary.plan.amountPaise, summary.quote.currency)}
+                    </span>
+                    {summary.plan.interviewSessions > 0 ? (
+                      <span className="text-sm text-slate-400">
+                        &middot;{" "}
+                        {formatPaise(
+                          Math.round(summary.plan.amountPaise / summary.plan.interviewSessions),
+                          summary.quote.currency
+                        )}{" "}
+                        per interview
+                      </span>
+                    ) : null}
+                    {selectedPlanRegularPaise !== null ? (
+                      <span className="inline-flex rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
+                        {INTRODUCTORY_OFFER_LABEL}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
                   {summary?.plan.description || selectedPlan?.description || "Select a database-priced HireVeri plan to generate a secure billing quote."}
                 </p>
