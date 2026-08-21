@@ -225,15 +225,17 @@ export default function PlanComparison({
         </p>
       ) : null}
 
-      {/* Wide table on a narrow panel: scroll the table, never the page. */}
+      {/* table-fixed shares the width across the five columns so nothing is
+          pushed under a scrollbar. Scrolling stays as a fallback for very
+          narrow screens only. */}
       <div className="mt-4 -mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[560px] border-collapse text-left">
+        <table className="w-full table-fixed border-collapse text-left">
           <caption className="sr-only">
             Comparison of HireVeri interview plans by price, included credits, and cost per interview
           </caption>
           <thead>
             <tr>
-              <th scope="col" className="pb-3 pr-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <th scope="col" className="w-[112px] pb-3 pr-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:w-[132px]">
                 Plan
               </th>
               {rows.map(({ plan }) => {
@@ -250,15 +252,20 @@ export default function PlanComparison({
                       disabled={disabled}
                       onClick={() => onSelectPlan(plan.slug, withScreening ? addonSlug : "")}
                       aria-pressed={isSelected}
-                      className={`w-full rounded-xl border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      className={`w-full rounded-xl border px-2.5 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                         isSelected
                           ? "border-blue-400/45 bg-blue-500/10"
                           : "border-slate-800 bg-slate-900 hover:border-slate-600"
                       }`}
                     >
+                      {plan.isPopular ? (
+                        <span className="mb-1 inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-amber-100">
+                          Most popular
+                        </span>
+                      ) : null}
                       <span className="block text-sm font-semibold text-slate-100">{plan.name}</span>
                       <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
-                        {isSelected ? "Current selection" : plan.isPopular ? "Most popular" : "Select"}
+                        {isSelected ? "Current selection" : "Select"}
                       </span>
                     </button>
                   </th>
@@ -377,7 +384,7 @@ function ComparisonRow({
     <tr className={highlight ? "bg-slate-900" : undefined}>
       <th
         scope="row"
-        className="border-t border-slate-800 py-3 pr-3 text-xs font-medium text-slate-400"
+        className="border-t border-slate-800 py-2.5 pr-2 text-[11px] font-medium leading-4 text-slate-400"
       >
         {label}
       </th>
@@ -399,7 +406,7 @@ function Cell({
     <td
       /* The selected plan is highlighted down its whole column so the figures a
          buyer is actually purchasing are readable as one block. */
-      className={`border-t border-slate-800 py-3 pl-3 pr-3 text-sm ${
+      className={`border-t border-slate-800 py-2.5 pl-2 pr-2 text-[13px] ${
         emphasis ? "font-semibold text-slate-100" : "text-slate-300"
       } ${selected ? "bg-blue-500/[0.07]" : ""}`}
     >
