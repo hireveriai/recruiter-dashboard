@@ -609,10 +609,12 @@ export default function BillingCheckoutPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          {/* One line at desktop: the four labels are reassurance, not content,
+              so they get the smallest readable size and no per-item padding.
+              Below lg they wrap rather than overflow. */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 lg:flex-nowrap">
             {TRUST_INDICATORS.map((indicator) => (
-              <span key={indicator} className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-400">
-                <span className="h-1 w-1 rounded-full bg-blue-400" />
+              <span key={indicator} className="whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.06em] text-slate-400">
                 {indicator}
               </span>
             ))}
@@ -882,7 +884,8 @@ export default function BillingCheckoutPage() {
           </button>
 
           <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-            Subscription activates only after backend signature, order, amount, coupon, and organization verification.
+            Secured by Razorpay. Your credits are added to the workspace as soon as payment is
+            confirmed, and a tax invoice is issued automatically.
           </p>
 
           {activeOrderId ? (
