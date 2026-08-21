@@ -235,7 +235,7 @@ export default function PlanComparison({
           </caption>
           <thead>
             <tr>
-              <th scope="col" className="w-[112px] pb-3 pr-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:w-[132px]">
+              <th scope="col" className="w-[96px] pb-3 pr-2 align-bottom text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:w-[116px]">
                 Plan
               </th>
               {rows.map(({ plan }) => {
@@ -245,27 +245,40 @@ export default function PlanComparison({
                   <th
                     key={plan.id}
                     scope="col"
-                    className={`pb-3 pl-3 pr-3 align-bottom ${isSelected ? "bg-blue-500/[0.07]" : ""}`}
+                    className={`pb-3 pl-1.5 pr-1.5 align-bottom ${isSelected ? "bg-blue-500/[0.07]" : ""}`}
                   >
+                    {/* The badge sits outside and above the button, on a row every
+                        column reserves, so all four boxes are the same size and
+                        start at the same height whichever plan is popular or
+                        selected. */}
+                    <span className="mb-1 flex h-[18px] items-center justify-center">
+                      {plan.isPopular ? (
+                        <span className="whitespace-nowrap rounded-full bg-[#b45309] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.06em] text-white">
+                          Most popular
+                        </span>
+                      ) : null}
+                    </span>
+
                     <button
                       type="button"
                       disabled={disabled}
                       onClick={() => onSelectPlan(plan.slug, withScreening ? addonSlug : "")}
                       aria-pressed={isSelected}
-                      className={`w-full rounded-xl border px-2.5 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      className={`flex w-full flex-col items-center rounded-xl border px-1.5 py-2 text-center transition disabled:cursor-not-allowed disabled:opacity-60 ${
                         isSelected
-                          ? "border-blue-400/45 bg-blue-500/10"
+                          ? "border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/40"
                           : "border-slate-800 bg-slate-900 hover:border-slate-600"
                       }`}
                     >
-                      {plan.isPopular ? (
-                        <span className="mb-1 inline-flex rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-amber-100">
-                          Most popular
-                        </span>
-                      ) : null}
-                      <span className="block text-sm font-semibold text-slate-100">{plan.name}</span>
-                      <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
-                        {isSelected ? "Current selection" : "Select"}
+                      <span className="block w-full truncate text-[13px] font-semibold leading-tight text-slate-100">
+                        {plan.name}
+                      </span>
+                      <span
+                        className={`mt-0.5 block text-[10px] font-medium leading-tight ${
+                          isSelected ? "text-blue-100" : "text-slate-500"
+                        }`}
+                      >
+                        {isSelected ? "Selected" : "Select"}
                       </span>
                     </button>
                   </th>
@@ -406,7 +419,7 @@ function Cell({
     <td
       /* The selected plan is highlighted down its whole column so the figures a
          buyer is actually purchasing are readable as one block. */
-      className={`border-t border-slate-800 py-2.5 pl-2 pr-2 text-[13px] ${
+      className={`border-t border-slate-800 py-2.5 pl-1.5 pr-1.5 text-[13px] ${
         emphasis ? "font-semibold text-slate-100" : "text-slate-300"
       } ${selected ? "bg-blue-500/[0.07]" : ""}`}
     >
