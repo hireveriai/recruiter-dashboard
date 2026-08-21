@@ -517,7 +517,7 @@ export default function BillingCheckoutPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-blue-200/75">
             Enterprise Billing Checkout
           </p>
-          <h1 className="mt-5 max-w-2xl text-3xl font-semibold leading-tight text-slate-50 sm:text-5xl">
+          <h1 className="mt-5 max-w-2xl text-3xl font-semibold leading-tight text-slate-100 sm:text-5xl">
             Activate HireVeri for your organization
           </h1>
           <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
@@ -527,7 +527,7 @@ export default function BillingCheckoutPage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Bill to</p>
-              <p className="mt-3 truncate text-sm font-semibold text-slate-50">
+              <p className="mt-3 truncate text-sm font-semibold text-slate-100">
                 {summary?.organization.organizationName || "Select a plan"}
               </p>
             </div>
@@ -558,7 +558,7 @@ export default function BillingCheckoutPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-blue-200">Selected plan</p>
-                <h2 className="mt-2 text-3xl font-semibold text-slate-50">{summary?.plan.name || selectedPlan?.name || "Choose a plan"}</h2>
+                <h2 className="mt-2 text-3xl font-semibold text-slate-100">{summary?.plan.name || selectedPlan?.name || "Choose a plan"}</h2>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
                   {summary?.plan.description || selectedPlan?.description || "Select a database-priced HireVeri plan to generate a secure billing quote."}
                 </p>
@@ -731,7 +731,7 @@ export default function BillingCheckoutPage() {
             <div className="border-t border-slate-800 pt-4">
               <div className="flex items-end justify-between gap-4">
                 <span className="text-sm font-semibold text-slate-200">Final payable</span>
-                <span className="text-3xl font-semibold text-slate-50">
+                <span className="text-3xl font-semibold text-slate-100">
                   {summary ? formatPaise(summary.quote.finalAmountPaise, summary.quote.currency) : "--"}
                 </span>
               </div>
