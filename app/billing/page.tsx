@@ -456,7 +456,16 @@ export default function BillingPage() {
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Credit validity</p>
-                  <p className="mt-3 text-sm font-semibold text-white">No expiry</p>
+                  {/* Credits are valid for 12 months from activation, so show the
+                      real date rather than a fixed claim. Older subscriptions
+                      predate the change and genuinely have no expiry. */}
+                  <p className="mt-3 text-sm font-semibold text-slate-100">
+                    {activeSubscription?.expiresAt
+                      ? `Valid until ${formatDate(activeSubscription.expiresAt)}`
+                      : activeSubscription
+                        ? "No expiry"
+                        : "-"}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Razorpay</p>
