@@ -7,6 +7,7 @@ import PlanComparison from "@/components/billing/plan-comparison"
 import { VerisGlobeLoader } from "@/components/system/loaders"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatMinorAmount } from "@/lib/pricing/currency"
+import { INTRODUCTORY_OFFER_LABEL, getRegularAmountPaise } from "@/lib/pricing/introductory-offer"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 type Plan = {
@@ -174,6 +175,46 @@ export default function BillingCheckoutPage() {
 
   const isBusy = status === "loading" || status === "applying" || status === "paying" || status === "verifying"
   const appliedCoupon = useMemo(() => appliedCouponCode.trim().toUpperCase(), [appliedCouponCode])
+
+  /**
+   * What this exact order would cost at the regular (post-introductory) price,
+   * tax included, so the struck-through total is comparable like for like with
+   * the final payable figure beneath it.
+   */
+  const regularOrderTotalPaise = useMemo(() => {
+    if (!summary) {
+      return null
+    }
+
+    const planRegularPaise = getRegularAmountPaise(
+      summary.plan.slug,
+      summary.quote.currency,
+      summary.plan.amountPaise
+    )
+
+    if (planRegularPaise === null) {
+      return null
+    }
+
+    const regularBeforeTax = planRegularPaise + (summary.addonPlan?.amountPaise ?? 0)
+
+    return (
+      regularBeforeTax + Math.round((regularBeforeTax * summary.quote.gstPercentage) / 100)
+    )
+  }, [summary])
+
+  /* Introductory saving and any coupon saving, as one number the buyer sees. */
+  const totalSavingPaise = useMemo(() => {
+    if (!summary) {
+      return 0
+    }
+
+    if (regularOrderTotalPaise !== null) {
+      return Math.max(0, regularOrderTotalPaise - summary.quote.finalAmountPaise)
+    }
+
+    return summary.quote.discountAmountPaise
+  }, [summary, regularOrderTotalPaise])
   const interviewPlans = useMemo(
     () => plans.filter((plan) => plan.planType !== "SCREENING"),
     [plans]
@@ -602,6 +643,10 @@ export default function BillingCheckoutPage() {
               selectedAddonPlanSlug={selectedAddonPlanSlug}
               onSelectPlan={updateCheckoutSelection}
               disabled={isBusy}
+              // Server-verified discount only. The struck-through price is the
+              // plan's real list price, never a decorative anchor.
+              discountPercentage={summary?.quote.discountPercentage ?? 0}
+              offerLabel={summary?.coupon?.description || "Special price"}
             />
 
 
@@ -731,10 +776,28 @@ export default function BillingCheckoutPage() {
             <div className="border-t border-slate-800 pt-4">
               <div className="flex items-end justify-between gap-4">
                 <span className="text-sm font-semibold text-slate-200">Final payable</span>
-                <span className="text-3xl font-semibold text-slate-100">
-                  {summary ? formatPaise(summary.quote.finalAmountPaise, summary.quote.currency) : "--"}
-                </span>
+                <div className="text-right">
+                  {/* Struck figure = what this order costs at the regular price
+                      the plan moves to once the introductory period ends. */}
+                  {regularOrderTotalPaise !== null ? (
+                    <span className="block text-sm font-medium text-slate-500 line-through">
+                      {formatPaise(regularOrderTotalPaise, summary!.quote.currency)}
+                    </span>
+                  ) : null}
+                  <span className="block text-3xl font-semibold text-slate-100">
+                    {summary ? formatPaise(summary.quote.finalAmountPaise, summary.quote.currency) : "--"}
+                  </span>
+                </div>
               </div>
+
+              {summary && totalSavingPaise > 0 ? (
+                <p className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-100">
+                  <span>{summary.coupon?.description || INTRODUCTORY_OFFER_LABEL}</span>
+                  <span className="shrink-0">
+                    You save {formatPaise(totalSavingPaise, summary.quote.currency)}
+                  </span>
+                </p>
+              ) : null}
             </div>
           </div>
 

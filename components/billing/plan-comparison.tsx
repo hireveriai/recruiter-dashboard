@@ -3,6 +3,11 @@
 import { useMemo, useState } from "react"
 
 import { formatMinorAmount } from "@/lib/pricing/currency"
+import {
+  INTRODUCTORY_OFFER_LABEL,
+  INTRODUCTORY_OFFER_NOTE,
+  getRegularAmountPaise,
+} from "@/lib/pricing/introductory-offer"
 
 /**
  * The table shows round numbers. Derived per-unit figures are dropped to whole
@@ -42,6 +47,13 @@ type PlanComparisonProps = {
   selectedAddonPlanSlug: string
   onSelectPlan: (planSlug: string, addonSlug: string) => void
   disabled?: boolean
+  /**
+   * Live discount from the applied coupon. The struck-through figure is the
+   * real list price the plan is sold at, never an invented anchor — a
+   * permanently crossed-out price nobody pays is a misleading price claim.
+   */
+  discountPercentage?: number
+  offerLabel?: string
 }
 
 /**
@@ -49,15 +61,34 @@ type PlanComparisonProps = {
  * Everything is in minor units (paise/cents) until it is formatted, so no
  * rounding creeps into the arithmetic.
  */
-function getUnitEconomics(plan: ComparablePlan, addon: ComparablePlan | null) {
-  const totalPaise = plan.amountPaise + (addon?.amountPaise ?? 0)
+function getUnitEconomics(
+  plan: ComparablePlan,
+  addon: ComparablePlan | null,
+  discountPercentage = 0
+) {
+  const chargedPaise = plan.amountPaise + (addon?.amountPaise ?? 0)
+  const discount = Math.min(Math.max(discountPercentage, 0), 100)
+  const totalPaise = discount > 0 ? Math.round(chargedPaise * (1 - discount / 100)) : chargedPaise
+
+  /* The struck-through figure is the regular price this plan moves to when the
+     introductory period ends. An add-on has no introductory price, so it is
+     added at its normal rate on both sides of the comparison. */
+  const planRegularPaise = getRegularAmountPaise(plan.slug, plan.currency, plan.amountPaise)
+  const regularPaise =
+    planRegularPaise === null ? null : planRegularPaise + (addon?.amountPaise ?? 0)
+
   const interviews = Math.max(plan.interviewSessions, 0)
   const screenings = Math.max(plan.screeningReviews, 0) + (addon?.screeningReviews ?? 0)
 
   return {
+    regularPaise,
     totalPaise,
+    savingPaise: regularPaise === null ? 0 : regularPaise - totalPaise,
+    discounted: regularPaise !== null && regularPaise > totalPaise,
     interviews,
     screenings,
+    regularPerInterviewPaise:
+      regularPaise !== null && interviews > 0 ? Math.round(regularPaise / interviews) : null,
     perInterviewPaise: interviews > 0 ? Math.round(totalPaise / interviews) : null,
     perScreeningPaise: screenings > 0 ? Math.round(totalPaise / screenings) : null,
     screeningsPerInterview: interviews > 0 ? screenings / interviews : 0,
@@ -71,6 +102,8 @@ export default function PlanComparison({
   selectedAddonPlanSlug,
   onSelectPlan,
   disabled = false,
+  discountPercentage = 0,
+  offerLabel = INTRODUCTORY_OFFER_LABEL,
 }: PlanComparisonProps) {
   const [withScreening, setWithScreening] = useState(Boolean(selectedAddonPlanSlug))
   const [addonSlug, setAddonSlug] = useState(selectedAddonPlanSlug || screeningPlans[0]?.slug || "")
@@ -80,13 +113,18 @@ export default function PlanComparison({
     [withScreening, addonSlug, screeningPlans]
   )
 
+  const offerActive = useMemo(
+    () => interviewPlans.some((plan) => getRegularAmountPaise(plan.slug, plan.currency, plan.amountPaise) !== null),
+    [interviewPlans]
+  )
+
   const rows = useMemo(
     () =>
       interviewPlans.map((plan) => ({
         plan,
-        economics: getUnitEconomics(plan, activeAddon),
+        economics: getUnitEconomics(plan, activeAddon, discountPercentage),
       })),
-    [interviewPlans, activeAddon]
+    [interviewPlans, activeAddon, discountPercentage]
   )
 
   /* The lowest cost per interview is the number a recruiter is really
@@ -119,9 +157,18 @@ export default function PlanComparison({
     <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-100">Compare plans</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-slate-100">Compare plans</p>
+            {offerActive ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
+                {offerLabel}
+              </span>
+            ) : null}
+          </div>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            Cost per interview is the plan price divided by the interviews it includes. Select any plan to switch your quote.
+            {offerActive
+              ? `Struck-through figures are the regular price. ${INTRODUCTORY_OFFER_NOTE} Select any plan to switch your quote.`
+              : "Cost per interview is the plan price divided by the interviews it includes. Select any plan to switch your quote."}
           </p>
         </div>
 
@@ -220,7 +267,21 @@ export default function PlanComparison({
             <ComparisonRow label={activeAddon ? "Plan + add-on price (excl. GST)" : "Plan price (excl. GST)"}>
               {rows.map(({ plan, economics }) => (
                 <Cell key={plan.id} emphasis>
-                  {formatUnitAmount(economics.totalPaise, currency)}
+                  {economics.discounted && economics.regularPaise !== null ? (
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-xs font-normal text-slate-500 line-through">
+                        {formatUnitAmount(economics.regularPaise, currency)}
+                      </span>
+                      <span className="text-emerald-100">
+                        {formatUnitAmount(economics.totalPaise, currency)}
+                      </span>
+                      <span className="text-[10px] font-medium text-emerald-200">
+                        Save {formatUnitAmount(economics.savingPaise, currency)}
+                      </span>
+                    </span>
+                  ) : (
+                    formatUnitAmount(economics.totalPaise, currency)
+                  )}
                 </Cell>
               ))}
             </ComparisonRow>
@@ -247,14 +308,23 @@ export default function PlanComparison({
 
                 return (
                   <Cell key={plan.id} emphasis>
-                    {economics.perInterviewPaise === null
-                      ? "--"
-                      : formatUnitAmount(economics.perInterviewPaise, currency)}
-                    {isBest ? (
-                      <span className="ml-2 inline-flex rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100">
-                        Best value
+                    <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      {economics.discounted && economics.regularPerInterviewPaise !== null ? (
+                        <span className="text-xs font-normal text-slate-500 line-through">
+                          {formatUnitAmount(economics.regularPerInterviewPaise, currency)}
+                        </span>
+                      ) : null}
+                      <span className={economics.discounted ? "text-emerald-100" : undefined}>
+                        {economics.perInterviewPaise === null
+                          ? "--"
+                          : formatUnitAmount(economics.perInterviewPaise, currency)}
                       </span>
-                    ) : null}
+                      {isBest ? (
+                        <span className="inline-flex rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100">
+                          Best value
+                        </span>
+                      ) : null}
+                    </span>
                   </Cell>
                 )
               })}

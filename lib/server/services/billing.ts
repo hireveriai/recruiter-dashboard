@@ -12,6 +12,8 @@ import { createAndSendInvoiceForPayment } from "@/lib/server/services/invoices"
 const PLAN_SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,80}$/
 const RAZORPAY_MINIMUM_AMOUNT_PAISE = 100
 const DEFAULT_GST_PERCENTAGE = 18
+/** How long purchased credits stay usable. See the activation update below. */
+const CREDIT_VALIDITY_MONTHS = 12
 
 type QueryClient = typeof prisma | Prisma.TransactionClient
 
@@ -1201,7 +1203,15 @@ export async function verifyAndActivatePayment(input: {
         "razorpayOrderId" = ${lockedPayment.razorpay_order_id},
         "razorpayPaymentId" = ${input.razorpayPaymentId},
         "activatedAt" = now(),
-        "expiresAt" = null,
+        -- Credits are valid for a fixed window rather than forever. Perpetual
+        -- credits make a later price change unenforceable: an organization
+        -- acquired at launch pricing would keep drawing down that rate
+        -- indefinitely, with no renewal moment at which new pricing applies.
+        -- A top-up extends the existing window rather than resetting it, so an
+        -- active customer is never cut short by buying more.
+        "expiresAt" =
+          greatest(coalesce("expiresAt", now()), now())
+          + make_interval(months => ${CREDIT_VALIDITY_MONTHS}),
         "updatedAt" = now()
       where id = ${lockedPayment.subscription_id}
       returning
