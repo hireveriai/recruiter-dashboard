@@ -122,6 +122,16 @@ function formatPaise(value: number, currency = "INR") {
   return formatMinorAmount(value, currency)
 }
 
+/** Derived per-unit figures read as round numbers, matching the comparison table. */
+function formatUnitPaise(value: number, currency = "INR") {
+  const whole = value >= 1000
+
+  return formatMinorAmount(value, currency, {
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: whole ? 0 : 2,
+  })
+}
+
 function getErrorMessage(payload: ApiResponse<unknown> | null, fallback: string) {
   return payload?.error?.message || fallback
 }
@@ -568,43 +578,43 @@ export default function BillingCheckoutPage() {
 
       <section className="relative mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)]">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-8">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-blue-200/75">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-200">
             Enterprise Billing Checkout
           </p>
-          <h1 className="mt-5 max-w-2xl text-3xl font-semibold leading-tight text-slate-100 sm:text-5xl">
+          <h1 className="mt-2 max-w-2xl text-2xl font-semibold leading-tight tracking-tight text-slate-100 sm:text-[28px]">
             Activate HireVeri for your organization
           </h1>
-          <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-            A server-verified procurement flow for organization billing, country-aware tax records, and controlled subscription activation.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+            Server-verified billing with country-aware tax records and controlled subscription activation.
           </p>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Bill to</p>
-              <p className="mt-3 truncate text-sm font-semibold text-slate-100">
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-950 p-3.5">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Bill to</p>
+              <p className="mt-2 truncate text-sm font-semibold text-slate-100">
                 {summary?.organization.organizationName || "Select a plan"}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Interview Credits</p>
-              <p className="mt-3 text-2xl font-semibold text-slate-100">
+            <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-950 p-3.5">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Interview credits</p>
+              <p className="mt-2 text-2xl font-semibold leading-none text-slate-100">
                 {summary?.plan.interviewSessions ?? "--"}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Screening Reviews</p>
-              <p className="mt-3 text-2xl font-semibold text-slate-100">
+            <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-950 p-3.5">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Screening reviews</p>
+              <p className="mt-2 text-2xl font-semibold leading-none text-slate-100">
                 {summary ? summary.plan.screeningReviews + (summary.addonPlan?.screeningReviews ?? 0) : "--"}
               </p>
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             {TRUST_INDICATORS.map((indicator) => (
-              <div key={indicator} className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/30 px-4 py-3 text-sm text-slate-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
-                <span>{indicator}</span>
-              </div>
+              <span key={indicator} className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-400">
+                <span className="h-1 w-1 rounded-full bg-blue-400" />
+                {indicator}
+              </span>
             ))}
           </div>
 
@@ -629,7 +639,7 @@ export default function BillingCheckoutPage() {
                     {summary.plan.interviewSessions > 0 ? (
                       <span className="text-sm text-slate-400">
                         &middot;{" "}
-                        {formatPaise(
+                        {formatUnitPaise(
                           Math.round(summary.plan.amountPaise / summary.plan.interviewSessions),
                           summary.quote.currency
                         )}{" "}
@@ -690,15 +700,18 @@ export default function BillingCheckoutPage() {
               // Server-verified discount only. The struck-through price is the
               // plan's real list price, never a decorative anchor.
               discountPercentage={summary?.quote.discountPercentage ?? 0}
-              offerLabel={summary?.coupon?.description || "Special price"}
+              offerLabel={summary?.coupon?.description || INTRODUCTORY_OFFER_LABEL}
             />
 
 
             {screeningPlans.length > 0 ? (
               <div className="mt-5 border-t border-slate-800 pt-5">
-                <p className="text-sm font-semibold text-slate-100">Standalone VERIS Screening</p>
-                <p className="mt-1 text-xs text-slate-500">Buy screening capacity independently without changing interview credits.</p>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <p className="text-sm font-semibold text-slate-100">Screening only</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Buy screening capacity on its own. To add screening to an interview plan, use the
+                  &ldquo;With VERIS Screening&rdquo; toggle above.
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   {screeningPlans.map((plan) => {
                     const isSelected = selectedPlanSlug === plan.slug
                     return (
@@ -712,13 +725,9 @@ export default function BillingCheckoutPage() {
                             : "border-slate-800 bg-slate-950 hover:border-slate-600"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-100">{plan.name}</p>
-                            <p className="mt-1 text-xs text-slate-400">{plan.screeningReviews} screening reviews</p>
-                          </div>
-                          <p className="shrink-0 text-sm font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</p>
-                        </div>
+                        <p className="text-sm font-semibold text-slate-100">{plan.name}</p>
+                        <p className="mt-1 text-xs text-slate-400">{plan.screeningReviews} reviews</p>
+                        <p className="mt-2 text-base font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</p>
                       </button>
                     )
                   })}
@@ -726,44 +735,6 @@ export default function BillingCheckoutPage() {
               </div>
             ) : null}
 
-            {selectedPlan && selectedPlan.planType !== "SCREENING" && screeningPlans.length > 0 ? (
-              <div className="mt-5 border-t border-slate-800 pt-5">
-                <p className="text-sm font-semibold text-slate-100">Optional VERIS Screening add-on</p>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => updateCheckoutSelection(selectedPlan.slug, "")}
-                    className={`rounded-xl border p-4 text-left text-sm transition ${
-                      !selectedAddonPlanSlug
-                        ? "border-blue-400/45 bg-blue-500/10 text-blue-100"
-                        : "border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-600"
-                    }`}
-                  >
-                    No add-on
-                  </button>
-                  {screeningPlans.map((plan) => (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      onClick={() => updateCheckoutSelection(selectedPlan.slug, plan.slug)}
-                      className={`rounded-xl border p-4 text-left transition ${
-                        selectedAddonPlanSlug === plan.slug
-                          ? "border-blue-400/45 bg-blue-500/10"
-                          : "border-slate-800 bg-slate-950 hover:border-slate-600"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-100">{plan.name}</p>
-                          <p className="mt-1 text-xs text-slate-400">+{plan.screeningReviews} screening reviews</p>
-                        </div>
-                        <p className="shrink-0 text-sm font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
 
             {!plansLoading && plans.length === 0 ? (
               <p className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
@@ -773,7 +744,7 @@ export default function BillingCheckoutPage() {
           </div>
         </div>
 
-        <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-7">
+        <aside className="h-fit rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-7 lg:sticky lg:top-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Payment Summary</p>

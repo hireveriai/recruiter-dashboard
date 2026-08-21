@@ -240,7 +240,11 @@ export default function PlanComparison({
                 const isSelected = plan.slug === selectedPlanSlug
 
                 return (
-                  <th key={plan.id} scope="col" className="pb-3 pl-3 align-bottom">
+                  <th
+                    key={plan.id}
+                    scope="col"
+                    className={`pb-3 pl-3 pr-3 align-bottom ${isSelected ? "bg-blue-500/[0.07]" : ""}`}
+                  >
                     <button
                       type="button"
                       disabled={disabled}
@@ -266,7 +270,7 @@ export default function PlanComparison({
           <tbody className="align-middle">
             <ComparisonRow label={activeAddon ? "Plan + add-on price (excl. GST)" : "Plan price (excl. GST)"}>
               {rows.map(({ plan, economics }) => (
-                <Cell key={plan.id} emphasis>
+                <Cell key={plan.id} emphasis selected={plan.slug === selectedPlanSlug}>
                   {economics.discounted && economics.regularPaise !== null ? (
                     <span className="flex flex-col gap-0.5">
                       <span className="text-xs font-normal text-slate-500 line-through">
@@ -288,13 +292,13 @@ export default function PlanComparison({
 
             <ComparisonRow label="Interviews included">
               {rows.map(({ plan, economics }) => (
-                <Cell key={plan.id}>{economics.interviews.toLocaleString()}</Cell>
+                <Cell key={plan.id} selected={plan.slug === selectedPlanSlug}>{economics.interviews.toLocaleString()}</Cell>
               ))}
             </ComparisonRow>
 
             <ComparisonRow label="Screening reviews included">
               {rows.map(({ plan, economics }) => (
-                <Cell key={plan.id}>{economics.screenings.toLocaleString()}</Cell>
+                <Cell key={plan.id} selected={plan.slug === selectedPlanSlug}>{economics.screenings.toLocaleString()}</Cell>
               ))}
             </ComparisonRow>
 
@@ -307,7 +311,7 @@ export default function PlanComparison({
                   economics.perInterviewPaise !== null && economics.perInterviewPaise === bestPerInterviewPaise
 
                 return (
-                  <Cell key={plan.id} emphasis>
+                  <Cell key={plan.id} emphasis selected={plan.slug === selectedPlanSlug}>
                     <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                       {economics.discounted && economics.regularPerInterviewPaise !== null ? (
                         <span className="text-xs font-normal text-slate-500 line-through">
@@ -332,7 +336,7 @@ export default function PlanComparison({
 
             <ComparisonRow label="Cost per screening review (excl. GST)">
               {rows.map(({ plan, economics }) => (
-                <Cell key={plan.id}>
+                <Cell key={plan.id} selected={plan.slug === selectedPlanSlug}>
                   {economics.perScreeningPaise === null
                     ? "--"
                     : formatUnitAmount(economics.perScreeningPaise, currency)}
@@ -342,7 +346,7 @@ export default function PlanComparison({
 
             <ComparisonRow label="Screening reviews per interview">
               {rows.map(({ plan, economics }) => (
-                <Cell key={plan.id}>
+                <Cell key={plan.id} selected={plan.slug === selectedPlanSlug}>
                   {economics.interviews > 0 ? `${economics.screeningsPerInterview.toFixed(1)}x` : "--"}
                 </Cell>
               ))}
@@ -370,7 +374,7 @@ function ComparisonRow({
   children: React.ReactNode
 }) {
   return (
-    <tr className={highlight ? "bg-blue-500/[0.06]" : undefined}>
+    <tr className={highlight ? "bg-slate-900" : undefined}>
       <th
         scope="row"
         className="border-t border-slate-800 py-3 pr-3 text-xs font-medium text-slate-400"
@@ -382,12 +386,22 @@ function ComparisonRow({
   )
 }
 
-function Cell({ emphasis = false, children }: { emphasis?: boolean; children: React.ReactNode }) {
+function Cell({
+  emphasis = false,
+  selected = false,
+  children,
+}: {
+  emphasis?: boolean
+  selected?: boolean
+  children: React.ReactNode
+}) {
   return (
     <td
-      className={`border-t border-slate-800 py-3 pl-3 text-sm ${
+      /* The selected plan is highlighted down its whole column so the figures a
+         buyer is actually purchasing are readable as one block. */
+      className={`border-t border-slate-800 py-3 pl-3 pr-3 text-sm ${
         emphasis ? "font-semibold text-slate-100" : "text-slate-300"
-      }`}
+      } ${selected ? "bg-blue-500/[0.07]" : ""}`}
     >
       {children}
     </td>
