@@ -217,7 +217,7 @@ function cacheAlerts(alerts) {
 
 export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, initialProfile = null, initialAlerts = undefined }) {
   const { resolvedTheme } = useTheme();
-  const logoSrc = resolvedTheme === "light" ? "/verisnova_logo_light.png" : "/verisnova_logo.png";
+  const logoSrc = resolvedTheme === "light" ? "/verisnova_logo_on_white.png" : "/verisnova_logo.png";
   const pathname = usePathname();
   const searchParams = useAuthSearchParams();
   const menuRef = useRef(null);
