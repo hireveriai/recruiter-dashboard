@@ -217,7 +217,19 @@ function cacheAlerts(alerts) {
 
 export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, initialProfile = null, initialAlerts = undefined }) {
   const { resolvedTheme } = useTheme();
-  const logoSrc = resolvedTheme === "light" ? "/verisnova_logo_on_white.png" : "/verisnova_logo.png";
+  /* Two different marks, and they need different treatment. The dark-theme
+     asset is line art on transparency with wide padding baked in, so it is
+     oversized and cropped by the tile to trim that padding. The light-theme
+     asset already fills its own frame, so the same crop cut into the mark -
+     it is fitted to the tile instead, on a white ground rather than navy. */
+  const isLightTheme = resolvedTheme === "light";
+  const logoSrc = isLightTheme ? "/verisnova_logo_on_white.png" : "/verisnova_logo.png";
+  const logoTileClass = isLightTheme
+    ? "border-slate-200 bg-white group-hover:border-slate-300"
+    : "border-slate-700 bg-slate-900 group-hover:border-slate-500";
+  const logoImageClass = isLightTheme
+    ? "h-full w-full object-contain"
+    : "h-[5.1rem] w-[5.1rem] max-w-none object-contain";
   const pathname = usePathname();
   const searchParams = useAuthSearchParams();
   const menuRef = useRef(null);
@@ -574,14 +586,16 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               className="group flex w-[108px] shrink-0 items-center gap-3 leading-none sm:w-[220px] xl:w-[244px]"
               aria-label="VerisNova home"
             >
-              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm transition-all duration-200 group-hover:border-slate-500">
+              <span
+                className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-sm transition-all duration-200 ${logoTileClass}`}
+              >
                 <Image
                   src={logoSrc}
                   alt=""
                   width={88}
                   height={88}
                   priority
-                  className="h-[5.1rem] w-[5.1rem] max-w-none object-contain"
+                  className={logoImageClass}
                   sizes="48px"
                 />
               </span>
