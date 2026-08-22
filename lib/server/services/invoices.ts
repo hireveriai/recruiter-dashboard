@@ -221,7 +221,7 @@ function getBusinessAddress() {
 }
 
 function getWebsiteUrl() {
-  return process.env.NEXT_PUBLIC_VERISNOVA_SITE_URL?.trim() || "https://verisnova.com"
+  return process.env.NEXT_PUBLIC_HIREVERI_SITE_URL?.trim() || "https://verisnova.com"
 }
 
 export async function generateInvoicePdf(input: InvoiceSourceRow & { invoice_number: string; invoice_date: Date }) {
