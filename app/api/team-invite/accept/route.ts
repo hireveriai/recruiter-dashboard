@@ -17,7 +17,7 @@ type InviteRow = {
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
 function getInviteSecret() {
-  return process.env.RECRUITER_INVITE_TOKEN_SECRET || process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "hireveri-dev-invite-secret"
+  return process.env.RECRUITER_INVITE_TOKEN_SECRET || process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "verisnova-dev-invite-secret"
 }
 
 function getJwtSecret() {
@@ -113,7 +113,7 @@ function cookieOptions(request: Request) {
 }
 
 function errorRedirect(request: Request, code: string) {
-  const url = new URL("/recruiter-access", process.env.AUTH_APP_URL || process.env.NEXT_PUBLIC_AUTH_APP_URL || "https://auth.hireveri.com")
+  const url = new URL("/recruiter-access", process.env.AUTH_APP_URL || process.env.NEXT_PUBLIC_AUTH_APP_URL || "https://auth.verisnova.com")
   url.searchParams.set("inviteError", code)
   url.searchParams.set("next", new URL("/", getRecruiterAppUrl(request)).toString())
   return NextResponse.redirect(url)

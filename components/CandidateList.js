@@ -11,7 +11,7 @@ import { DecisionPill } from "@/components/dashboard/DecisionPill"
 
 import CandidateInsightModal from "./CandidateInsightModal"
 
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
 
 function getStatusColor(status) {
   const normalized = String(status ?? "PENDING").toUpperCase()

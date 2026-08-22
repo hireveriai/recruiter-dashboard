@@ -189,7 +189,7 @@ export default function CognitiveDock({
   }, [workspace]);
 
   const openCreateJob = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("hireveri:open-create-job"));
+    window.dispatchEvent(new CustomEvent("verisnova:open-create-job"));
     setPanel(null);
   }, []);
 

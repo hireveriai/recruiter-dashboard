@@ -229,7 +229,7 @@ export default function ReportsPage() {
           <div className="absolute inset-x-16 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.68fr)] xl:items-center 2xl:grid-cols-[minmax(0,1fr)_minmax(620px,0.68fr)]">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-300/75">HireVeri Reports</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-300/75">VerisNova Reports</p>
               <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-white lg:text-[40px] 2xl:text-[42px]">
                 Hiring Decisions & Risk Intelligence
               </h1>

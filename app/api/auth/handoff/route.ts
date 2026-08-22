@@ -8,7 +8,7 @@ const AUTH_COOKIE_NAMES = [
   "access_token",
   "token",
 ]
-const COOKIE_DOMAINS = [undefined, ".hireveri.com", ".verihireai.work"]
+const COOKIE_DOMAINS = [undefined, ".verisnova.com", ".hireveri.com", ".verihireai.work"]
 
 function sameOriginPath(value: string | null) {
   if (!value) {
@@ -16,7 +16,7 @@ function sameOriginPath(value: string | null) {
   }
 
   try {
-    const parsed = new URL(value, "https://recruiter.hireveri.com")
+    const parsed = new URL(value, "https://recruiter.verisnova.com")
     return `${parsed.pathname}${parsed.search}${parsed.hash}`
   } catch {
     return "/"

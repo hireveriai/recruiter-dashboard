@@ -10,7 +10,7 @@ import CreateJobModal from "./CreateJobModal"
 import HiringWorkflow from "./HiringWorkflow"
 import SendInterviewModal from "./SendInterviewModal"
 
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
 
 export default function Sidebar({ initialProfile = null, overview = null }) {
   const searchParams = useAuthSearchParams()
@@ -142,13 +142,13 @@ export default function Sidebar({ initialProfile = null, overview = null }) {
         })
     }
 
-    window.addEventListener("hireveri:open-create-job", handleOpenCreateJobEvent)
-    window.addEventListener("hireveri:open-send-interview", handleOpenSendInterviewEvent)
+    window.addEventListener("verisnova:open-create-job", handleOpenCreateJobEvent)
+    window.addEventListener("verisnova:open-send-interview", handleOpenSendInterviewEvent)
 
     return () => {
       isMounted = false
-      window.removeEventListener("hireveri:open-create-job", handleOpenCreateJobEvent)
-      window.removeEventListener("hireveri:open-send-interview", handleOpenSendInterviewEvent)
+      window.removeEventListener("verisnova:open-create-job", handleOpenCreateJobEvent)
+      window.removeEventListener("verisnova:open-send-interview", handleOpenSendInterviewEvent)
     }
   }, [initialProfile, searchParams])
 

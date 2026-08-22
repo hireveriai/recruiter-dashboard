@@ -1,4 +1,4 @@
-# HireVeri Recruiter Backend
+# VerisNova Recruiter Backend
 
 Backend APIs for the recruiter dashboard using the existing PostgreSQL schema.
 

@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server"
 
-import { getAuthTokenFromRequest, getHireveriSessionFromRequest, getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { getAuthTokenFromRequest, getVerisnovaSessionFromRequest, getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { errorResponse } from "@/lib/server/response"
 
 export async function GET(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
     const token = getAuthTokenFromRequest(request)
-    const hireveriSession = getHireveriSessionFromRequest(request)
+    const verisnovaSession = getVerisnovaSessionFromRequest(request)
 
-    if (!token && !hireveriSession) {
+    if (!token && !verisnovaSession) {
       return NextResponse.json(
         {
           success: false,
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       success: true,
       data: {
         authToken: token,
-        hireveriSession,
+        verisnovaSession,
         organizationId: auth.organizationId,
       },
     })

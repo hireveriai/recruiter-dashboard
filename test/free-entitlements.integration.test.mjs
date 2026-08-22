@@ -150,7 +150,7 @@ async function getPracticeState(identityId) {
   return rows[0].state
 }
 
-async function approve(requestId, actor = "admin@hireveri.com") {
+async function approve(requestId, actor = "admin@verisnova.com") {
   const { rows } = await pool.query(
     `select * from public.fn_approve_trial_request($1::uuid, $2::text, null::text)`,
     [requestId, actor]

@@ -9,24 +9,24 @@ import ModalScrollLock from "@/components/system/ModalScrollLock";
 import AmbientLoadingProvider from "@/components/system/loading/AmbientLoadingProvider";
 
 export const metadata = {
-  title: "HireVeri Recruiter Workspace",
+  title: "VerisNova Recruiter Workspace",
   description:
     "Recruiter workspace for secure interview orchestration, reviewable candidate evidence, and human-controlled hiring decisions.",
-  applicationName: "HireVeri Recruiter",
+  applicationName: "VerisNova Recruiter",
 };
 
 const GA_MEASUREMENT_ID = "G-N6GNKTH5LY";
 const THEME_INITIALIZER = `
   (() => {
     try {
-      const storedTheme = localStorage.getItem("hireveri-theme");
+      const storedTheme = localStorage.getItem("verisnova-theme");
       const preference = ["dark", "light"].includes(storedTheme)
         ? storedTheme
         : "light";
       const root = document.documentElement;
 
       if (storedTheme && storedTheme !== preference) {
-        localStorage.setItem("hireveri-theme", preference);
+        localStorage.setItem("verisnova-theme", preference);
       }
 
       root.dataset.themePreference = preference;
@@ -46,7 +46,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" data-theme="light" data-theme-preference="light" suppressHydrationWarning>
       <head>
-        <Script id="hireveri-theme" strategy="beforeInteractive">
+        <Script id="verisnova-theme" strategy="beforeInteractive">
           {THEME_INITIALIZER}
         </Script>
         <Script

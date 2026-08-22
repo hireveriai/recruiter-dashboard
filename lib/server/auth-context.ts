@@ -63,10 +63,10 @@ type CookieEntry = {
 }
 
 declare global {
-  var __hireveriRecruiterAuthServiceCache:
+  var __verisnovaRecruiterAuthServiceCache:
     | Map<string, { expiresAt: number; recruiter: RecruiterLookupRow }>
     | undefined
-  var __hireveriRecruiterAuthServiceInFlight:
+  var __verisnovaRecruiterAuthServiceInFlight:
     | Map<string, Promise<RecruiterLookupRow | null>>
     | undefined
 }
@@ -77,7 +77,7 @@ const AUTH_APP_URL =
   process.env.NEXT_PUBLIC_AUTH_APP_URL ||
   process.env.NEXT_PUBLIC_RECRUITER_LOGIN_URL ||
   process.env.NEXT_PUBLIC_LOGIN_URL ||
-  "https://auth.hireveri.com"
+  "https://auth.verisnova.com"
 const DEV_AUTH_BYPASS =
   process.env.NODE_ENV !== "production" &&
   (process.env.DEV_AUTH_BYPASS === "true" ||
@@ -86,19 +86,19 @@ const AUTH_SERVICE_CACHE_TTL_MS = 60_000
 const AUTH_SERVICE_CACHE_MAX_ENTRIES = 500
 
 function getAuthServiceCache() {
-  if (!global.__hireveriRecruiterAuthServiceCache) {
-    global.__hireveriRecruiterAuthServiceCache = new Map()
+  if (!global.__verisnovaRecruiterAuthServiceCache) {
+    global.__verisnovaRecruiterAuthServiceCache = new Map()
   }
 
-  return global.__hireveriRecruiterAuthServiceCache
+  return global.__verisnovaRecruiterAuthServiceCache
 }
 
 function getAuthServiceInFlightMap() {
-  if (!global.__hireveriRecruiterAuthServiceInFlight) {
-    global.__hireveriRecruiterAuthServiceInFlight = new Map()
+  if (!global.__verisnovaRecruiterAuthServiceInFlight) {
+    global.__verisnovaRecruiterAuthServiceInFlight = new Map()
   }
 
-  return global.__hireveriRecruiterAuthServiceInFlight
+  return global.__verisnovaRecruiterAuthServiceInFlight
 }
 
 function getCachedAuthServiceRecruiter(sessionId: string) {
@@ -457,7 +457,7 @@ export function getAuthTokenFromRequest(request: Request): string | null {
   return extractJwtCandidatesFromRequest(request, cookieHeader, cookieMap)[0] ?? null
 }
 
-export function getHireveriSessionFromRequest(request: Request): string | null {
+export function getVerisnovaSessionFromRequest(request: Request): string | null {
   const cookieHeader = request.headers.get("cookie")
   const cookieMap = parseCookieHeader(cookieHeader)
   return uniqueNormalizedValues([

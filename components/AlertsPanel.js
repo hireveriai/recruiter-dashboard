@@ -6,7 +6,7 @@ import { buildAuthUrl, hasAuthQuery } from "@/lib/client/auth-query"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 import { TimelineSkeleton } from "@/components/system/skeletons"
 
-const ALERTS_READ_EVENT = "hireveri:alerts-read"
+const ALERTS_READ_EVENT = "verisnova:alerts-read"
 
 function getToneClass(tone) {
   if (tone === "success") {

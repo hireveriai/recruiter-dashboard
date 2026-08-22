@@ -18,7 +18,7 @@ export default function NavigationProgress({
   return (
     <div className="fixed inset-0 z-[130]">
       <VerisGlobeLoader
-        eyebrow="HireVeri"
+        eyebrow="VerisNova"
         steps={[
           { label: "Opening screen", detail: "Securing recruiter session and route context." },
           { label: message.replace(/\.+$/, ""), detail: "Loading data for this recruiter screen." },

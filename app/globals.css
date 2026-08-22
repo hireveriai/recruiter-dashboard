@@ -744,7 +744,7 @@ a {
   }
 }
 
-@keyframes hireveri-skeleton-shimmer {
+@keyframes verisnova-skeleton-shimmer {
   0% {
     transform: translateX(-120%);
   }
@@ -754,7 +754,7 @@ a {
   }
 }
 
-@keyframes hireveri-skeleton-pulse {
+@keyframes verisnova-skeleton-pulse {
   0%,
   100% {
     opacity: 0.58;
@@ -800,18 +800,18 @@ a {
   }
 }
 
-.hireveri-skeleton {
-  animation: hireveri-skeleton-pulse 2.4s ease-in-out infinite;
+.verisnova-skeleton {
+  animation: verisnova-skeleton-pulse 2.4s ease-in-out infinite;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
-.hireveri-skeleton::after {
+.verisnova-skeleton::after {
   content: "";
   position: absolute;
   inset: 0;
   transform: translateX(-120%);
   background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.12), transparent);
-  animation: hireveri-skeleton-shimmer 2.6s ease-in-out infinite;
+  animation: verisnova-skeleton-shimmer 2.6s ease-in-out infinite;
 }
 
 @keyframes hiring-workflow-pulse {
@@ -1323,7 +1323,7 @@ a {
   inset: 0;
   background: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.035), transparent 46%);
   transform: translateX(-120%);
-  animation: hireveri-skeleton-shimmer var(--hv-loader-shimmer-duration) ease-in-out infinite;
+  animation: verisnova-skeleton-shimmer var(--hv-loader-shimmer-duration) ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -1372,8 +1372,8 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hireveri-skeleton,
-  .hireveri-skeleton::after,
+  .verisnova-skeleton,
+  .verisnova-skeleton::after,
   .hiring-workflow-pulse,
   .hiring-workflow-flow,
   .hv-ai-panel::before,

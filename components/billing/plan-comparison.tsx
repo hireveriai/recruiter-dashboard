@@ -231,7 +231,7 @@ export default function PlanComparison({
       <div className="mt-4 -mx-1 overflow-x-auto px-1">
         <table className="w-full table-fixed border-collapse text-left">
           <caption className="sr-only">
-            Comparison of HireVeri interview plans by price, included credits, and cost per interview
+            Comparison of VerisNova interview plans by price, included credits, and cost per interview
           </caption>
           <thead>
             <tr>

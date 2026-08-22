@@ -1,4 +1,4 @@
-# HireVeri Interview Architecture
+# VerisNova Interview Architecture
 
 ## Layers
 

@@ -14,7 +14,7 @@ import { canAccessFeature } from "@/lib/client/permissions"
 import { useOrgTimezone } from "@/components/OrgTimezoneProvider"
 import { TableSkeleton } from "@/components/system/skeletons"
 
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
 
 function getInterviewActivityTime(interview) {
   const value = interview?.endedAt || interview?.startedAt || interview?.startTime || interview?.createdAt
@@ -293,7 +293,7 @@ function GuidedInterviewEmptyState({ compact = false, profile = null }) {
         {canCreateJob ? (
         <button
           type="button"
-          onClick={() => openDashboardAction("hireveri:open-create-job")}
+          onClick={() => openDashboardAction("verisnova:open-create-job")}
           className="hv-invited-empty-primary rounded-xl border border-blue-300/25 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:border-blue-300/45 hover:bg-blue-500/20"
         >
           Create Job
@@ -302,7 +302,7 @@ function GuidedInterviewEmptyState({ compact = false, profile = null }) {
         {canSendInterview ? (
         <button
           type="button"
-          onClick={() => openDashboardAction("hireveri:open-send-interview")}
+          onClick={() => openDashboardAction("verisnova:open-send-interview")}
           className="hv-invited-empty-secondary rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-500/20"
         >
           Send Interview Link

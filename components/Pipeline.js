@@ -14,7 +14,7 @@ const FALLBACK_PIPELINE = {
   reviewed: 0,
   reviewRequired: 0,
 }
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
 
 export default function Pipeline({ initialPipeline, isLoading = false }) {
   const searchParams = useAuthSearchParams()

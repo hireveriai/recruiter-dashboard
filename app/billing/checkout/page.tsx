@@ -404,13 +404,13 @@ export default function BillingCheckoutPage() {
 
     try {
       window.sessionStorage.setItem(
-        "hireveri-billing-success",
+        "verisnova-billing-success",
         JSON.stringify({
           title: "Subscription activated",
           message: `${activatedPlanName} is live for ${summary?.organization.organizationName || "your organization"}.`,
         })
       )
-      window.sessionStorage.removeItem("hireveri-overview")
+      window.sessionStorage.removeItem("verisnova-overview")
     } catch {
       // Non-critical; dashboard still redirects correctly.
     }
@@ -464,7 +464,7 @@ export default function BillingCheckoutPage() {
         key: order.keyId,
         amount: order.amount,
         currency: order.currency,
-        name: "HireVeri",
+        name: "VerisNova",
         description: `${order.plan.name} plan for ${order.organization.organizationName}`,
         order_id: order.order_id,
         prefill: {
@@ -604,7 +604,7 @@ export default function BillingCheckoutPage() {
             </button>
           </div>
           <h1 className="mt-2 max-w-2xl text-2xl font-semibold leading-tight tracking-tight text-slate-100 sm:text-[28px]">
-            Activate HireVeri for your organization
+            Activate VerisNova for your organization
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             Server-verified billing with country-aware tax records and controlled subscription activation.
@@ -681,7 +681,7 @@ export default function BillingCheckoutPage() {
                 ) : null}
 
                 <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
-                  {summary?.plan.description || selectedPlan?.description || "Select a database-priced HireVeri plan to generate a secure billing quote."}
+                  {summary?.plan.description || selectedPlan?.description || "Select a database-priced VerisNova plan to generate a secure billing quote."}
                 </p>
                 {summary?.addonPlan ? (
                   <p className="mt-3 inline-flex rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-100">
@@ -712,7 +712,7 @@ export default function BillingCheckoutPage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-slate-100">Available plans</p>
-                <p className="mt-1 text-xs text-slate-500">Plans are loaded from HireVeri billing records.</p>
+                <p className="mt-1 text-xs text-slate-500">Plans are loaded from VerisNova billing records.</p>
               </div>
             </div>
 
@@ -764,7 +764,7 @@ export default function BillingCheckoutPage() {
 
             {!plansLoading && plans.length === 0 ? (
               <p className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                No active billing plans are available. Please contact HireVeri support.
+                No active billing plans are available. Please contact VerisNova support.
               </p>
             ) : null}
           </div>

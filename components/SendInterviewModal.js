@@ -10,10 +10,10 @@ import { copyText } from "@/lib/client/copy-to-clipboard"
 import { formatDateTime } from "@/lib/client/date-format"
 import UpgradeLimitDialog from "@/components/UpgradeLimitDialog"
 
-const DASHBOARD_CACHE_KEY = "hireveri-overview"
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
-const DASHBOARD_INVALIDATED_KEY = "hireveri-overview-invalidated"
-const SEND_INTERVIEW_JOBS_CACHE_PREFIX = "hireveri-send-interview-jobs"
+const DASHBOARD_CACHE_KEY = "verisnova-overview"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_KEY = "verisnova-overview-invalidated"
+const SEND_INTERVIEW_JOBS_CACHE_PREFIX = "verisnova-send-interview-jobs"
 const SEND_INTERVIEW_JOBS_CACHE_TTL_MS = 5 * 60 * 1000
 const MAX_BATCH_CANDIDATES = 25
 
@@ -170,7 +170,7 @@ function normalizeTrialCredits(credits) {
 
 function notifyTrialCreditsUpdated(credits) {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("hireveri:trial-credits-updated", { detail: credits }))
+    window.dispatchEvent(new CustomEvent("verisnova:trial-credits-updated", { detail: credits }))
   }
 }
 
@@ -712,7 +712,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
 
   const openCreateJobFlow = () => {
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("hireveri:open-create-job"))
+      window.dispatchEvent(new CustomEvent("verisnova:open-create-job"))
     }
 
     handleClose()

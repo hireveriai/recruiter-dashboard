@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { logoutRecruiter } from "@/lib/client/logout";
 
 const INACTIVITY_LIMIT_MS = 4 * 60 * 60 * 1000;
-const STORAGE_KEY = "hireveri:last-activity-at";
+const STORAGE_KEY = "verisnova:last-activity-at";
 
 function hasSessionCookie() {
   return document.cookie.split(";").some((entry) => {

@@ -387,7 +387,7 @@ export async function GET(request: Request) {
       const response = NextResponse.json({ success: true, data: cached })
       const durationMs = Date.now() - routeStartedAt
       response.headers.set("Cache-Control", "private, max-age=5, stale-while-revalidate=10")
-      response.headers.set("X-HireVeri-Cache", "hit")
+      response.headers.set("X-VerisNova-Cache", "hit")
       response.headers.set("Server-Timing", `auth;dur=${authMs}, total;dur=${durationMs}`)
       return response
     }
@@ -408,7 +408,7 @@ export async function GET(request: Request) {
       setCachedOverview(cacheKey, overview)
       const response = NextResponse.json({ success: true, data: overview })
       response.headers.set("Cache-Control", "private, max-age=5, stale-while-revalidate=10")
-      response.headers.set("X-HireVeri-Cache", "fast")
+      response.headers.set("X-VerisNova-Cache", "fast")
       response.headers.set("Server-Timing", `auth;dur=${authMs}, data;dur=${dataMs}, total;dur=${durationMs}`)
       return response
     }
@@ -432,7 +432,7 @@ export async function GET(request: Request) {
     const durationMs = Date.now() - routeStartedAt
 
     response.headers.set("Cache-Control", forceRefresh ? "no-store" : "private, max-age=5, stale-while-revalidate=10")
-    response.headers.set("X-HireVeri-Cache", forceRefresh ? "refresh" : "miss")
+    response.headers.set("X-VerisNova-Cache", forceRefresh ? "refresh" : "miss")
     response.headers.set("Server-Timing", `auth;dur=${authMs}, data;dur=${dataMs}, total;dur=${durationMs}`)
 
     if (durationMs >= SLOW_DASHBOARD_ROUTE_MS) {

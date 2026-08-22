@@ -15,7 +15,7 @@ const fallbackCategories = [
 ];
 
 const fallbackConfig = {
-  sidebar: [{ label: "Support Desk", value: "support@hireveri.com" }],
+  sidebar: [{ label: "Support Desk", value: "support@verisnova.com" }],
   system_status: [
     { label: "Platform Operational", value: "Live" },
     { label: "AI Systems Active", value: "Active" },
@@ -159,12 +159,12 @@ export default function ContactUsPage() {
             <div className="flex flex-col gap-4 border-b border-slate-800/90 pb-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0">
                 <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/40 hover:bg-slate-900 hover:text-white" />
-                <p className="mt-6 text-xs font-semibold uppercase tracking-[0.32em] text-cyan-200/80">HireVeri Support Center</p>
+                <p className="mt-6 text-xs font-semibold uppercase tracking-[0.32em] text-cyan-200/80">VerisNova Support Center</p>
                 <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
                   Enterprise Operations Support
                 </h1>
                 <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Route technical, recording, AI analysis, security, billing, sales, and compliance requests directly into the HireVeri support queue.
+                  Route technical, recording, AI analysis, security, billing, sales, and compliance requests directly into the VerisNova support queue.
                 </p>
               </div>
               <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-3 text-sm text-cyan-100">

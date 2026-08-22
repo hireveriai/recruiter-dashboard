@@ -303,7 +303,7 @@ function json(data: unknown, status = 200) {
 }
 
 export function getMarketingDemoResponse(request: Request) {
-  if (process.env.HIREVERI_MARKETING_DEMO !== "true") return null
+  if (process.env.VERISNOVA_MARKETING_DEMO !== "true") return null
   const url = new URL(request.url)
   const path = url.pathname
 

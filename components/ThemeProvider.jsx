@@ -2,12 +2,12 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-const THEME_STORAGE_KEY = "hireveri-theme";
+const THEME_STORAGE_KEY = "verisnova-theme";
 const THEME_VALUES = new Set(["dark", "light"]);
-// Shared with the War Room app (hireveri-war) so a theme choice made here is
+// Shared with the War Room app (verisnova-war) so a theme choice made here is
 // readable there without a server round trip, and vice versa.
-const SHARED_THEME_COOKIE = "hireveri-theme";
-const SHARED_COOKIE_DOMAIN = ".hireveri.com";
+const SHARED_THEME_COOKIE = "verisnova-theme";
+const SHARED_COOKIE_DOMAIN = ".verisnova.com";
 const SHARED_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 const ThemeContext = createContext({

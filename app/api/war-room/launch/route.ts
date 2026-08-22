@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
 
-import { getAuthTokenFromRequest, getHireveriSessionFromRequest } from "@/lib/server/auth-context"
+import { getAuthTokenFromRequest, getVerisnovaSessionFromRequest } from "@/lib/server/auth-context"
 import { errorResponse } from "@/lib/server/response"
 
-const WAR_APP_URL = (process.env.NEXT_PUBLIC_WAR_APP_URL || "https://war-room.hireveri.com").replace(/\/+$/, "")
+const WAR_APP_URL = (process.env.NEXT_PUBLIC_WAR_APP_URL || "https://war-room.verisnova.com").replace(/\/+$/, "")
 const WAR_ROOM_PATH = "/recruiter/war-room"
-const SHARED_COOKIE_DOMAIN = ".hireveri.com"
+const SHARED_COOKIE_DOMAIN = ".verisnova.com"
 const SHARED_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 2
 
 function setSharedCookie(response: NextResponse, name: string, value: string) {
@@ -23,12 +23,12 @@ function setSharedCookie(response: NextResponse, name: string, value: string) {
 export async function GET(request: Request) {
   try {
     const token = getAuthTokenFromRequest(request)
-    const hireveriSession = getHireveriSessionFromRequest(request)
+    const verisnovaSession = getVerisnovaSessionFromRequest(request)
     const requestUrl = new URL(request.url)
     const orgId = requestUrl.searchParams.get("orgId")?.trim() || ""
     const theme = requestUrl.searchParams.get("theme")?.trim() || ""
 
-    if ((!token && !hireveriSession) || !orgId) {
+    if ((!token && !verisnovaSession) || !orgId) {
       return NextResponse.json(
         {
           success: false,
@@ -50,8 +50,8 @@ export async function GET(request: Request) {
 
     const response = NextResponse.redirect(redirectUrl)
 
-    if (hireveriSession) {
-      setSharedCookie(response, "hireveri_session", hireveriSession)
+    if (verisnovaSession) {
+      setSharedCookie(response, "hireveri_session", verisnovaSession)
     }
 
     if (token) {

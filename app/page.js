@@ -206,8 +206,8 @@ function DashboardContent({ profile, overview, isLoading }) {
       }
     }
 
-    window.addEventListener("hireveri:trial-credits-updated", handleTrialCreditsUpdated);
-    return () => window.removeEventListener("hireveri:trial-credits-updated", handleTrialCreditsUpdated);
+    window.addEventListener("verisnova:trial-credits-updated", handleTrialCreditsUpdated);
+    return () => window.removeEventListener("verisnova:trial-credits-updated", handleTrialCreditsUpdated);
   }, []);
 
   if (isLoading) {
@@ -256,7 +256,7 @@ function DashboardContent({ profile, overview, isLoading }) {
           <DashboardIntelligenceBanner
             overview={fullOverview}
             profile={displayProfile}
-            onCreateJob={canCreateJob ? () => window.dispatchEvent(new CustomEvent("hireveri:open-create-job")) : undefined}
+            onCreateJob={canCreateJob ? () => window.dispatchEvent(new CustomEvent("verisnova:open-create-job")) : undefined}
             onSendInterview={canSendInterview ? () => setIsModalOpen(true) : undefined}
           />
           <TrialStatusCard credits={trialCredits} />

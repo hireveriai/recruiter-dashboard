@@ -31,8 +31,8 @@ export function OrgTimezoneProvider({ children, initialTimezone, initialTimezone
       return
     }
 
-    window.__HIREVERI_ORG_TIMEZONE__ = state.timezone
-    window.__HIREVERI_ORG_TIMEZONE_LABEL__ = state.timezoneLabel
+    window.__VERISNOVA_ORG_TIMEZONE__ = state.timezone
+    window.__VERISNOVA_ORG_TIMEZONE_LABEL__ = state.timezoneLabel
   }, [state.timezone, state.timezoneLabel])
 
   const value = useMemo(

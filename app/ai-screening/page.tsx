@@ -180,10 +180,10 @@ type CleanupModal = "CLEAR_RESULTS" | "DELETE_UPLOAD" | null
 
 const recommendationFilters = ["ALL", "STRONG_FIT", "POTENTIAL", "WEAK", "REJECT"] as const
 const riskFilters = ["ALL", "LOW", "MEDIUM", "HIGH"] as const
-const FLOW_STORAGE_KEY = "hireveri.aiScreening.flowState"
-const DASHBOARD_CACHE_KEY = "hireveri-overview"
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
-const DASHBOARD_INVALIDATED_KEY = "hireveri-overview-invalidated"
+const FLOW_STORAGE_KEY = "verisnova.aiScreening.flowState"
+const DASHBOARD_CACHE_KEY = "verisnova-overview"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_KEY = "verisnova-overview-invalidated"
 const AUTO_RUN = true
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const UPGRADE_MESSAGE =
@@ -3161,7 +3161,7 @@ export default function AiScreeningPage() {
               <div>
                 <p className="text-sm font-semibold text-white">Send Interview to Selected ({selectedCount})</p>
                 <p className="mt-1 text-xs text-slate-400">
-                  Human approval is required before HireVeri sends interview links.
+                  Human approval is required before VerisNova sends interview links.
                   {selectedMissingEmailCount > 0 ? ` ${selectedMissingEmailCount} selected candidate${selectedMissingEmailCount === 1 ? "" : "s"} without email will be skipped.` : ""}
                 </p>
               </div>
@@ -3581,7 +3581,7 @@ export default function AiScreeningPage() {
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               {sending
-                ? `HireVeri is preparing and sending ${sendProgressCount || "the selected"} interview invitation${sendProgressCount === 1 ? "" : "s"}. Larger batches may take a few minutes.`
+                ? `VerisNova is preparing and sending ${sendProgressCount || "the selected"} interview invitation${sendProgressCount === 1 ? "" : "s"}. Larger batches may take a few minutes.`
                 : sendProgressError}
             </p>
             {sending ? (

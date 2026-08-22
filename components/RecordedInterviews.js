@@ -9,7 +9,7 @@ import { openWarRoom } from "@/lib/client/war-room"
 import { CardSkeleton } from "@/components/system/skeletons"
 import RecordedInterviewCard from "@/components/interviews/RecordedInterviewCard"
 
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
 
 function getInterviewActivityTime(interview) {
   const value = interview?.endedAt || interview?.startedAt || interview?.startTime || interview?.createdAt

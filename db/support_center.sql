@@ -35,7 +35,7 @@ create table if not exists public.support_center_seed_data (
 
 insert into public.support_center_seed_data (config_key, item_key, label, value, sort_order)
 values
-  ('sidebar', 'support_email', 'Support Desk', 'support@hireveri.com', 10),
+  ('sidebar', 'support_email', 'Support Desk', 'support@verisnova.com', 10),
   ('system_status', 'platform', 'Platform Operational', 'Live', 10),
   ('system_status', 'ai_systems', 'AI Systems Active', 'Active', 20),
   ('system_status', 'recording', 'Recording Infrastructure Healthy', 'Healthy', 30),

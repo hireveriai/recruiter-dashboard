@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       })
 
       response.headers.set("Cache-Control", "private, max-age=10, stale-while-revalidate=30")
-      response.headers.set("X-HireVeri-Cache", "hit")
+      response.headers.set("X-VerisNova-Cache", "hit")
       response.headers.set("Server-Timing", `workflow;dur=${Date.now() - startedAt}`)
       return response
     }
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
     })
 
     response.headers.set("Cache-Control", forceRefresh ? "no-store" : "private, max-age=10, stale-while-revalidate=30")
-    response.headers.set("X-HireVeri-Cache", forceRefresh ? "refresh" : "miss")
+    response.headers.set("X-VerisNova-Cache", forceRefresh ? "refresh" : "miss")
     response.headers.set("Server-Timing", `workflow;dur=${Date.now() - startedAt}`)
     return response
   } catch (error) {

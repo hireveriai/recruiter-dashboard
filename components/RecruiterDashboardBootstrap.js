@@ -3,16 +3,16 @@
 import { useEffect, useRef, useState } from "react"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
-import { clearHireveriSessionCookie, getRecruiterLoginUrl } from "@/lib/client/auth-session"
+import { clearVerisnovaSessionCookie, getRecruiterLoginUrl } from "@/lib/client/auth-session"
 import { ACTION_FEEDBACK_EVENT } from "@/lib/client/action-feedback"
 import { connectDashboardRealtime } from "@/lib/client/dashboard-realtime"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 import { useOrgTimezone } from "@/components/OrgTimezoneProvider"
 
 const DASHBOARD_AUTO_REFRESH_MS = 60000
-const DASHBOARD_CACHE_KEY = "hireveri-overview"
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
-const DASHBOARD_INVALIDATED_KEY = "hireveri-overview-invalidated"
+const DASHBOARD_CACHE_KEY = "verisnova-overview"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_KEY = "verisnova-overview-invalidated"
 
 function withoutVolatileOverviewFields(overview) {
   return overview ?? null
@@ -201,7 +201,7 @@ export default function RecruiterDashboardBootstrap({ children }) {
         }
 
         if (overviewResponse.status === 401) {
-          clearHireveriSessionCookie()
+          clearVerisnovaSessionCookie()
           setState({
             status: "error",
             profile: null,
@@ -388,11 +388,11 @@ export default function RecruiterDashboardBootstrap({ children }) {
     let payload = null
 
     try {
-      const rawPayload = window.sessionStorage.getItem("hireveri-billing-success")
+      const rawPayload = window.sessionStorage.getItem("verisnova-billing-success")
       payload = rawPayload ? JSON.parse(rawPayload) : null
-      window.sessionStorage.removeItem("hireveri-billing-success")
+      window.sessionStorage.removeItem("verisnova-billing-success")
     } catch {
-      window.sessionStorage.removeItem("hireveri-billing-success")
+      window.sessionStorage.removeItem("verisnova-billing-success")
     }
 
     if (!payload) {

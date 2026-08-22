@@ -118,7 +118,7 @@ function getRecruiterAppUrl() {
     process.env.RECRUITER_APP_URL ||
     process.env.NEXT_PUBLIC_RECRUITER_APP_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "https://recruiter.hireveri.com"
+    "https://recruiter.verisnova.com"
   )
 }
 
@@ -128,7 +128,7 @@ function getOnboardingBaseUrl() {
     process.env.NEXT_PUBLIC_AUTH_APP_URL ||
     process.env.NEXT_PUBLIC_RECRUITER_LOGIN_URL ||
     process.env.NEXT_PUBLIC_LOGIN_URL ||
-    "https://auth.hireveri.com"
+    "https://auth.verisnova.com"
   const defaultUrl = new URL(authUrl)
 
   if (defaultUrl.pathname === "/" || defaultUrl.pathname === "") {
@@ -143,7 +143,7 @@ function getOnboardingBaseUrl() {
 }
 
 function getTokenSecret() {
-  return process.env.RECRUITER_INVITE_TOKEN_SECRET || process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "hireveri-dev-invite-secret"
+  return process.env.RECRUITER_INVITE_TOKEN_SECRET || process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "verisnova-dev-invite-secret"
 }
 
 function sha256(value: string) {
@@ -1194,7 +1194,7 @@ export async function POST(request: Request) {
       where organization_id = ${auth.organizationId}::uuid
       limit 1
     `)
-    const organizationName = organizationRows[0]?.organization_name ?? "HireVeri"
+    const organizationName = organizationRows[0]?.organization_name ?? "VerisNova"
     const roleName = role.code || "Organization Role"
     const inviterName = actor?.full_name || actor?.email || "Your team admin"
     const expiresAt = new Date(Date.now() + INVITE_TTL_HOURS * 60 * 60 * 1000)
@@ -1400,7 +1400,7 @@ export async function PATCH(request: Request) {
       const setupLink = getSetupLink(token)
       const workspaceLink = `${getRecruiterAppUrl().replace(/\/$/, "")}/`
       const inviteStatus = getInviteStatus(teamMember.invite_status, teamMember.invite_expires_at)
-      const organization = teamMember.organization_name ?? "HireVeri"
+      const organization = teamMember.organization_name ?? "VerisNova"
       const roleName = teamMember.recruiter_role_code || "Organization Role"
       const inviterName = actor?.full_name || actor?.email || "Your team admin"
 

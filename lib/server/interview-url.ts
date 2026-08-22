@@ -4,6 +4,6 @@ export function getInterviewAppUrl() {
     process.env.NEXT_PUBLIC_CALM_ROOM_URL ||
     process.env.NEXT_PUBLIC_CALM_ROOM_APP_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "https://calm-room.hireveri.com"
+    "https://calm-room.verisnova.com"
   )
 }

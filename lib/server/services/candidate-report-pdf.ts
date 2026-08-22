@@ -127,7 +127,7 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
 }
 
 function addFooter(ctx: PdfContext) {
-  ctx.page.drawText(`HireVeri Candidate Report | Page ${ctx.pageNumber}`, {
+  ctx.page.drawText(`VerisNova Candidate Report | Page ${ctx.pageNumber}`, {
     x: MARGIN,
     y: 24,
     size: 8,
@@ -346,7 +346,7 @@ export async function generateCandidateReportPdf(organizationId: string, intervi
     pageNumber: 1,
   }
 
-  ctx.page.drawText("HireVeri", {
+  ctx.page.drawText("VerisNova", {
     x: MARGIN,
     y: ctx.y,
     size: 15,

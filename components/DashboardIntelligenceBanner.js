@@ -91,7 +91,7 @@ export default function DashboardIntelligenceBanner({ overview, profile = null, 
     <section className="hv-elevated-section mb-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 px-6 py-6 shadow-[0_14px_40px_rgba(2,6,23,0.22)] transition-all duration-300 sm:px-7">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">HireVeri Workflow</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">VerisNova Workflow</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">Start by creating a job and inviting candidates.</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
             Create a job and begin candidate evaluation.

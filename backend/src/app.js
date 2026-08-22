@@ -9,7 +9,7 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
-    message: "HireVeri Recruiter backend is healthy",
+    message: "VerisNova Recruiter backend is healthy",
   });
 });
 

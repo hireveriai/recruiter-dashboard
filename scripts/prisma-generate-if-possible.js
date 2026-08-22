@@ -11,7 +11,7 @@ const { spawnSync } = require("node:child_process");
 // always matches the committed schema.
 const root = process.cwd();
 // This project's schema.prisma has no custom generator `output`, so Prisma
-// generates directly into node_modules/@prisma/client (unlike hireveri-calm,
+// generates directly into node_modules/@prisma/client (unlike verisnova-calm,
 // which generates into node_modules/.prisma/client) -- verified against the
 // actual output of `prisma generate` in this project, not assumed.
 const generatedClientPath = join(

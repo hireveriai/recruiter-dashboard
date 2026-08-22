@@ -1,12 +1,12 @@
 import { Resend } from "resend";
 import { formatOrgDateTime } from "@/lib/time";
 
-const DEFAULT_EMAIL_FROM = "HireVeri <no-reply@mail.hireveri.com>";
+const DEFAULT_EMAIL_FROM = "VerisNova <no-reply@mail.verisnova.com>";
 const MAX_EMAIL_ATTEMPTS = 3;
 const RETRYABLE_EMAIL_ERROR_PATTERN = /(timeout|timed out|temporar|rate|429|5\d\d|network|fetch|econnreset|etimedout|socket)/i;
 
 const globalForResend = globalThis as unknown as {
-  hireveriResend?: Resend;
+  verisnovaResend?: Resend;
 };
 
 type SendEmailParams = {
@@ -176,11 +176,11 @@ function getResendClient() {
     throw new Error("RESEND_API_KEY is not configured");
   }
 
-  if (!globalForResend.hireveriResend) {
-    globalForResend.hireveriResend = new Resend(apiKey);
+  if (!globalForResend.verisnovaResend) {
+    globalForResend.verisnovaResend = new Resend(apiKey);
   }
 
-  return globalForResend.hireveriResend;
+  return globalForResend.verisnovaResend;
 }
 
 function getEmailFrom() {
@@ -299,7 +299,7 @@ export async function sendInterviewEmail({
     subject,
     text: [
       `${displayCompany} Hiring Team`,
-      "powered by HireVeri",
+      "powered by VerisNova",
       "",
       `Hi ${displayName},`,
       "",
@@ -320,7 +320,7 @@ export async function sendInterviewEmail({
       "Please complete the interview in a quiet environment with a stable internet connection.",
       "This session may include integrity and behavioral verification monitoring.",
       "",
-      "This interview is conducted through HireVeri's secure structured interview platform.",
+      "This interview is conducted through VerisNova's secure structured interview platform.",
     ].filter(Boolean).join("\n"),
     html: `
       <div style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
@@ -334,7 +334,7 @@ export async function sendInterviewEmail({
                       <div style="padding:28px 30px 22px;background:#f8fafc;border-bottom:1px solid #e5e7eb;">
                         ${buildCompanyLogoHtml(displayLogo, displayCompany)}
                         <div style="font-size:20px;line-height:28px;font-weight:800;color:#0f172a;">${safeCompany} Hiring Team</div>
-                        <div style="margin-top:3px;font-size:12px;line-height:18px;color:#64748b;">powered by HireVeri</div>
+                        <div style="margin-top:3px;font-size:12px;line-height:18px;color:#64748b;">powered by VerisNova</div>
                       </div>
 
                       <div style="padding:30px;">
@@ -395,7 +395,7 @@ export async function sendInterviewEmail({
                         </div>
 
                         <p style="margin:0;font-size:13px;line-height:21px;color:#64748b;">
-                          This interview is conducted through HireVeri's secure structured interview platform.
+                          This interview is conducted through VerisNova's secure structured interview platform.
                         </p>
                       </div>
                     </div>
@@ -423,10 +423,10 @@ export async function sendRecruiterAccessEmail({
   return sendWithRetry({
     from: getEmailFrom(),
     to,
-    subject: `Your HireVeri recruiter access for ${organization}`,
+    subject: `Your VerisNova recruiter access for ${organization}`,
     text: [
       `Hi ${name || "Recruiter"},`,
-      `You have been added to the ${organization || "your organization"} team on HireVeri Recruiter.`,
+      `You have been added to the ${organization || "your organization"} team on VerisNova Recruiter.`,
       "Open workspace:",
       link,
     ].join("\n"),
@@ -437,7 +437,7 @@ export async function sendRecruiterAccessEmail({
         <p>Hi ${safeName},</p>
 
         <p>
-          You have been added to the <strong>${safeOrganization}</strong> team on HireVeri Recruiter.
+          You have been added to the <strong>${safeOrganization}</strong> team on VerisNova Recruiter.
           Use the secure workspace link below to sign in and continue.
         </p>
 
@@ -450,7 +450,7 @@ export async function sendRecruiterAccessEmail({
           If you already have access, this email simply confirms your current team assignment.
         </p>
 
-        <p style="margin-top:24px;">Regards,<br />HireVeri Recruiter Workspace</p>
+        <p style="margin-top:24px;">Regards,<br />VerisNova Recruiter Workspace</p>
       </div>
     `,
   });
@@ -462,7 +462,7 @@ function recruiterShellHtml(content: string) {
       <div style="max-width:640px;margin:0 auto;padding:32px 18px;">
         <div style="border:1px solid #dbe3ee;border-radius:24px;overflow:hidden;background:#ffffff;box-shadow:0 18px 48px rgba(15,23,42,0.10);">
           <div style="padding:26px 28px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
-            <div style="font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#2563eb;">HireVeri Recruiter</div>
+            <div style="font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#2563eb;">VerisNova Recruiter</div>
             <h1 style="margin:12px 0 0;font-size:24px;line-height:1.25;color:#0f172a;">Organization access</h1>
           </div>
           <div style="padding:28px;">
@@ -501,10 +501,10 @@ export async function sendRecruiterOnboardingEmail({
   return sendWithRetry({
     from: getEmailFrom(),
     to,
-    subject: `Set up your HireVeri access for ${organization}`,
+    subject: `Set up your VerisNova access for ${organization}`,
     text: [
       `Hi ${name || "Recruiter"},`,
-      `${inviterName || "Your team admin"} invited you to ${organization || "your organization"} on HireVeri Recruiter.`,
+      `${inviterName || "Your team admin"} invited you to ${organization || "your organization"} on VerisNova Recruiter.`,
       `Assigned role: ${role || "Recruiter"}`,
       `This setup link expires at ${expiry}.`,
       "Set up access:",
@@ -513,7 +513,7 @@ export async function sendRecruiterOnboardingEmail({
     html: recruiterShellHtml(`
       <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">Hi ${safeName},</p>
       <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
-        ${safeInviter} invited you to join <strong style="color:#0f172a;">${safeOrganization}</strong> on HireVeri Recruiter.
+        ${safeInviter} invited you to join <strong style="color:#0f172a;">${safeOrganization}</strong> on VerisNova Recruiter.
       </p>
       <div style="margin:18px 0;padding:14px 16px;border:1px solid #bfdbfe;border-radius:16px;background:#eff6ff;">
         <div style="font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#64748b;">Assigned Role</div>
@@ -542,7 +542,7 @@ export async function sendRecruiterOrganizationAddedEmail({
   return sendWithRetry({
     from: getEmailFrom(),
     to,
-    subject: `You were added to ${organization} on HireVeri`,
+    subject: `You were added to ${organization} on VerisNova`,
     text: [
       `Hi ${name || "Recruiter"},`,
       `You were added to organization ${organization || "your organization"} by ${inviterName || "your team admin"}.`,
@@ -592,13 +592,13 @@ function supportRequestDetailsHtml(input: SupportRequestEmailParams) {
 }
 
 export async function sendSupportNotificationEmail(input: SupportRequestEmailParams) {
-  const supportTo = process.env.SUPPORT_EMAIL_TO?.trim() || "support@hireveri.com";
+  const supportTo = process.env.SUPPORT_EMAIL_TO?.trim() || "support@verisnova.com";
 
   return sendWithRetry({
     from: getEmailFrom(),
     to: supportTo,
     replyTo: input.workEmail,
-    subject: `[${input.priority}] HireVeri support request ${input.referenceId}`,
+    subject: `[${input.priority}] VerisNova support request ${input.referenceId}`,
     attachments: input.attachmentName && input.attachmentContent
       ? [
           {
@@ -619,7 +619,7 @@ export async function sendSupportNotificationEmail(input: SupportRequestEmailPar
     ].join("\n"),
     html: `
       <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#0f172a;">
-        <h2 style="margin:0 0 8px;">New HireVeri support request</h2>
+        <h2 style="margin:0 0 8px;">New VerisNova support request</h2>
         <p style="margin:0;color:#475569;">A requester submitted a support center ticket.</p>
         ${supportRequestDetailsHtml(input)}
         <div style="margin-top:18px;padding:16px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;">
@@ -635,30 +635,30 @@ export async function sendSupportConfirmationEmail(input: SupportRequestEmailPar
   return sendWithRetry({
     from: getEmailFrom(),
     to: input.workEmail,
-    subject: `HireVeri support request received: ${input.referenceId}`,
+    subject: `VerisNova support request received: ${input.referenceId}`,
     text: [
       `Hi ${input.fullName},`,
       "",
-      `We received your HireVeri support request ${input.referenceId}.`,
+      `We received your VerisNova support request ${input.referenceId}.`,
       `Category: ${input.category}`,
       `Priority: ${input.priority}`,
       "",
       "Our operations team will review it against the applicable support routing and SLA.",
       "",
       "Regards,",
-      "HireVeri Support",
+      "VerisNova Support",
     ].join("\n"),
     html: `
       <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#0f172a;">
         <h2 style="margin:0 0 8px;">Support request received</h2>
         <p>Hi ${escapeHtml(input.fullName)},</p>
-        <p>We received your HireVeri support request. Keep this reference ID for follow-up:</p>
+        <p>We received your VerisNova support request. Keep this reference ID for follow-up:</p>
         <div style="display:inline-block;margin:8px 0 18px;padding:12px 16px;border-radius:12px;background:#0f172a;color:#ffffff;font-weight:700;letter-spacing:0.08em;">
           ${escapeHtml(input.referenceId)}
         </div>
         ${supportRequestDetailsHtml(input)}
         <p style="color:#475569;">Our operations team will review it against the applicable support routing and SLA.</p>
-        <p style="margin-top:24px;">Regards,<br />HireVeri Support</p>
+        <p style="margin-top:24px;">Regards,<br />VerisNova Support</p>
       </div>
     `,
   });
@@ -668,7 +668,7 @@ export async function sendBillingInvoiceEmail(input: BillingInvoiceEmailParams) 
   const safeRecruiterName = escapeHtml(normalizeText(input.recruiterName, "Recruiter"));
   const safeOrganizationName = escapeHtml(input.organizationName);
   const safePlanName = escapeHtml(input.planName);
-  const supportEmail = process.env.BILLING_SUPPORT_EMAIL?.trim() || process.env.SUPPORT_EMAIL_TO?.trim() || "support@hireveri.com";
+  const supportEmail = process.env.BILLING_SUPPORT_EMAIL?.trim() || process.env.SUPPORT_EMAIL_TO?.trim() || "support@verisnova.com";
   const rows = [
     ["Organization", input.organizationName],
     ["Plan", input.planName],
@@ -684,7 +684,7 @@ export async function sendBillingInvoiceEmail(input: BillingInvoiceEmailParams) 
   return sendWithRetry({
     from: getEmailFrom(),
     to: input.to,
-    subject: `HireVeri Invoice & Subscription Activation - ${input.invoiceNumber}`,
+    subject: `VerisNova Invoice & Subscription Activation - ${input.invoiceNumber}`,
     attachments: [
       {
         filename: input.invoicePdfFileName,
@@ -694,7 +694,7 @@ export async function sendBillingInvoiceEmail(input: BillingInvoiceEmailParams) 
     text: [
       `Hi ${input.recruiterName || "Recruiter"},`,
       "",
-      `Your HireVeri subscription is active for ${input.organizationName}.`,
+      `Your VerisNova subscription is active for ${input.organizationName}.`,
       `Plan: ${input.planName}`,
       `Invoice: ${input.invoiceNumber}`,
       `Amount paid: ${input.finalAmountLabel}`,
@@ -711,13 +711,13 @@ export async function sendBillingInvoiceEmail(input: BillingInvoiceEmailParams) 
         <div style="max-width:640px;margin:0 auto;padding:28px 18px;">
           <div style="border:1px solid #e2e8f0;border-radius:18px;background:#ffffff;overflow:hidden;">
             <div style="padding:24px 26px;border-bottom:1px solid #e2e8f0;background:#0f172a;">
-              <div style="font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:#93c5fd;font-weight:700;">HireVeri Billing</div>
+              <div style="font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:#93c5fd;font-weight:700;">VerisNova Billing</div>
               <h1 style="margin:10px 0 0;color:#ffffff;font-size:24px;line-height:1.25;">Invoice & subscription activation</h1>
             </div>
             <div style="padding:26px;">
               <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#334155;">Hi ${safeRecruiterName},</p>
               <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">
-                Your HireVeri subscription for <strong>${safeOrganizationName}</strong> is active. The GST invoice for <strong>${safePlanName}</strong> is attached for finance and procurement records.
+                Your VerisNova subscription for <strong>${safeOrganizationName}</strong> is active. The GST invoice for <strong>${safePlanName}</strong> is attached for finance and procurement records.
               </p>
               <div style="border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
                 ${rows
@@ -884,7 +884,7 @@ function trialShellHtml(heading: string, content: string) {
       <div style="max-width:640px;margin:0 auto;padding:32px 18px;">
         <div style="border:1px solid #dbe3ee;border-radius:24px;overflow:hidden;background:#ffffff;box-shadow:0 18px 48px rgba(15,23,42,0.10);">
           <div style="padding:26px 28px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
-            <div style="font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#2563eb;">HireVeri</div>
+            <div style="font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#2563eb;">VerisNova</div>
             <h1 style="margin:12px 0 0;font-size:24px;line-height:1.25;color:#0f172a;">${escapeHtml(heading)}</h1>
           </div>
           <div style="padding:28px;">

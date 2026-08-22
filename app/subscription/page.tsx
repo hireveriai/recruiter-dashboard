@@ -189,7 +189,7 @@ export default function SubscriptionPage() {
       <Navbar onSendInterviewClick={() => undefined} />
       <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:pl-28 lg:px-8 lg:pl-32">
         <section className="overflow-hidden rounded-[32px] border border-cyan-400/16 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.16),transparent_28%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(2,6,23,0.94))] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.42)] sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-200/75">HireVeri Subscription</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-200/75">VerisNova Subscription</p>
           <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
             <div>
               <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">

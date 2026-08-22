@@ -7,7 +7,7 @@ import { buildAuthUrl } from "@/lib/client/auth-query"
 import { CardSkeleton, TimelineSkeleton } from "@/components/system/skeletons"
 
 const DASHBOARD_SUMMARY_LIMIT = 4
-const DASHBOARD_INVALIDATED_EVENT = "hireveri:dashboard-data-invalidated"
+const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
 
 function getRecommendationColor(value) {
   const normalized = String(value ?? "").toUpperCase()

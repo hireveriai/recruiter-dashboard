@@ -14,7 +14,7 @@ export function SkeletonBlock({ className = "", style }: SkeletonBlockProps) {
   return (
     <div
       aria-hidden="true"
-      className={`hireveri-skeleton relative overflow-hidden rounded-xl border border-cyan-300/10 bg-slate-900/70 ${className}`}
+      className={`verisnova-skeleton relative overflow-hidden rounded-xl border border-cyan-300/10 bg-slate-900/70 ${className}`}
       style={style}
     />
   )

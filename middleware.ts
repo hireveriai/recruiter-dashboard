@@ -5,7 +5,7 @@ const LOGIN_URL =
   process.env.NEXT_PUBLIC_RECRUITER_LOGIN_URL ||
   process.env.NEXT_PUBLIC_AUTH_APP_URL ||
   process.env.NEXT_PUBLIC_LOGIN_URL ||
-  "https://auth.hireveri.com"
+  "https://auth.verisnova.com"
 
 const PROTECTED_PAGE_PREFIXES = [
   "/",

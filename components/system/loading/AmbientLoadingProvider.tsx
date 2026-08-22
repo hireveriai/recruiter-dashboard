@@ -34,8 +34,8 @@ const routeMessages: Array<[RegExp, string]> = [
   [/^\//, "Dashboard"],
 ]
 
-const DASHBOARD_CACHE_KEY = "hireveri-overview"
-const DASHBOARD_INVALIDATED_KEY = "hireveri-overview-invalidated"
+const DASHBOARD_CACHE_KEY = "verisnova-overview"
+const DASHBOARD_INVALIDATED_KEY = "verisnova-overview-invalidated"
 
 const screenCacheRules: Array<[RegExp, (search: string) => string]> = [
   [/^\/candidates/, (search) => `candidates:${search}`],
@@ -108,7 +108,7 @@ function getEffectiveCacheSearch(search: string) {
   }
 
   try {
-    const storedAuth = window.sessionStorage.getItem("hireveri-auth")
+    const storedAuth = window.sessionStorage.getItem("verisnova-auth")
     const parsedAuth = storedAuth ? JSON.parse(storedAuth) : null
 
     if (parsedAuth?.userId && parsedAuth?.organizationId) {
@@ -266,7 +266,7 @@ export default function AmbientLoadingProvider({ children }: { children: ReactNo
       {visible ? (
         <div className="fixed inset-0 z-[130]">
           <VerisGlobeLoader
-            eyebrow="HireVeri"
+            eyebrow="VerisNova"
             steps={getGlobeSteps(message)}
             activeIndex={showDetails ? 2 : 1}
             fullscreen

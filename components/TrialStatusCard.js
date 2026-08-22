@@ -97,7 +97,7 @@ export default function TrialStatusCard({ credits }) {
 
         setTrialState(payload.data)
         setFormOpen(false)
-        window.dispatchEvent(new CustomEvent("hireveri:trial-credits-updated"))
+        window.dispatchEvent(new CustomEvent("verisnova:trial-credits-updated"))
       } catch (submitError) {
         console.warn("Trial request failed", submitError)
         setError("We couldn’t submit your request. Please try again.")

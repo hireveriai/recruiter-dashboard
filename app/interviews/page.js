@@ -170,24 +170,24 @@ function getRecruiterStatus(interview) {
 
 // Every message states who/what caused the interruption up front, so a
 // recruiter can immediately tell a candidate-side problem (their network,
-// device, browser) apart from a HireVeri platform problem (our video/camera
+// device, browser) apart from a VerisNova platform problem (our video/camera
 // service) without needing to guess or ask engineering.
 const INTERRUPTION_REASON_LABELS = {
   NETWORK_DISCONNECT_TIMEOUT: "Candidate-side network issue: their internet connection dropped and did not reconnect in time.",
   HEARTBEAT_TIMEOUT: "Candidate-side connectivity issue: their device stopped responding, most likely due to a weak or unstable internet connection. Answers submitted before the drop were preserved for evaluation.",
   HEARTBEAT_FAILURE: "Candidate-side connectivity issue: their device stopped responding, most likely due to a weak or unstable internet connection. Answers submitted before the drop were preserved for evaluation.",
   "HEARTBEAT TIMED OUT": "Candidate-side connectivity issue: their device stopped responding, most likely due to a weak or unstable internet connection. Answers submitted before the drop were preserved for evaluation.",
-  WATCHDOG_TIMEOUT: "Candidate-side connectivity issue: their connection kept failing to recover, so HireVeri automatically closed the session after repeated reconnect attempts.",
-  EXCESSIVE_RECONNECTS: "Candidate-side connectivity issue: their connection repeatedly dropped and reconnected throughout the session (usually unstable WiFi or mobile data), so HireVeri automatically closed it rather than let it continue indefinitely.",
+  WATCHDOG_TIMEOUT: "Candidate-side connectivity issue: their connection kept failing to recover, so VerisNova automatically closed the session after repeated reconnect attempts.",
+  EXCESSIVE_RECONNECTS: "Candidate-side connectivity issue: their connection repeatedly dropped and reconnected throughout the session (usually unstable WiFi or mobile data), so VerisNova automatically closed it rather than let it continue indefinitely.",
   SESSION_TIME_EXPIRED: "Candidate did not finish within the scheduled interview time window.",
   TIMEOUT: "Candidate did not finish before the allotted interview time ran out.",
   TIME_EXPIRED: "Candidate did not finish before the allotted interview time ran out.",
-  CAMERA_STREAM: "HireVeri platform issue: an internal camera-service restart interrupted the session. Not caused by the candidate.",
-  "CAMERA STREAM INTERRUPTED.": "HireVeri platform issue: an internal camera-service restart interrupted the session. Not caused by the candidate.",
+  CAMERA_STREAM: "VerisNova platform issue: an internal camera-service restart interrupted the session. Not caused by the candidate.",
+  "CAMERA STREAM INTERRUPTED.": "VerisNova platform issue: an internal camera-service restart interrupted the session. Not caused by the candidate.",
   CAMERA_TRACK_ENDED: "Candidate-side device issue: their browser reported the camera feed ending unexpectedly (often the OS or browser revoking camera access mid-interview).",
   CAMERA_ACQUISITION_FAILED: "Candidate-side device issue: their browser could not access the camera (often a permissions or device issue on their end).",
-  LIVEKIT_ROOM: "HireVeri platform issue: an internal realtime video-service restart interrupted the session. Not caused by the candidate.",
-  "REALTIME INTERVIEW LINK WAS INTERRUPTED.": "HireVeri platform issue: an internal realtime video-service restart interrupted the session. Not caused by the candidate.",
+  LIVEKIT_ROOM: "VerisNova platform issue: an internal realtime video-service restart interrupted the session. Not caused by the candidate.",
+  "REALTIME INTERVIEW LINK WAS INTERRUPTED.": "VerisNova platform issue: an internal realtime video-service restart interrupted the session. Not caused by the candidate.",
   LIVEKIT_DISCONNECTED: "Connection issue (candidate network or a temporary platform issue): the realtime video connection was lost and did not recover even after automatic reconnect attempts.",
   CAMERA_FAILURE: "Candidate-side device issue: their camera became unavailable during the interview.",
   MICROPHONE_FAILURE: "Candidate-side device issue: their microphone became unavailable during the interview.",

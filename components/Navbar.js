@@ -28,10 +28,10 @@ const navItems = [
   { href: "/billing", label: "Billing", feature: "billing" },
 ];
 
-const ALERT_READ_STORAGE_KEY = "hireveri-read-alert-ids";
-const ALERTS_CACHE_KEY = "hireveri-dashboard-alerts";
-const ALERTS_READ_EVENT = "hireveri:alerts-read";
-const PROFILE_PERMISSION_CACHE_KEY = "hireveri-recruiter-profile-permissions";
+const ALERT_READ_STORAGE_KEY = "verisnova-read-alert-ids";
+const ALERTS_CACHE_KEY = "verisnova-dashboard-alerts";
+const ALERTS_READ_EVENT = "verisnova:alerts-read";
+const PROFILE_PERMISSION_CACHE_KEY = "verisnova-recruiter-profile-permissions";
 
 function normalizeStorageKeyPart(value) {
   return String(value ?? "")
@@ -217,7 +217,7 @@ function cacheAlerts(alerts) {
 
 export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, initialProfile = null, initialAlerts = undefined }) {
   const { resolvedTheme } = useTheme();
-  const logoSrc = resolvedTheme === "light" ? "/hireveri_logo_light.png" : "/hireveri_logo.png";
+  const logoSrc = resolvedTheme === "light" ? "/verisnova_logo_light.png" : "/verisnova_logo.png";
   const pathname = usePathname();
   const searchParams = useAuthSearchParams();
   const menuRef = useRef(null);
@@ -391,12 +391,12 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
 
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
-    window.addEventListener("hireveri:open-create-job", handleOpenCreateJobEvent);
+    window.addEventListener("verisnova:open-create-job", handleOpenCreateJobEvent);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("hireveri:open-create-job", handleOpenCreateJobEvent);
+      window.removeEventListener("verisnova:open-create-job", handleOpenCreateJobEvent);
     };
   }, []);
 
@@ -572,7 +572,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               href="/"
               onClick={() => handleNavigationClick("/")}
               className="group flex w-[108px] shrink-0 items-center gap-3 leading-none sm:w-[220px] xl:w-[244px]"
-              aria-label="HireVeri home"
+              aria-label="VerisNova home"
             >
               <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm transition-all duration-200 group-hover:border-slate-500">
                 <Image
@@ -586,7 +586,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                 />
               </span>
               <span className="min-w-0">
-                <span className="block text-lg font-semibold tracking-tight text-white xl:text-xl">HireVeri</span>
+                <span className="block text-lg font-semibold tracking-tight text-white xl:text-xl">VerisNova</span>
                 <span className="mt-1 hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 sm:block">
                   Hiring Workspace
                 </span>
