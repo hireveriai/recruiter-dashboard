@@ -84,10 +84,34 @@ function getConnectionConfig() {
   }
 }
 
-export const pgPool =
-  globalForPg.pgPool ??
-  new Pool(getConnectionConfig())
+/**
+ * Nothing imports this module today, but it carried the same landmine that
+ * broke the build via prisma.ts: getConnectionConfig() throws when no database
+ * URL is set, and doing that at module scope turns a missing runtime secret
+ * into a build failure. Deferred here too, so importing it stays safe.
+ */
+let pool: Pool | undefined
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPg.pgPool = pgPool
+function getPool(): Pool {
+  if (!pool) {
+    pool = globalForPg.pgPool ?? new Pool(getConnectionConfig())
+
+    if (process.env.NODE_ENV !== "production") {
+      globalForPg.pgPool = pool
+    }
+  }
+
+  return pool
 }
+
+export const pgPool = new Proxy({} as Pool, {
+  get(_target, property, receiver) {
+    const instance = getPool()
+    const value = Reflect.get(instance as object, property, receiver)
+
+    return typeof value === "function" ? value.bind(instance) : value
+  },
+  has(_target, property) {
+    return Reflect.has(getPool() as object, property)
+  },
+})

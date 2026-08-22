@@ -89,18 +89,51 @@ function getNormalizedDatabaseUrl() {
   }
 }
 
-const normalizedDatabaseUrl = getNormalizedDatabaseUrl()
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    datasources: {
-      db: {
-        url: normalizedDatabaseUrl,
-      },
-    },
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
-  })
+/**
+ * Built on first property access rather than at module load.
+ *
+ * getNormalizedDatabaseUrl() throws "Missing DATABASE_URL" when no connection
+ * string is present. Constructing the client at module scope meant that throw
+ * fired on *import*, and `next build` imports every route module to collect
+ * page data - so any build without a live database URL in its environment
+ * failed outright, even though nothing queries at build time. Deferring it
+ * keeps the build independent of runtime secrets; a genuinely missing URL now
+ * surfaces on the first request instead, where it belongs.
+ *
+ * Caching semantics are unchanged: reuse the global if present, and only
+ * populate the global outside production, exactly as before.
+ */
+let client: PrismaClient | undefined
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma
+function getPrismaClient(): PrismaClient {
+  if (!client) {
+    client =
+      globalForPrisma.prisma ??
+      new PrismaClient({
+        datasources: {
+          db: {
+            url: getNormalizedDatabaseUrl(),
+          },
+        },
+        log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+      })
+
+    if (process.env.NODE_ENV !== "production") {
+      globalForPrisma.prisma = client
+    }
+  }
+
+  return client
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property, receiver) {
+    const instance = getPrismaClient()
+    const value = Reflect.get(instance as object, property, receiver)
+
+    return typeof value === "function" ? value.bind(instance) : value
+  },
+  has(_target, property) {
+    return Reflect.has(getPrismaClient() as object, property)
+  },
+})
