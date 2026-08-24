@@ -216,6 +216,7 @@ model Interview {
   candidateFeedbackGeneratedAt DateTime? @db.Timestamptz(6) @map("candidate_feedback_generated_at")
   candidateFeedbackSentAt     DateTime? @db.Timestamptz(6) @map("candidate_feedback_sent_at")
   candidateFeedbackSentTo     String?   @map("candidate_feedback_sent_to")
+  candidateFeedbackHiringDecision String? @map("candidate_feedback_hiring_decision")
   job               JobPosition       @relation(fields: [jobId], references: [jobId])
   candidate         Candidate         @relation(fields: [candidateId], references: [candidateId])
   attempts          InterviewAttempt[]

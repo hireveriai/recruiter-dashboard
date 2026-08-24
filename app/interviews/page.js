@@ -803,7 +803,13 @@ export default function InterviewsPage() {
     setInterviews((current) =>
       current.map((item) =>
         item.interviewId === interview.interviewId
-          ? { ...item, candidateFeedbackText: result.text, candidateFeedbackStatus: "sent", candidateFeedbackSentAt: result.sentAt }
+          ? {
+              ...item,
+              candidateFeedbackText: result.text,
+              candidateFeedbackStatus: "sent",
+              candidateFeedbackSentAt: result.sentAt,
+              candidateFeedbackHiringDecision: result.hiringDecision,
+            }
           : item
       )
     )

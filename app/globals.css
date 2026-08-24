@@ -344,7 +344,7 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
 
-:root[data-theme="light"] .hv-theme-modal [class*="bg-[#"] {
+:root[data-theme="light"] .hv-theme-modal [class*="bg-[#"]:not(.hv-solid-action) {
   background: rgba(248, 250, 252, 0.94);
 }
 

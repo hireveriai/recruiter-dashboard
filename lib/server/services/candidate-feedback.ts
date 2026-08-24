@@ -11,6 +11,7 @@ type InterviewContextRow = {
   attempt_id: string | null
   candidate_feedback_text: string | null
   candidate_feedback_status: string | null
+  organization_name: string
 }
 
 async function loadInterviewContext(organizationId: string, interviewId: string) {
@@ -29,10 +30,12 @@ async function loadInterviewContext(organizationId: string, interviewId: string)
         limit 1
       ) as attempt_id,
       i.candidate_feedback_text,
-      i.candidate_feedback_status
+      i.candidate_feedback_status,
+      o.organization_name
     from public.interviews i
     join public.candidates c on c.candidate_id = i.candidate_id
     join public.job_positions jp on jp.job_id = i.job_id
+    join public.organizations o on o.organization_id = i.organization_id
     where i.interview_id = ${interviewId}::uuid
       and i.organization_id = ${organizationId}::uuid
     limit 1
@@ -171,11 +174,22 @@ function isValidEmail(value: string) {
   return EMAIL_PATTERN.test(value.trim())
 }
 
+export const CANDIDATE_FEEDBACK_HIRING_DECISIONS = ["SHORTLISTED", "REJECTED", "UNDISCLOSED"] as const
+
+export type CandidateFeedbackHiringDecision = typeof CANDIDATE_FEEDBACK_HIRING_DECISIONS[number]
+
+export function normalizeCandidateFeedbackHiringDecision(value: unknown): CandidateFeedbackHiringDecision {
+  const normalized = String(value ?? "").trim().toUpperCase()
+  return (CANDIDATE_FEEDBACK_HIRING_DECISIONS as readonly string[]).includes(normalized)
+    ? (normalized as CandidateFeedbackHiringDecision)
+    : "UNDISCLOSED"
+}
+
 export async function sendCandidateFeedback(
   organizationId: string,
   interviewId: string,
   text: string,
-  options?: { to?: string; cc?: string[] }
+  options?: { to?: string; cc?: string[]; hiringDecision?: unknown; includeSignature?: boolean }
 ) {
   const trimmed = text.trim()
   if (!trimmed) {
@@ -207,6 +221,9 @@ export async function sendCandidateFeedback(
     throw new ApiError(400, "INVALID_EMAIL", `"${invalidCc}" is not a valid email address.`)
   }
 
+  const hiringDecision = normalizeCandidateFeedbackHiringDecision(options?.hiringDecision)
+  const includeSignature = Boolean(options?.includeSignature)
+
   const { sendCandidateFeedbackEmail } = await import("@/lib/services/email.service")
   await sendCandidateFeedbackEmail({
     to: recipientEmail,
@@ -214,6 +231,8 @@ export async function sendCandidateFeedback(
     candidateName: context.candidate_name,
     jobTitle: context.job_title,
     feedbackText: trimmed,
+    hiringDecision,
+    organizationName: includeSignature ? context.organization_name : undefined,
   })
 
   const sentToLabel = [recipientEmail, ...ccEmails].join(", ")
@@ -223,9 +242,10 @@ export async function sendCandidateFeedback(
     set candidate_feedback_text = ${trimmed},
         candidate_feedback_status = 'sent',
         candidate_feedback_sent_at = now(),
-        candidate_feedback_sent_to = ${sentToLabel}
+        candidate_feedback_sent_to = ${sentToLabel},
+        candidate_feedback_hiring_decision = ${hiringDecision}
     where interview_id = ${interviewId}::uuid
   `
 
-  return { sentTo: recipientEmail, cc: ccEmails, sentAt: new Date().toISOString() }
+  return { sentTo: recipientEmail, cc: ccEmails, sentAt: new Date().toISOString(), hiringDecision }
 }

@@ -1,7 +1,6 @@
 import { Resend } from "resend";
 import { formatOrgDateTime } from "@/lib/time";
 
-const DEFAULT_EMAIL_FROM = "VerisNova <no-reply@mail.verisnova.com>";
 const MAX_EMAIL_ATTEMPTS = 3;
 const RETRYABLE_EMAIL_ERROR_PATTERN = /(timeout|timed out|temporar|rate|429|5\d\d|network|fetch|econnreset|etimedout|socket)/i;
 
@@ -55,12 +54,16 @@ type SupportRequestEmailParams = {
   attachmentContent?: string | null;
 };
 
+type CandidateFeedbackHiringDecision = "SHORTLISTED" | "REJECTED" | "UNDISCLOSED";
+
 type SendCandidateFeedbackEmailParams = {
   to: string;
   cc?: string[];
   candidateName: string;
   jobTitle: string;
   feedbackText: string;
+  hiringDecision?: CandidateFeedbackHiringDecision;
+  organizationName?: string;
 };
 
 type BillingInvoiceEmailParams = {
@@ -186,7 +189,16 @@ function getResendClient() {
 function getEmailFrom() {
   const configured = process.env.EMAIL_FROM?.trim();
 
-  return configured || DEFAULT_EMAIL_FROM;
+  if (!configured) {
+    // No hard-coded fallback on purpose: a default that points at a domain
+    // nobody verified in Resend fails at send time with an opaque provider
+    // error. Fail loudly at the config layer instead.
+    throw new Error(
+      "EMAIL_FROM is not configured. Set it to a sender on a domain verified in this environment's Resend account (resend.com/domains)."
+    );
+  }
+
+  return configured;
 }
 
 function getInterviewEmailFrom() {
@@ -806,16 +818,46 @@ function renderStructuredFeedbackHtml(feedbackText: string) {
   return blocks.join("");
 }
 
+function candidateFeedbackDecisionCopy(hiringDecision: CandidateFeedbackHiringDecision | undefined, safeRole: string) {
+  if (hiringDecision === "SHORTLISTED") {
+    return {
+      text: `Hiring update: You have been shortlisted for the ${safeRole} position. We will be in touch about next steps.`,
+      html: `
+        <div style="margin:0 0 22px;padding:16px 18px;border-radius:14px;background:#ecfdf5;border:1px solid #a7f3d0;">
+          <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#047857;font-weight:700;">Hiring Update</div>
+          <p style="margin:6px 0 0;font-size:15px;line-height:22px;color:#065f46;">You have been <strong>shortlisted</strong> for the ${safeRole} position. We will be in touch about next steps.</p>
+        </div>
+      `,
+    };
+  }
+  if (hiringDecision === "REJECTED") {
+    return {
+      text: `Hiring update: We will not be moving forward with your application for the ${safeRole} position at this time.`,
+      html: `
+        <div style="margin:0 0 22px;padding:16px 18px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;">
+          <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#64748b;font-weight:700;">Hiring Update</div>
+          <p style="margin:6px 0 0;font-size:15px;line-height:22px;color:#334155;">We will not be moving forward with your application for the ${safeRole} position at this time. We appreciate the time you invested and encourage you to apply again in the future.</p>
+        </div>
+      `,
+    };
+  }
+  return null;
+}
+
 export async function sendCandidateFeedbackEmail({
   to,
   cc,
   candidateName,
   jobTitle,
   feedbackText,
+  hiringDecision,
+  organizationName,
 }: SendCandidateFeedbackEmailParams) {
   const safeName = escapeHtml(normalizeText(candidateName, "Candidate"));
   const safeRole = escapeHtml(normalizeText(jobTitle, "the role you applied for"));
   const feedbackHtml = renderStructuredFeedbackHtml(feedbackText);
+  const decisionCopy = candidateFeedbackDecisionCopy(hiringDecision, safeRole);
+  const safeOrgName = organizationName ? escapeHtml(normalizeText(organizationName, "")) : "";
 
   return sendWithRetry({
     from: getEmailFrom(),
@@ -827,7 +869,9 @@ export async function sendCandidateFeedbackEmail({
       "",
       `Thank you for taking the time to interview for the ${normalizeText(jobTitle, "role")} position. Here is some feedback on your interview:`,
       "",
+      ...(decisionCopy ? [decisionCopy.text, ""] : []),
       feedbackText,
+      ...(safeOrgName ? ["", "Best regards,", organizationName] : []),
     ].join("\n"),
     html: `
       <div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
@@ -842,7 +886,13 @@ export async function sendCandidateFeedbackEmail({
               <p style="margin:0 0 22px;font-size:15px;line-height:24px;color:#475569;">
                 Thank you for taking the time to interview for the ${safeRole} position. Here is some feedback on your interview:
               </p>
+              ${decisionCopy ? decisionCopy.html : ""}
               ${feedbackHtml}
+              ${
+                safeOrgName
+                  ? `<p style="margin:26px 0 0;font-size:15px;line-height:24px;color:#334155;">Best regards,<br />${safeOrgName}</p>`
+                  : ""
+              }
             </div>
           </div>
         </div>

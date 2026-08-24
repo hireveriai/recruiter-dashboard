@@ -7,6 +7,12 @@ import { buildAuthUrl } from "@/lib/client/auth-query"
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+const HIRING_DECISION_OPTIONS = [
+  { value: "SHORTLISTED", label: "Shortlisted" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "UNDISCLOSED", label: "Prefer not to disclose" },
+]
+
 function parseCcInput(value) {
   return value
     .split(/[,\n]/)
@@ -18,6 +24,8 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
   const [text, setText] = useState("")
   const [toEmail, setToEmail] = useState("")
   const [ccInput, setCcInput] = useState("")
+  const [hiringDecision, setHiringDecision] = useState("UNDISCLOSED")
+  const [includeSignature, setIncludeSignature] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState("")
@@ -30,6 +38,8 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
       setText("")
       setToEmail("")
       setCcInput("")
+      setHiringDecision("UNDISCLOSED")
+      setIncludeSignature(false)
       setError("")
       setSentAt(null)
       return
@@ -38,6 +48,7 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
     setSentAt(interview.candidateFeedbackSentAt || null)
     setToEmail(interview.candidateEmail || "")
     setCcInput("")
+    setHiringDecision(interview.candidateFeedbackHiringDecision || "UNDISCLOSED")
 
     if (interview.candidateFeedbackText) {
       setText(interview.candidateFeedbackText)
@@ -88,7 +99,10 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
     }
 
     const recipientSummary = [trimmedTo, ...ccList].join(", ")
-    if (!window.confirm(`Send this feedback to ${recipientSummary}?`)) {
+    const decisionLabel = HIRING_DECISION_OPTIONS.find((option) => option.value === hiringDecision)?.label
+    const decisionNote =
+      hiringDecision === "UNDISCLOSED" ? "" : ` The email will state the candidate is "${decisionLabel}".`
+    if (!window.confirm(`Send this feedback to ${recipientSummary}?${decisionNote}`)) {
       return
     }
 
@@ -101,7 +115,7 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, to: trimmedTo, cc: ccList }),
+          body: JSON.stringify({ text, to: trimmedTo, cc: ccList, hiringDecision, includeSignature }),
         }
       )
       const data = await response.json()
@@ -109,7 +123,12 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
         throw new Error(data?.error?.message || "Failed to send candidate feedback")
       }
       setSentAt(data.data.sentAt)
-      onSent?.(interview, { text, sentAt: data.data.sentAt, sentTo: data.data.sentTo })
+      onSent?.(interview, {
+        text,
+        sentAt: data.data.sentAt,
+        sentTo: data.data.sentTo,
+        hiringDecision: data.data.hiringDecision,
+      })
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Failed to send candidate feedback")
     } finally {
@@ -150,8 +169,63 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
           <div className="px-6 py-6 sm:px-8">
             <p className="mb-4 text-sm leading-6 text-slate-400">
               This is a separate, candidate-friendly rewrite -- not the internal VERIS evaluation. It never includes
-              scores, risk flags, or a hiring decision. Review and edit before sending.
+              scores or risk flags. Review and edit before sending.
             </p>
+
+            <div className="mb-4 grid gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Hiring Decision</span>
+              <div className="flex flex-wrap gap-3">
+                {HIRING_DECISION_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm transition ${
+                      hiringDecision === option.value
+                        ? "border-cyan-300/70 bg-cyan-300/10 text-white"
+                        : "border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="candidate-feedback-hiring-decision"
+                      value={option.value}
+                      checked={hiringDecision === option.value}
+                      onChange={() => setHiringDecision(option.value)}
+                      className="h-3.5 w-3.5 accent-cyan-300"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">
+                {hiringDecision === "UNDISCLOSED"
+                  ? "No hiring decision will be included in the email."
+                  : `The email will tell the candidate they were ${
+                      hiringDecision === "SHORTLISTED" ? "shortlisted" : "not selected"
+                    }.`}
+              </p>
+            </div>
+
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-900/60 px-3.5 py-2.5">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Include Signature</span>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {includeSignature ? "Your organization's name will be added as a signature." : "No signature will be added."}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={includeSignature}
+                onClick={() => setIncludeSignature((current) => !current)}
+                className={`inline-flex h-7 w-14 shrink-0 items-center rounded-full px-1 text-[10px] font-bold transition ${
+                  includeSignature ? "justify-end bg-emerald-500 text-emerald-950" : "justify-start bg-slate-700 text-slate-300"
+                }`}
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white shadow">
+                  {includeSignature ? "✓" : "✕"}
+                </span>
+              </button>
+            </div>
 
             <div className="mb-4 grid gap-3 sm:grid-cols-2">
               <div className="grid gap-1.5">

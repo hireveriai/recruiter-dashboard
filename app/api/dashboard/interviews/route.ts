@@ -925,6 +925,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       candidateFeedbackText: interview.candidateFeedbackText ?? null,
       candidateFeedbackStatus: interview.candidateFeedbackStatus ?? null,
       candidateFeedbackSentAt: interview.candidateFeedbackSentAt ?? null,
+      candidateFeedbackHiringDecision: interview.candidateFeedbackHiringDecision ?? null,
       candidateEmail: interview.candidate?.email ?? null,
     }
   })
