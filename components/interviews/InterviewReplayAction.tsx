@@ -14,8 +14,8 @@ export default function InterviewReplayAction({
   compact = false,
 }: InterviewReplayActionProps) {
   const className = compact
-    ? "hv-preserve-dark group/replay inline-flex w-full min-w-0 items-center gap-3 rounded-2xl border border-cyan-300/30 bg-[linear-gradient(135deg,rgba(8,145,178,0.45),rgba(3,105,161,0.55))] px-4 py-3 text-left text-white shadow-[0_0_28px_rgba(34,211,238,0.1)] transition duration-200 hover:border-cyan-200/45 hover:bg-cyan-500/25 hover:shadow-[0_0_34px_rgba(34,211,238,0.16)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
-    : "hv-preserve-dark group/replay inline-flex w-full min-w-0 items-center gap-4 rounded-2xl border border-cyan-300/30 bg-[linear-gradient(135deg,rgba(8,145,178,0.45),rgba(3,105,161,0.55))] px-4 py-4 text-left text-white shadow-[0_0_34px_rgba(34,211,238,0.12)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200/50 hover:shadow-[0_0_42px_rgba(34,211,238,0.18)] focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
+    ? "hv-preserve-dark group/replay inline-flex w-full min-w-0 items-center gap-3 rounded-2xl border border-blue-300/30 bg-[linear-gradient(135deg,rgba(29,78,216,0.55),rgba(12,74,110,0.6))] px-4 py-3 text-left text-white shadow-[0_0_28px_rgba(59,130,246,0.12)] transition duration-200 hover:border-blue-200/45 hover:bg-blue-500/25 hover:shadow-[0_0_34px_rgba(59,130,246,0.18)] focus:outline-none focus:ring-2 focus:ring-blue-300/35"
+    : "hv-preserve-dark group/replay inline-flex w-full min-w-0 items-center gap-4 rounded-2xl border border-blue-300/30 bg-[linear-gradient(135deg,rgba(29,78,216,0.55),rgba(12,74,110,0.6))] px-4 py-4 text-left text-white shadow-[0_0_34px_rgba(59,130,246,0.14)] transition duration-200 hover:-translate-y-0.5 hover:border-blue-200/50 hover:shadow-[0_0_42px_rgba(59,130,246,0.2)] focus:outline-none focus:ring-2 focus:ring-blue-300/35"
 
   if (!href) {
     return (
@@ -41,7 +41,7 @@ export default function InterviewReplayAction({
       className={className}
       aria-label={`Open interview replay for ${candidateName}`}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-[linear-gradient(150deg,rgba(255,255,255,0.34),rgba(255,255,255,0.1))] text-white shadow-[0_2px_6px_rgba(3,50,75,0.35),inset_0_1px_0_rgba(255,255,255,0.4)] transition duration-200 group-hover/replay:border-white/45 group-hover/replay:bg-[linear-gradient(150deg,rgba(255,255,255,0.44),rgba(255,255,255,0.14))]">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-200/40 bg-[linear-gradient(150deg,rgba(191,219,254,0.4),rgba(96,165,250,0.18))] text-white shadow-[0_2px_6px_rgba(3,50,75,0.35),inset_0_1px_0_rgba(255,255,255,0.35)] transition duration-200 group-hover/replay:border-sky-100/55 group-hover/replay:bg-[linear-gradient(150deg,rgba(191,219,254,0.5),rgba(96,165,250,0.24))]">
         <span className="ml-0.5 drop-shadow-[0_1px_1px_rgba(3,50,75,0.4)]">▶</span>
       </span>
       <span className="min-w-0">

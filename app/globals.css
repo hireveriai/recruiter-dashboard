@@ -270,6 +270,20 @@ body {
   color: #ffffff;
 }
 
+.hv-brand-wordmark {
+  background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 45%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+:root[data-theme="light"] .hv-brand-wordmark {
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 45%, #4338ca 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 :root[data-theme="light"] .hv-navbar {
   background: rgba(248, 251, 255, 0.92);
   border-color: rgba(148, 163, 184, 0.32);

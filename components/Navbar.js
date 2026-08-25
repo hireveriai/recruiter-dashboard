@@ -600,7 +600,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                 />
               </span>
               <span className="min-w-0">
-                <span className="block text-lg font-semibold tracking-tight text-white xl:text-xl">VerisNova</span>
+                <span className="hv-brand-wordmark block text-lg font-bold tracking-tight xl:text-xl">VerisNova</span>
                 <span className="mt-1 hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 sm:block">
                   Hiring Workspace
                 </span>
