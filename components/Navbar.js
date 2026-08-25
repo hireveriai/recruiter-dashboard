@@ -1,9 +1,10 @@
 "use client";
 
+import { BrainCircuit } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { buildAuthUrl, hasAuthQuery } from "@/lib/client/auth-query";
@@ -231,6 +232,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
     ? "h-full w-full object-contain"
     : "h-[5.1rem] w-[5.1rem] max-w-none object-contain";
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useAuthSearchParams();
   const menuRef = useRef(null);
   const alertsRef = useRef(null);
@@ -252,6 +254,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
   const canManageTeam = canAccessFeature(displayProfile, "manageTeam");
   const canViewBilling = canAccessFeature(displayProfile, "billing");
   const canManageSettings = canAccessFeature(displayProfile, "settings");
+  const canUseCopilot = canAccessFeature(permissionProfile, "copilot");
   const alertReadStorageKey = useMemo(() => getAlertReadStorageKey(displayProfile), [displayProfile]);
 
   useEffect(() => {
@@ -543,6 +546,14 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
     });
   }
 
+  function handleOpenVerisAi() {
+    if (pathname === "/") {
+      window.dispatchEvent(new CustomEvent("verisnova:open-copilot"));
+      return;
+    }
+    router.push("/?openCopilot=1");
+  }
+
   function handleMarkAllAlertsRead() {
     const nextReadIds = new Set(readAlertIds);
     const alertIds = unreadAlerts.map((alert) => alert.id);
@@ -711,6 +722,18 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
           </div>
 
           <div className="ml-1 flex shrink-0 flex-nowrap items-center gap-2">
+            {canUseCopilot ? (
+              <button
+                type="button"
+                onClick={handleOpenVerisAi}
+                className="hv-preserve-dark group relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-400/25 bg-[linear-gradient(135deg,rgba(8,145,178,0.22),rgba(56,189,248,0.1))] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.14)] transition-all duration-200 hover:border-cyan-300/45 hover:bg-cyan-400/20 hover:text-white hover:shadow-[0_0_20px_rgba(34,211,238,0.22)]"
+                aria-label="Open VERIS AI"
+                title="VERIS AI"
+              >
+                <BrainCircuit className="h-4 w-4" strokeWidth={2} />
+                <span className="pointer-events-none absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_6px_rgba(34,211,238,0.9)]" />
+              </button>
+            ) : null}
             <ThemeSelector />
             <div className="relative" ref={menuRef}>
               <button

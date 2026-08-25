@@ -199,6 +199,25 @@ export default function CognitiveDock({
   }, [onSendInterviewClick]);
 
   useEffect(() => {
+    function handleOpenCopilot() {
+      setPanel("copilot");
+    }
+
+    window.addEventListener("verisnova:open-copilot", handleOpenCopilot);
+    return () => window.removeEventListener("verisnova:open-copilot", handleOpenCopilot);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("openCopilot") === "1") {
+      setPanel("copilot");
+      params.delete("openCopilot");
+      const query = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    }
+  }, []);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();

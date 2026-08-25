@@ -190,7 +190,7 @@ export default function Sidebar({ initialProfile = null, overview = null }) {
 
   return (
     <>
-      <aside className="hv-elevated-section mt-10 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-[0_14px_44px_rgba(2,6,23,0.18)] xl:p-3.5 2xl:p-4">
+      <aside className="hv-elevated-section rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-[0_14px_44px_rgba(2,6,23,0.18)] xl:p-3.5 2xl:p-4">
         <h2 className="text-[1.9rem] font-semibold leading-none text-white xl:text-[1.7rem]">Recruiter</h2>
 
         <div className="mt-5 flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-4 xl:p-3 2xl:p-3.5">
