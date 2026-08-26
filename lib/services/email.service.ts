@@ -42,6 +42,24 @@ type SendRecruiterOrganizationAddedEmailParams = SendRecruiterAccessEmailParams 
   inviterName: string;
 };
 
+type InterviewLifecycleNotificationEmailParams = {
+  to: string
+  candidateName: string
+  jobTitle: string
+  organizationName: string
+  durationMinutes?: number | null
+  interviewUrl: string
+}
+
+type InterviewStartedNotificationEmailParams = InterviewLifecycleNotificationEmailParams & {
+  startedAt: Date | string
+}
+
+type InterviewCompletedNotificationEmailParams = InterviewLifecycleNotificationEmailParams & {
+  completedAt: Date | string
+  score?: number | null
+}
+
 type SupportRequestEmailParams = {
   referenceId: string;
   fullName: string;
@@ -640,6 +658,132 @@ export async function sendSupportNotificationEmail(input: SupportRequestEmailPar
         </div>
       </div>
     `,
+  });
+}
+
+function interviewNotificationDurationLabel(durationMinutes?: number | null) {
+  if (typeof durationMinutes === "number" && Number.isFinite(durationMinutes)) {
+    return `${durationMinutes} minutes`;
+  }
+
+  return "Not specified";
+}
+
+export async function sendInterviewStartedNotificationEmail({
+  to,
+  candidateName,
+  jobTitle,
+  organizationName,
+  durationMinutes,
+  interviewUrl,
+  startedAt,
+}: InterviewStartedNotificationEmailParams) {
+  const safeCandidateName = escapeHtml(candidateName || "The candidate");
+  const safeJobTitle = escapeHtml(jobTitle || "the role");
+  const safeOrganizationName = escapeHtml(organizationName || "your organization");
+  const startedAtLabel = formatOrgDateTime(startedAt);
+  const durationLabel = interviewNotificationDurationLabel(durationMinutes);
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to,
+    subject: `Candidate Started Interview — ${candidateName || "Candidate"}`,
+    text: [
+      "A candidate has started an interview.",
+      `Candidate: ${candidateName || "The candidate"}`,
+      `Position: ${jobTitle || "the role"}`,
+      `Started: ${startedAtLabel}`,
+      `Duration: ${durationLabel}`,
+      `Organization: ${organizationName || "your organization"}`,
+      "View Interview:",
+      interviewUrl,
+    ].join("\n"),
+    html: recruiterShellHtml(`
+      <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">
+        A candidate has started an interview at <strong style="color:#0f172a;">${safeOrganizationName}</strong>.
+      </p>
+      <div style="margin:18px 0;border:1px solid #dbe3ee;border-radius:14px;overflow:hidden;">
+        ${[
+          ["Candidate", safeCandidateName],
+          ["Position", safeJobTitle],
+          ["Started", escapeHtml(startedAtLabel)],
+          ["Duration", escapeHtml(durationLabel)],
+        ]
+          .map(
+            ([label, value]) => `
+              <div style="display:flex;gap:16px;padding:11px 14px;border-bottom:1px solid #e2e8f0;">
+                <div style="min-width:100px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;">${label}</div>
+                <div style="color:#0f172a;font-size:14px;font-weight:600;">${value}</div>
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+      ${actionButtonHtml(interviewUrl, "View Interview")}
+    `),
+  });
+}
+
+export async function sendInterviewCompletedNotificationEmail({
+  to,
+  candidateName,
+  jobTitle,
+  organizationName,
+  durationMinutes,
+  interviewUrl,
+  completedAt,
+  score,
+}: InterviewCompletedNotificationEmailParams) {
+  const safeCandidateName = escapeHtml(candidateName || "The candidate");
+  const safeJobTitle = escapeHtml(jobTitle || "the role");
+  const safeOrganizationName = escapeHtml(organizationName || "your organization");
+  const completedAtLabel = formatOrgDateTime(completedAt);
+  const durationLabel = interviewNotificationDurationLabel(durationMinutes);
+  const hasScore = typeof score === "number" && Number.isFinite(score);
+  const scoreLine = hasScore ? `Score: ${Math.round(score as number)}` : "Interview completed — report available.";
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to,
+    subject: `Candidate Completed Interview — ${candidateName || "Candidate"}`,
+    text: [
+      "A candidate has completed an interview.",
+      `Candidate: ${candidateName || "The candidate"}`,
+      `Position: ${jobTitle || "the role"}`,
+      `Completed: ${completedAtLabel}`,
+      `Duration: ${durationLabel}`,
+      `Organization: ${organizationName || "your organization"}`,
+      scoreLine,
+      "View Interview Report:",
+      interviewUrl,
+    ].join("\n"),
+    html: recruiterShellHtml(`
+      <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">
+        A candidate has completed an interview at <strong style="color:#0f172a;">${safeOrganizationName}</strong>.
+      </p>
+      <div style="margin:18px 0;border:1px solid #dbe3ee;border-radius:14px;overflow:hidden;">
+        ${[
+          ["Candidate", safeCandidateName],
+          ["Position", safeJobTitle],
+          ["Completed", escapeHtml(completedAtLabel)],
+          ["Duration", escapeHtml(durationLabel)],
+        ]
+          .map(
+            ([label, value]) => `
+              <div style="display:flex;gap:16px;padding:11px 14px;border-bottom:1px solid #e2e8f0;">
+                <div style="min-width:100px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;">${label}</div>
+                <div style="color:#0f172a;font-size:14px;font-weight:600;">${value}</div>
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+      <div style="margin:18px 0;padding:14px 16px;border:1px solid #bfdbfe;border-radius:16px;background:#eff6ff;">
+        <div style="font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#64748b;">${hasScore ? "Score" : "Status"}</div>
+        <div style="margin-top:6px;color:#1d4ed8;font-size:16px;font-weight:700;">${escapeHtml(scoreLine)}</div>
+      </div>
+      ${actionButtonHtml(interviewUrl, "View Interview Report")}
+    `),
   });
 }
 

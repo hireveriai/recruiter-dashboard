@@ -11,8 +11,9 @@ import {
 } from "@/lib/time/constants"
 
 const payloadSchema = z.object({
-  timezone: z.string().trim().min(1),
+  timezone: z.string().trim().min(1).optional(),
   timezoneLabel: z.string().trim().min(1).optional(),
+  notifyRecruitingTeam: z.boolean().optional(),
 })
 
 function resolveTimezoneLabel(timezone: string, timezoneLabel?: string) {
@@ -32,8 +33,9 @@ export async function GET(request: Request) {
     const rows = await prisma.$queryRaw<Array<{
       timezone: string | null
       timezone_label: string | null
+      notify_recruiting_team: boolean | null
     }>>`
-      select timezone, timezone_label
+      select timezone, timezone_label, notify_recruiting_team
       from public.organizations
       where organization_id = ${auth.organizationId}::uuid
       limit 1
@@ -46,6 +48,7 @@ export async function GET(request: Request) {
       data: {
         timezone: organization?.timezone ?? DEFAULT_ORG_TIMEZONE,
         timezoneLabel: organization?.timezone_label ?? DEFAULT_ORG_TIMEZONE_LABEL,
+        notifyRecruitingTeam: organization?.notify_recruiting_team ?? true,
       },
     })
     response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120")
@@ -59,22 +62,39 @@ export async function PATCH(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
     const parsed = payloadSchema.parse(await request.json())
-    const timezoneLabel = resolveTimezoneLabel(parsed.timezone, parsed.timezoneLabel)
 
-    await prisma.$executeRaw`
-      update public.organizations
-      set
-        timezone = ${parsed.timezone},
-        timezone_label = ${timezoneLabel}
-      where organization_id = ${auth.organizationId}::uuid
-    `
+    const data: { timezone?: string; timezoneLabel?: string; notifyRecruitingTeam?: boolean } = {}
+
+    if (parsed.timezone !== undefined) {
+      data.timezone = parsed.timezone
+      data.timezoneLabel = resolveTimezoneLabel(parsed.timezone, parsed.timezoneLabel)
+    }
+
+    if (parsed.notifyRecruitingTeam !== undefined) {
+      data.notifyRecruitingTeam = parsed.notifyRecruitingTeam
+    }
+
+    if (data.timezone !== undefined) {
+      await prisma.$executeRaw`
+        update public.organizations
+        set
+          timezone = ${data.timezone},
+          timezone_label = ${data.timezoneLabel}
+        where organization_id = ${auth.organizationId}::uuid
+      `
+    }
+
+    if (data.notifyRecruitingTeam !== undefined) {
+      await prisma.$executeRaw`
+        update public.organizations
+        set notify_recruiting_team = ${data.notifyRecruitingTeam}
+        where organization_id = ${auth.organizationId}::uuid
+      `
+    }
 
     return NextResponse.json({
       success: true,
-      data: {
-        timezone: parsed.timezone,
-        timezoneLabel,
-      },
+      data,
     })
   } catch (error) {
     return errorResponse(error)

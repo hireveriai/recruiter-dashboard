@@ -465,6 +465,7 @@ export async function POST(request: Request) {
           accessType: scheduleByCandidateId.get(match.candidate_id)?.accessType ?? "FLEXIBLE",
           startTime: scheduleByCandidateId.get(match.candidate_id)?.startTime ?? undefined,
           endTime: scheduleByCandidateId.get(match.candidate_id)?.endTime ?? undefined,
+          createdBy: auth.userId,
         })
         queuedInvites.push({
           interviewId: link.interviewId,

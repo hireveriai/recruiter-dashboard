@@ -37,6 +37,7 @@ type PreparingInterviewInput = {
   startTime?: string | null
   endTime?: string | null
   idempotencyKey?: string | null
+  createdBy?: string | null
 }
 
 type InterviewWorkflowRow = {
@@ -466,7 +467,8 @@ export async function createPreparingInterview(input: PreparingInterviewInput) {
         ${input.accessType ?? "FLEXIBLE"},
         ${input.startTime ?? null}::timestamptz,
         ${input.endTime ?? null}::timestamptz,
-        ${appUrl}
+        ${appUrl},
+        ${input.createdBy ?? null}::uuid
       )
     `)
 

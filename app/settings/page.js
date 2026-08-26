@@ -22,6 +22,8 @@ export default function SettingsPage() {
   const [selectedTimezone, setSelectedTimezone] = useState(DEFAULT_ORG_TIMEZONE);
   const [selectedLabel, setSelectedLabel] = useState(DEFAULT_ORG_TIMEZONE_LABEL);
   const [status, setStatus] = useState({ loading: true, saving: false, error: "", notice: "" });
+  const [notifyRecruitingTeam, setNotifyRecruitingTeam] = useState(true);
+  const [notificationStatus, setNotificationStatus] = useState({ saving: false, error: "", notice: "" });
 
   useEffect(() => {
     let active = true;
@@ -30,6 +32,7 @@ export default function SettingsPage() {
     if (cached) {
       const cachedTimezone = cached.timezone ?? timezone ?? DEFAULT_ORG_TIMEZONE;
       const cachedLabel = cached.timezoneLabel ?? timezoneLabel ?? DEFAULT_ORG_TIMEZONE_LABEL;
+      const cachedNotifyRecruitingTeam = cached.notifyRecruitingTeam ?? true;
       window.queueMicrotask(() => {
         if (!active) {
           return;
@@ -37,6 +40,7 @@ export default function SettingsPage() {
 
         setSelectedTimezone(cachedTimezone);
         setSelectedLabel(cachedLabel);
+        setNotifyRecruitingTeam(cachedNotifyRecruitingTeam);
         setTimezoneState({ timezone: cachedTimezone, timezoneLabel: cachedLabel });
         setStatus({ loading: false, saving: false, error: "", notice: "" });
       });
@@ -59,13 +63,16 @@ export default function SettingsPage() {
 
         const nextTimezone = payload?.data?.timezone ?? timezone ?? DEFAULT_ORG_TIMEZONE;
         const nextLabel = payload?.data?.timezoneLabel ?? timezoneLabel ?? DEFAULT_ORG_TIMEZONE_LABEL;
+        const nextNotifyRecruitingTeam = payload?.data?.notifyRecruitingTeam ?? true;
 
         setSelectedTimezone(nextTimezone);
         setSelectedLabel(nextLabel);
+        setNotifyRecruitingTeam(nextNotifyRecruitingTeam);
         setTimezoneState({ timezone: nextTimezone, timezoneLabel: nextLabel });
         writeSessionJsonCache(cacheKey, {
           timezone: nextTimezone,
           timezoneLabel: nextLabel,
+          notifyRecruitingTeam: nextNotifyRecruitingTeam,
         });
         setStatus({ loading: false, saving: false, error: "", notice: "" });
       } catch {
@@ -134,6 +141,42 @@ export default function SettingsPage() {
         loading: false,
         saving: false,
         error: error instanceof Error ? error.message : "Failed to save timezone.",
+        notice: "",
+      });
+    }
+  }
+
+  async function saveNotifyRecruitingTeam() {
+    setNotificationStatus({ saving: true, error: "", notice: "" });
+
+    try {
+      const response = await fetch(buildAuthUrl("/api/organization/settings", searchParams), {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          notifyRecruitingTeam,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error?.message || payload?.message || "Failed to save interview notification setting.");
+      }
+
+      writeSessionJsonCache(cacheKey, {
+        timezone: selectedTimezone,
+        timezoneLabel: selectedLabel,
+        notifyRecruitingTeam,
+      });
+      setNotificationStatus({ saving: false, error: "", notice: "Interview notification setting updated." });
+    } catch (error) {
+      setNotificationStatus({
+        saving: false,
+        error: error instanceof Error ? error.message : "Failed to save interview notification setting.",
         notice: "",
       });
     }
@@ -221,6 +264,52 @@ export default function SettingsPage() {
                 {status.saving ? "Saving..." : "Save Organization Timezone"}
               </button>
             </section>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-950/40 p-6">
+            <p className="text-xs uppercase tracking-[0.35em] text-blue-300/80">Interview Notifications</p>
+            <div className="mt-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-white">Notify recruiting team</p>
+                <p className="mt-1 max-w-xl text-sm text-slate-400">
+                  {notifyRecruitingTeam
+                    ? "Notify me and all members of the recruiting team when candidates start or complete interviews."
+                    : "Notify me only."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotifyRecruitingTeam((value) => !value)}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  notifyRecruitingTeam
+                    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+                    : "border-slate-700 bg-slate-900/70 text-slate-300"
+                }`}
+              >
+                {notifyRecruitingTeam ? "ON" : "OFF"}
+              </button>
+            </div>
+
+            {notificationStatus.error ? (
+              <p className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                {notificationStatus.error}
+              </p>
+            ) : null}
+
+            {notificationStatus.notice ? (
+              <p className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                {notificationStatus.notice}
+              </p>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => void saveNotifyRecruitingTeam()}
+              disabled={status.loading || notificationStatus.saving}
+              className="mt-6 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {notificationStatus.saving ? "Saving..." : "Save"}
+            </button>
           </div>
         </div>
       </div>

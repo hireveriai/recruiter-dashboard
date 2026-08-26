@@ -27,6 +27,7 @@ export type CreateInterviewLinkInput = {
   start_time?: string
   endTime?: string
   end_time?: string
+  createdBy?: string | null
 }
 
 export type UpdateInterviewInviteInput = {
@@ -429,7 +430,8 @@ export async function createInterviewLink(input: CreateInterviewLinkInput) {
         ${input.accessType ?? "FLEXIBLE"},
         ${input.startTime ?? input.start_time ?? null}::timestamptz,
         ${input.endTime ?? input.end_time ?? null}::timestamptz,
-        ${getInterviewAppUrl()}
+        ${getInterviewAppUrl()},
+        ${input.createdBy ?? null}::uuid
       )
     `)
 
