@@ -15,7 +15,6 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
-  Sparkles,
   SquarePlus,
   Users,
   X,
@@ -784,7 +783,7 @@ export default function CognitiveDock({
             <motion.section
               role="dialog"
               aria-label={getPanelTitle(panel)}
-            className={`hv-cognitive-modal hv-theme-modal absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[24px] border border-cyan-400/15 bg-[#071226]/95 p-4 text-white shadow-[0_24px_80px_rgba(2,6,23,0.58),0_0_42px_rgba(34,211,238,0.09)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-auto !top-1/2 h-[min(82dvh,780px)] !max-h-[780px] !-translate-y-1/2 w-[min(94vw,1100px)] md:w-[min(calc(100vw-7rem),1100px)]" : "w-[min(92vw,640px)]"}`}
+            className={`hv-cognitive-modal hv-theme-modal absolute bottom-24 left-1/2 max-h-[min(84dvh,820px)] -translate-x-1/2 overflow-hidden rounded-[24px] border border-cyan-400/15 bg-[#071226]/95 p-4 text-white shadow-[0_24px_80px_rgba(2,6,23,0.58),0_0_42px_rgba(34,211,238,0.09)] backdrop-blur-2xl md:bottom-auto md:left-24 md:top-1/2 md:translate-x-0 md:-translate-y-1/2 ${panel === "copilot" ? "!bottom-auto !top-1/2 h-[min(80dvh,700px)] !max-h-[min(80dvh,700px)] !-translate-y-1/2 w-[min(92vw,980px)] md:w-[min(calc(100vw-8rem),980px)]" : "w-[min(92vw,640px)]"}`}
               initial={{ opacity: 0, x: -10, scale: 0.97 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -10, scale: 0.97 }}
@@ -927,7 +926,7 @@ export default function CognitiveDock({
                   <div className="hv-copilot-shell grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[220px_minmax(0,1fr)]">
                     <aside className="hv-copilot-sidebar hidden min-h-0 overflow-hidden border-r border-white/8 bg-white/[0.025] p-3 lg:block">
                       <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><Sparkles className="h-5 w-5" /></span>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/25 bg-[linear-gradient(135deg,rgba(8,145,178,0.22),rgba(56,189,248,0.1))] text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><BrainCircuit className="h-5 w-5" strokeWidth={2} /></span>
                         <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 whitespace-nowrap text-[10px] text-slate-400">Live workspace intelligence</p></div>
                       </div>
                       <p className="mb-2 mt-4 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-500">Try asking</p>
