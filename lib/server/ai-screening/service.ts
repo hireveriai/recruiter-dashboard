@@ -783,7 +783,7 @@ export async function createJobPositionForPastedJd(input: {
       ${input.description},
       ${experienceLevelId}::smallint,
       ${input.parsed.requiredSkills}::text[],
-      ${difficultyFromParsedJob(input.parsed)}::difficulty_profile,
+      ${difficultyFromParsedJob(input.parsed)}::text,
       30
     )
     returning job_id::text

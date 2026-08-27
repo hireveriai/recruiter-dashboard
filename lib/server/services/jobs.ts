@@ -179,7 +179,7 @@ export async function updateJob(input: UpdateJobInput) {
         job_description = ${input.job_description ?? null},
         experience_level_id = ${input.experience_level_id}::smallint,
         core_skills = ${sanitizedCoreSkills}::text[],
-        difficulty_profile = ${input.difficulty_profile}::difficulty_profile,
+        difficulty_profile = ${input.difficulty_profile}::text,
         interview_duration_minutes = ${input.interview_duration_minutes}::integer
       where job_id = ${input.job_id}::uuid
         and organization_id = ${input.organization_id}::uuid
