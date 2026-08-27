@@ -89,6 +89,15 @@ type VerisAiMessage = {
   sources?: string[];
 };
 
+type RecentConversation = {
+  id: string;
+  title: string;
+  updatedAt: number;
+  messages: VerisAiMessage[];
+};
+
+const RECENT_CONVERSATION_LIMIT = 12;
+
 function getPanelTitle(panel: PanelMode) {
   if (panel === "search") return "Universal Search";
   if (panel === "alerts") return "Review Flags";
@@ -107,6 +116,45 @@ function readNumber(value: unknown) {
 
 function normalizeSearch(value: unknown) {
   return String(value ?? "").toLowerCase();
+}
+
+function formatRelativeTime(timestamp: number) {
+  const diffMs = Date.now() - timestamp;
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.round(days / 7)}w ago`;
+}
+
+function recentStorageKeyFor(profile: Record<string, unknown> | null | undefined) {
+  const raw = profile as Record<string, unknown> | null | undefined;
+  const userKey = readText(
+    raw?.id ?? raw?.userId ?? raw?.recruiterId ?? raw?.membershipId ?? raw?.email,
+    "anon",
+  );
+  return `verisnova-veris-ai-recent:${userKey}`;
+}
+
+function readStoredRecent(profile: Record<string, unknown> | null | undefined): RecentConversation[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = window.localStorage.getItem(recentStorageKeyFor(profile));
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item): item is RecentConversation =>
+        Boolean(item)
+        && typeof (item as RecentConversation).id === "string"
+        && Array.isArray((item as RecentConversation).messages))
+      .slice(0, RECENT_CONVERSATION_LIMIT);
+  } catch {
+    return [];
+  }
 }
 
 function getPanelLoadingLabel(panel: PanelMode) {
@@ -166,7 +214,11 @@ export default function CognitiveDock({
   const [aiInput, setAiInput] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMessages, setAiMessages] = useState<VerisAiMessage[]>([]);
+  const [aiSidebarTab, setAiSidebarTab] = useState<"prompts" | "recent">("prompts");
+  const [aiRecent, setAiRecent] = useState<RecentConversation[]>(() => readStoredRecent(profile));
+  const [aiConversationId, setAiConversationId] = useState<string | null>(null);
   const workspaceRef = useRef(workspace);
+  const aiMessagesRef = useRef<VerisAiMessage[]>([]);
 
   const apiHref = useCallback((path: string) => buildAuthUrl(path, searchParams), [searchParams]);
   const pageHref = useCallback((path: string) => path, []);
@@ -671,28 +723,84 @@ export default function CognitiveDock({
     };
   }, [workspace, copilot, canViewCandidates, canViewInterviews, canViewReports, pageHref]);
 
+  const recentStorageKey = useMemo(() => recentStorageKeyFor(profile), [profile]);
+
+  const writeStoredRecent = useCallback((next: RecentConversation[]) => {
+    try {
+      window.localStorage.setItem(recentStorageKey, JSON.stringify(next));
+    } catch {
+      // Ignore storage write failures (private mode, quota, disabled storage).
+    }
+  }, [recentStorageKey]);
+
+  const rememberConversation = useCallback((conversationId: string, messages: VerisAiMessage[]) => {
+    const firstUserMessage = messages.find((message) => message.role === "user");
+    if (!firstUserMessage) return;
+    const title = firstUserMessage.content.length > 80
+      ? `${firstUserMessage.content.slice(0, 80)}...`
+      : firstUserMessage.content;
+    const entry: RecentConversation = { id: conversationId, title, updatedAt: Date.now(), messages };
+
+    setAiRecent((current) => {
+      const next = [entry, ...current.filter((item) => item.id !== conversationId)].slice(0, RECENT_CONVERSATION_LIMIT);
+      writeStoredRecent(next);
+      return next;
+    });
+  }, [writeStoredRecent]);
+
   const askVerisAi = useCallback((question: string) => {
     const cleanQuestion = question.trim();
     if (!cleanQuestion || aiBusy) return;
 
-    setAiMessages((current) => [...current, {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: cleanQuestion,
-    }]);
+    const conversationId = aiConversationId ?? `conv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    if (!aiConversationId) setAiConversationId(conversationId);
+
+    const withUser: VerisAiMessage[] = [
+      ...aiMessagesRef.current,
+      { id: `user-${Date.now()}`, role: "user", content: cleanQuestion },
+    ];
+    aiMessagesRef.current = withUser;
+    setAiMessages(withUser);
     setAiInput("");
     setAiBusy(true);
+
     window.setTimeout(() => {
-      setAiMessages((current) => [...current, buildAiReply(cleanQuestion)]);
+      const withReply: VerisAiMessage[] = [...aiMessagesRef.current, buildAiReply(cleanQuestion)];
+      aiMessagesRef.current = withReply;
+      setAiMessages(withReply);
       setAiBusy(false);
+      rememberConversation(conversationId, withReply);
     }, 260);
-  }, [aiBusy, buildAiReply]);
+  }, [aiBusy, aiConversationId, buildAiReply, rememberConversation]);
 
   const startNewAiChat = useCallback(() => {
+    aiMessagesRef.current = [];
     setAiMessages([]);
     setAiInput("");
     setAiBusy(false);
+    setAiConversationId(null);
   }, []);
+
+  const loadRecentConversation = useCallback((conversation: RecentConversation) => {
+    aiMessagesRef.current = conversation.messages;
+    setAiMessages(conversation.messages);
+    setAiConversationId(conversation.id);
+    setAiBusy(false);
+    setAiInput("");
+  }, []);
+
+  const deleteRecentConversation = useCallback((id: string) => {
+    setAiRecent((current) => {
+      const next = current.filter((item) => item.id !== id);
+      writeStoredRecent(next);
+      return next;
+    });
+    if (aiConversationId === id) {
+      aiMessagesRef.current = [];
+      setAiMessages([]);
+      setAiConversationId(null);
+    }
+  }, [writeStoredRecent, aiConversationId]);
 
   const dockSections = [
     {
@@ -924,20 +1032,54 @@ export default function CognitiveDock({
 
                 {panel === "copilot" ? (
                   <div className="hv-copilot-shell grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-[#050d1b]/65 lg:grid-cols-[220px_minmax(0,1fr)]">
-                    <aside className="hv-copilot-sidebar hidden min-h-0 overflow-hidden border-r border-white/8 bg-white/[0.025] p-3 lg:block">
-                      <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
+                    <aside className="hv-copilot-sidebar hidden min-h-0 flex-col overflow-hidden border-r border-white/8 bg-white/[0.025] p-3 lg:flex">
+                      <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/25 bg-[linear-gradient(135deg,rgba(8,145,178,0.22),rgba(56,189,248,0.1))] text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"><BrainCircuit className="h-5 w-5" strokeWidth={2} /></span>
                         <div className="min-w-0"><p className="text-sm font-semibold text-white">VERIS AI online</p><p className="mt-1 whitespace-nowrap text-[10px] text-slate-400">Live workspace intelligence</p></div>
                       </div>
-                      <p className="mb-2 mt-4 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-500">Try asking</p>
-                      <div className="space-y-1.5">
-                        {aiStartingPoints.map(({ title, prompt, icon: Icon }) => (
-                          <button key={title} type="button" onClick={() => askVerisAi(prompt)} className="group flex w-full items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5 text-left transition hover:border-cyan-300/20 hover:bg-cyan-400/[0.08]">
-                            <Icon className="h-4 w-4 shrink-0 text-cyan-200/70 transition group-hover:text-cyan-100" />
-                            <span className="text-xs font-medium text-slate-300 group-hover:text-white">{title}</span>
-                            <ArrowRight className="ml-auto h-3.5 w-3.5 text-slate-600" />
-                          </button>
-                        ))}
+                      <div className="mt-3 grid shrink-0 grid-cols-2 gap-1 rounded-xl border border-white/8 bg-slate-950/40 p-1 text-[11px] font-semibold">
+                        <button type="button" onClick={() => setAiSidebarTab("prompts")} className={`rounded-lg px-2 py-1.5 transition ${aiSidebarTab === "prompts" ? "bg-cyan-400/15 text-cyan-100" : "text-slate-400 hover:text-slate-200"}`}>Prompts</button>
+                        <button type="button" onClick={() => setAiSidebarTab("recent")} className={`rounded-lg px-2 py-1.5 transition ${aiSidebarTab === "recent" ? "bg-cyan-400/15 text-cyan-100" : "text-slate-400 hover:text-slate-200"}`}>Recent</button>
+                      </div>
+                      <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+                        {aiSidebarTab === "prompts" ? (
+                          <>
+                            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-500">Try asking</p>
+                            <div className="space-y-1.5">
+                              {aiStartingPoints.map(({ title, prompt, icon: Icon }) => (
+                                <button key={title} type="button" onClick={() => askVerisAi(prompt)} className="group flex w-full items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5 text-left transition hover:border-cyan-300/20 hover:bg-cyan-400/[0.08]">
+                                  <Icon className="h-4 w-4 shrink-0 text-cyan-200/70 transition group-hover:text-cyan-100" />
+                                  <span className="text-xs font-medium text-slate-300 group-hover:text-white">{title}</span>
+                                  <ArrowRight className="ml-auto h-3.5 w-3.5 text-slate-600" />
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-500">Recent conversations</p>
+                            {aiRecent.length === 0 ? (
+                              <p className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-3 text-[11px] leading-4 text-slate-500">Your recent VERIS AI conversations will appear here.</p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {aiRecent.map((conversation) => {
+                                  const questionCount = conversation.messages.filter((message) => message.role === "user").length;
+                                  return (
+                                    <div key={conversation.id} className={`group flex w-full items-start gap-2 rounded-xl border px-3 py-2 text-left transition ${conversation.id === aiConversationId ? "border-cyan-300/30 bg-cyan-400/[0.1]" : "border-white/5 bg-white/[0.025] hover:border-cyan-300/20 hover:bg-cyan-400/[0.08]"}`}>
+                                      <button type="button" onClick={() => loadRecentConversation(conversation)} className="min-w-0 flex-1">
+                                        <span className="block truncate text-xs font-medium text-slate-200">{conversation.title}</span>
+                                        <span className="mt-0.5 block text-[10px] text-slate-500">{formatRelativeTime(conversation.updatedAt)} · {questionCount} question{questionCount === 1 ? "" : "s"}</span>
+                                      </button>
+                                      <button type="button" onClick={() => deleteRecentConversation(conversation.id)} className="shrink-0 rounded-md p-1 text-slate-600 opacity-0 transition hover:text-rose-300 group-hover:opacity-100" aria-label="Remove conversation">
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     </aside>
 
