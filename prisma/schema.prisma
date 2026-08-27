@@ -43,13 +43,90 @@ model JobPosition {
   jobDescription        String?                @map("job_description")
   experienceLevelId     Int                    @db.SmallInt @map("experience_level_id")
   coreSkills            String[]               @map("core_skills")
-  difficultyProfile     DifficultyProfile      @map("difficulty_profile")
+  // NOTE: the underlying column is plain text, not a Postgres enum. The
+  // `difficulty_profile` enum type does not exist in the database.
+  difficultyProfile     String?                @map("difficulty_profile")
   interviewDurationMinutes Int                 @default(30) @map("interview_duration_minutes")
+  interviewMode         String                 @default("INDIVIDUALIZED") @map("interview_mode")
+  resumeQuestionsEnabled Boolean               @default(true) @map("resume_questions_enabled")
   companySkillBaselines CompanySkillBaseline[]
   interviewConfigs      InterviewConfig[]
   interviews            Interview[]
+  questionnaire         JobQuestionnaire?
 
   @@map("job_positions")
+}
+
+/// Job-level interview questionnaire (one per job). Role-agnostic: holds no
+/// industry or profession specific structure.
+model JobQuestionnaire {
+  questionnaireId String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("questionnaire_id")
+  organizationId  String                     @db.Uuid @map("organization_id")
+  jobId           String                     @unique @db.Uuid @map("job_id")
+  activeVersionId String?                    @db.Uuid @map("active_version_id")
+  createdAt       DateTime                   @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt       DateTime                   @default(now()) @db.Timestamptz(6) @map("updated_at")
+  job             JobPosition                @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+  activeVersion   JobQuestionnaireVersion?   @relation("questionnaire_active_version", fields: [activeVersionId], references: [questionnaireVersionId], onDelete: SetNull)
+  versions        JobQuestionnaireVersion[]  @relation("questionnaire_versions")
+
+  @@index([organizationId])
+  @@map("job_questionnaires")
+}
+
+/// A questionnaire version. Once FINALIZED it must never be mutated - a new
+/// version is created instead, so historical interviews stay reproducible.
+model JobQuestionnaireVersion {
+  questionnaireVersionId   String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("questionnaire_version_id")
+  questionnaireId          String                      @db.Uuid @map("questionnaire_id")
+  organizationId           String                      @db.Uuid @map("organization_id")
+  versionNumber            Int                         @map("version_number")
+  status                   String                      @default("DRAFT")
+  generatedBy              String                      @default("AI") @map("generated_by")
+  interviewMode            String                      @default("STANDARD") @map("interview_mode")
+  targetQuestionCount      Int?                        @map("target_question_count")
+  interviewDurationMinutes Int?                        @map("interview_duration_minutes")
+  generationModel          String?                     @map("generation_model")
+  generationMeta           Json                        @default("{}") @map("generation_meta")
+  createdBy                String?                     @db.Uuid @map("created_by")
+  createdAt                DateTime                    @default(now()) @db.Timestamptz(6) @map("created_at")
+  finalizedBy              String?                     @db.Uuid @map("finalized_by")
+  finalizedAt              DateTime?                   @db.Timestamptz(6) @map("finalized_at")
+  questionnaire            JobQuestionnaire            @relation("questionnaire_versions", fields: [questionnaireId], references: [questionnaireId], onDelete: Cascade)
+  activeFor                JobQuestionnaire[]          @relation("questionnaire_active_version")
+  questions                JobQuestionnaireQuestion[]
+
+  @@unique([questionnaireId, versionNumber])
+  @@index([organizationId, status])
+  @@map("job_questionnaire_versions")
+}
+
+/// A single question inside a version. `sourceType` and `competencyLabel` are
+/// deliberately generic so the model works for any role in any industry.
+model JobQuestionnaireQuestion {
+  questionnaireQuestionId String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("questionnaire_question_id")
+  questionnaireVersionId  String                  @db.Uuid @map("questionnaire_version_id")
+  organizationId          String                  @db.Uuid @map("organization_id")
+  questionOrder           Int                     @map("question_order")
+  questionText            String                  @map("question_text")
+  questionType            String?                 @map("question_type")
+  sourceType              String                  @default("job") @map("source_type")
+  competencyLabel         String?                 @map("competency_label")
+  targetSkillId           String?                 @db.Uuid @map("target_skill_id")
+  difficultyLevel         Int                     @default(3) @map("difficulty_level")
+  phaseHint               String                  @default("core") @map("phase_hint")
+  allowFollowUp           Boolean                 @default(true) @map("allow_follow_up")
+  isMandatory             Boolean                 @default(true) @map("is_mandatory")
+  evaluationCriteria      String?                 @map("evaluation_criteria")
+  origin                  String                  @default("AI")
+  renderingMode           String?                 @map("rendering_mode")
+  createdAt               DateTime                @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt               DateTime                @default(now()) @db.Timestamptz(6) @map("updated_at")
+  version                 JobQuestionnaireVersion @relation(fields: [questionnaireVersionId], references: [questionnaireVersionId], onDelete: Cascade)
+
+  @@index([questionnaireVersionId, questionOrder])
+  @@index([organizationId])
+  @@map("job_questionnaire_questions")
 }
 
 model ExperienceLevelPool {
@@ -209,6 +286,8 @@ model Interview {
   failureReason     String?           @map("failure_reason")
   lastError         String?           @map("last_error")
   questionsGeneratedAt DateTime?      @db.Timestamptz(6) @map("questions_generated_at")
+  questionnaireVersionId String?      @db.Uuid @map("questionnaire_version_id")
+  questionnaireSnapshotAt DateTime?   @db.Timestamptz(6) @map("questionnaire_snapshot_at")
   emailSentAt       DateTime?         @db.Timestamptz(6) @map("email_sent_at")
   idempotencyKey    String?           @map("idempotency_key")
   candidateFeedbackText       String?   @map("candidate_feedback_text")
