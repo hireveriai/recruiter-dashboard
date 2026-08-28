@@ -10,6 +10,7 @@ import {
   jobPositionsSupportCodingConfig,
   jobPositionsSupportIsActive,
   jobPositionsSupportQuestionTypeDefault,
+  jobPositionsSupportQuestionnaireConfig,
 } from "@/lib/server/services/jobs"
 import { getReportsOverview } from "@/lib/server/services/reports.service"
 
@@ -45,6 +46,8 @@ type JobRow = {
   codingDurationMinutes: number | null
   codingLanguages: string[] | null
   isActive: boolean
+  interviewMode: string | null
+  resumeQuestionsEnabled: boolean | null
   interviewCount: number
 }
 
@@ -118,10 +121,11 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
     }
   }
 
-  const [hasIsActive, hasCodingConfig, hasQuestionTypeDefault] = await Promise.all([
+  const [hasIsActive, hasCodingConfig, hasQuestionTypeDefault, hasQuestionnaireConfig] = await Promise.all([
     jobPositionsSupportIsActive(),
     jobPositionsSupportCodingConfig(),
     jobPositionsSupportQuestionTypeDefault(),
+    jobPositionsSupportQuestionnaireConfig(),
   ])
 
   const rows = await prisma.$queryRaw<JobRow[]>(Prisma.sql`
@@ -141,6 +145,8 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
       ${hasCodingConfig ? Prisma.sql`jp.coding_duration_minutes` : Prisma.sql`null`} as "codingDurationMinutes",
       ${hasCodingConfig ? Prisma.sql`jp.coding_languages` : Prisma.sql`null`} as "codingLanguages",
       ${hasIsActive ? Prisma.sql`jp.is_active` : Prisma.sql`true`} as "isActive",
+      ${hasQuestionnaireConfig ? Prisma.sql`jp.interview_mode::text` : Prisma.sql`null`} as "interviewMode",
+      ${hasQuestionnaireConfig ? Prisma.sql`jp.resume_questions_enabled` : Prisma.sql`null`} as "resumeQuestionsEnabled",
       count(i.interview_id)::int as "interviewCount"
     from public.job_positions jp
     left join public.interviews i
@@ -158,6 +164,7 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
       jp.core_skills
       ${hasIsActive ? Prisma.sql`, jp.is_active` : Prisma.empty}
       ${hasCodingConfig ? Prisma.sql`, jp.coding_required, jp.coding_assessment_type, jp.coding_difficulty, jp.coding_duration_minutes, jp.coding_languages` : Prisma.empty}
+      ${hasQuestionnaireConfig ? Prisma.sql`, jp.interview_mode, jp.resume_questions_enabled` : Prisma.empty}
     order by jp.job_id desc
   `)
 
@@ -178,6 +185,10 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
       codingDurationMinutes: row.codingDurationMinutes,
       codingLanguages: row.codingLanguages ?? [],
       isActive: row.isActive,
+      // Existing jobs predate this column, so fall back to INDIVIDUALIZED,
+      // which is the behaviour they already have.
+      interviewMode: row.interviewMode ?? "INDIVIDUALIZED",
+      resumeQuestionsEnabled: row.resumeQuestionsEnabled ?? true,
       _count: {
         interviews: row.interviewCount ?? 0,
       },
@@ -186,6 +197,7 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
       supportsJobActiveState: hasIsActive,
       supportsCodingConfig: hasCodingConfig,
       supportsQuestionTypeDefault: hasQuestionTypeDefault,
+      supportsQuestionnaireConfig: hasQuestionnaireConfig,
     },
   }
 }

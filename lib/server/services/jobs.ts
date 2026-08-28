@@ -66,7 +66,21 @@ export async function createJob(input: CreateJobInput) {
       update public.job_positions
       set device_requirement = ${input.device_requirement}
       where job_id = ${job.job_id}::uuid
+        and organization_id = ${input.organization_id}::uuid
     `)
+
+    // Interview mode is written only for NEW jobs. The column default is
+    // INDIVIDUALIZED so existing jobs keep their current behaviour untouched;
+    // new jobs default to STANDARD unless the recruiter chooses otherwise.
+    if (await jobPositionsSupportQuestionnaireConfig()) {
+      await prisma.$executeRaw(Prisma.sql`
+        update public.job_positions
+        set interview_mode = ${input.interview_mode ?? "STANDARD"},
+            resume_questions_enabled = ${input.resume_questions_enabled ?? true}
+        where job_id = ${job.job_id}::uuid
+          and organization_id = ${input.organization_id}::uuid
+      `)
+    }
 
     return { job_id: job.job_id }
   } catch (error) {
@@ -81,6 +95,37 @@ export async function createJob(input: CreateJobInput) {
 let hasJobIsActiveColumnCache: boolean | null = null
 let hasJobCodingColumnsCache: boolean | null = null
 let hasJobQuestionTypeDefaultColumnCache: boolean | null = null
+let hasJobQuestionnaireConfigColumnCache: boolean | null = null
+
+/**
+ * Schema changes here are applied out of band, so environments drift. Follows
+ * the existing capability-probe pattern rather than assuming the questionnaire
+ * columns exist.
+ */
+export async function jobPositionsSupportQuestionnaireConfig() {
+  if (hasJobQuestionnaireConfigColumnCache !== null) {
+    return hasJobQuestionnaireConfigColumnCache
+  }
+
+  try {
+    const rows = await prisma.$queryRaw<ColumnExistsRow[]>(Prisma.sql`
+      select exists (
+        select 1
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'job_positions'
+          and column_name = 'interview_mode'
+      )
+    `)
+
+    hasJobQuestionnaireConfigColumnCache = Boolean(rows[0]?.exists)
+    return hasJobQuestionnaireConfigColumnCache
+  } catch (error) {
+    console.warn("Job position questionnaire config capability lookup failed", error)
+    hasJobQuestionnaireConfigColumnCache = false
+    return false
+  }
+}
 
 export async function jobPositionsSupportQuestionTypeDefault() {
   if (hasJobQuestionTypeDefaultColumnCache !== null) {
@@ -219,6 +264,27 @@ export async function updateJob(input: UpdateJobInput) {
       await prisma.$executeRaw(Prisma.sql`
         update public.job_positions
         set is_active = ${input.is_active ?? true}
+        where job_id = ${input.job_id}::uuid
+          and organization_id = ${input.organization_id}::uuid
+      `)
+    }
+
+    // Only written when explicitly supplied. Editing an existing job must never
+    // silently change its interview mode, since that would alter how every
+    // future candidate for that job is interviewed.
+    if (input.interview_mode !== undefined && (await jobPositionsSupportQuestionnaireConfig())) {
+      await prisma.$executeRaw(Prisma.sql`
+        update public.job_positions
+        set interview_mode = ${input.interview_mode}
+        where job_id = ${input.job_id}::uuid
+          and organization_id = ${input.organization_id}::uuid
+      `)
+    }
+
+    if (input.resume_questions_enabled !== undefined && (await jobPositionsSupportQuestionnaireConfig())) {
+      await prisma.$executeRaw(Prisma.sql`
+        update public.job_positions
+        set resume_questions_enabled = ${input.resume_questions_enabled}
         where job_id = ${input.job_id}::uuid
           and organization_id = ${input.organization_id}::uuid
       `)

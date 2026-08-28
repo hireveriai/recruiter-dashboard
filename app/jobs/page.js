@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
@@ -149,6 +150,7 @@ function JobSkillsCell({ skills }) {
 }
 
 export default function JobsPage() {
+  const router = useRouter()
   const searchParams = useAuthSearchParams()
   const cacheKey = `jobs:${searchParams.toString()}`
   const [jobs, setJobs] = useState([])
@@ -491,14 +493,26 @@ export default function JobsPage() {
                   filteredJobs.map((job) => (
                     <tr key={job.jobId} className="border-t border-slate-800/80 align-top text-slate-200">
                       <td className="px-4 py-4">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(job)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-100"
-                          aria-label={`Edit ${job.jobTitle}`}
-                        >
-                          <EditIcon />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(job)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-100"
+                            aria-label={`Edit ${job.jobTitle}`}
+                          >
+                            <EditIcon />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(buildAuthUrl(`/jobs/${job.jobId}/questionnaire`, searchParams))
+                            }
+                            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 px-3 text-xs text-slate-300 transition hover:border-violet-400/40 hover:bg-violet-500/10 hover:text-violet-100"
+                            aria-label={`Interview questions for ${job.jobTitle}`}
+                          >
+                            Questions
+                          </button>
+                        </div>
                       </td>
                       <td className="px-4 py-4 font-medium text-white">{job.jobTitle}</td>
                       <td className="px-4 py-4 text-slate-400">

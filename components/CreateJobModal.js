@@ -49,6 +49,23 @@ const DEVICE_REQUIREMENT_OPTIONS = [
   },
 ];
 
+const INTERVIEW_MODE_OPTIONS = [
+  {
+    value: "STANDARD",
+    label: "Standard interview",
+    description:
+      "Every candidate answers the same structured questionnaire, so results compare like for like.",
+    badge: "Default",
+  },
+  {
+    value: "INDIVIDUALIZED",
+    label: "Individualized interview",
+    description:
+      "Each candidate gets their own structured questions, still matched to this role's requirements and level.",
+    badge: null,
+  },
+];
+
 const QUESTION_TYPE_OPTIONS = [
   { value: "AUTO", label: "Auto Detect" },
   { value: "coding", label: "Coding" },
@@ -77,6 +94,8 @@ function createDefaultForm() {
     coding_duration_minutes: 15,
     coding_languages: "",
     is_active: true,
+    interview_mode: "STANDARD",
+    resume_questions_enabled: true,
   };
 }
 
@@ -109,6 +128,11 @@ function mapJobToForm(job) {
       ? (job.codingLanguages ?? job.coding_languages).join(", ")
       : "",
     is_active: job.isActive ?? job.is_active ?? true,
+    // Existing jobs keep whatever mode they already have. Only brand new jobs
+    // default to STANDARD, so nothing already running changes behaviour.
+    interview_mode: job.interviewMode ?? job.interview_mode ?? "INDIVIDUALIZED",
+    resume_questions_enabled:
+      job.resumeQuestionsEnabled ?? job.resume_questions_enabled ?? true,
   };
 }
 
@@ -253,6 +277,8 @@ export default function CreateJobModal({
           .filter(Boolean),
         skill_baseline: [],
         is_active: Boolean(form.is_active),
+        interview_mode: form.interview_mode,
+        resume_questions_enabled: Boolean(form.resume_questions_enabled),
       };
 
       const endpoint = isEditMode
@@ -291,7 +317,9 @@ export default function CreateJobModal({
         resetForm();
       }
 
-      onSuccess?.();
+      // Hand the new job id back so the caller can send the recruiter straight
+      // to the questionnaire review step.
+      onSuccess?.(isEditMode ? null : data?.data?.job_id ?? data?.job_id ?? null);
       showActionFeedback({
         tone: "success",
         title: isEditMode ? "Job updated successfully" : "Job created successfully",
@@ -426,6 +454,64 @@ export default function CreateJobModal({
 
               <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100">
                 Every interview link created for this job will inherit the same interview duration.
+              </div>
+
+              <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
+                <p className="text-sm font-medium text-white">Interview Mode</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Controls the structured questions only. Every candidate still gets questions
+                  drawn from their own background, plus follow-up questions based on what they say.
+                </p>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {INTERVIEW_MODE_OPTIONS.map((option) => {
+                    const selected = form.interview_mode === option.value;
+                    return (
+                      <button
+                        type="button"
+                        key={option.value}
+                        onClick={() => handleChange("interview_mode", option.value)}
+                        aria-pressed={selected}
+                        className={`rounded-2xl border px-4 py-4 text-left transition ${
+                          selected
+                            ? "border-violet-400/60 bg-violet-500/10 shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                            : "border-slate-700 bg-slate-900/60 hover:border-slate-600"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-white">{option.label}</span>
+                          {option.badge ? (
+                            <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
+                              {option.badge}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
+                          {option.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.resume_questions_enabled)}
+                    onChange={(e) => handleChange("resume_questions_enabled", e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-violet-500"
+                  />
+                  <span>
+                    <span className="block text-sm text-white">
+                      Ask about each candidate&apos;s own background
+                    </span>
+                    <span className="mt-0.5 block text-xs text-slate-400">
+                      Adds a small number of questions tailored to what each candidate has actually
+                      done. Turn this off only if every candidate must answer an identical
+                      interview.
+                    </span>
+                  </span>
+                </label>
               </div>
 
               <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">

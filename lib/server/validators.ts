@@ -43,6 +43,10 @@ export const createJobSchema = z.object({
       })
     )
     .default([]),
+  // New jobs default to STANDARD: one structured questionnaire shared by every
+  // candidate. Existing jobs are untouched and keep INDIVIDUALIZED.
+  interview_mode: z.enum(["STANDARD", "INDIVIDUALIZED"]).default("STANDARD"),
+  resume_questions_enabled: z.boolean().default(true),
 })
 
 export const updateJobSchema = z.object({
@@ -63,6 +67,10 @@ export const updateJobSchema = z.object({
   coding_duration_minutes: z.number().int().optional().nullable(),
   coding_languages: z.array(z.string().trim().min(1)).default([]),
   is_active: z.boolean().optional(),
+  // Optional on update, and only written when present, so editing a job never
+  // silently changes how its candidates are interviewed.
+  interview_mode: z.enum(["STANDARD", "INDIVIDUALIZED"]).optional(),
+  resume_questions_enabled: z.boolean().optional(),
 })
 
 export const createInterviewConfigSchema = z.object({

@@ -825,7 +825,18 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
         </div>
       ) : null}
 
-      {openCreateJob ? <CreateJobModal open={openCreateJob} setOpen={setOpenCreateJob} /> : null}
+      {openCreateJob ? (
+        <CreateJobModal
+          open={openCreateJob}
+          setOpen={setOpenCreateJob}
+          onSuccess={(newJobId) => {
+            // Create Job -> review the generated questionnaire -> finalize.
+            if (newJobId) {
+              router.push(buildAuthUrl(`/jobs/${newJobId}/questionnaire`, searchParams));
+            }
+          }}
+        />
+      ) : null}
     </>
   );
 }
