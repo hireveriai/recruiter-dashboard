@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 
-import { generateInterviewQuestions, type InterviewQuestion } from "@/lib/interview-flow"
+import { type InterviewQuestion } from "@/lib/interview-flow"
+import { prepareInterviewQuestionSet } from "@/lib/server/interview/prepare-questions"
 import { InterviewQuestionType } from "@/lib/server/ai/interview-question-types"
 import {
   bucketSkill,
@@ -643,58 +644,51 @@ export async function prepareInterviewQuestionsWithRetry(input: GenerateQuestion
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const candidateResumeText = input.candidateResumeText || context.resume_text || undefined
-      const parsedResumeSkills = candidateResumeText ? parseResumeText(candidateResumeText).skills ?? [] : []
-      const resumeSkills = input.resumeSkills && input.resumeSkills.length > 0 ? input.resumeSkills : parsedResumeSkills
 
       const cleared = await clearInterviewQuestions(input.interviewId)
       if (!cleared) {
         throw new Error("Failed to clear existing interview questions")
       }
 
-      const generatedQuestions = await withTimeout(
-        generateInterviewQuestions({
-          jobDescription: context.job_description ?? undefined,
-          coreSkills: context.core_skills ?? [],
-          candidateResumeText,
-          candidateResumeSkills: resumeSkills,
-          candidateId: context.candidate_id,
+      // Routes by the job's interview mode. In STANDARD mode the structured
+      // core is generated once per job and snapshotted here, so this costs no
+      // OpenAI call per candidate; only the candidate-specific resume questions
+      // do. In INDIVIDUALIZED mode the structured core is generated per
+      // candidate, which is the previous behaviour.
+      const prepared = await withTimeout(
+        prepareInterviewQuestionSet({
+          organizationId: input.organizationId,
           jobId: context.job_id,
-          experienceLevel: String(context.experience_level_id ?? ""),
-          totalQuestions: input.totalQuestions,
-          interviewDurationMinutes: input.interviewDurationMinutes ?? context.interview_duration_minutes ?? undefined,
-          jobTitle: context.job_title ?? undefined,
-          codingRequired: context.coding_required,
-          codingRecommended: context.coding_recommended,
-          codingAssessmentType: context.coding_assessment_type,
-          codingDifficulty: context.coding_difficulty,
-          codingDurationMinutes: context.coding_duration_minutes,
-          codingLanguages: context.coding_languages ?? [],
-          previousQuestions,
-          similarityThreshold: input.similarityThreshold ?? 0.72,
+          interviewId: input.interviewId,
+          candidateBackground: candidateResumeText,
+          excludeQuestions: previousQuestions,
         }),
         input.generationTimeoutMs ?? CREATE_LINK_AI_TIMEOUT_MS,
         "AI question generation timed out"
       )
 
-      if (generatedQuestions.length < MIN_QUESTION_COUNT) {
-        throw new Error("Generated too few questions")
+      const totalQuestions = prepared.structuredQuestionCount + prepared.resumeQuestionCount
+
+      if (totalQuestions < MIN_QUESTION_COUNT) {
+        throw new Error(
+          `Prepared too few questions (${totalQuestions} < ${MIN_QUESTION_COUNT})`
+        )
       }
 
-      const replaced = await replaceInterviewQuestions(input.interviewId, generatedQuestions)
-      if (!replaced) {
-        const existingQuestions = await fetchExistingInterviewQuestions(input.interviewId)
-        if (existingQuestions.length === 0) {
-          throw new Error("Generated interview questions could not be saved")
-        }
+      const persisted = await fetchExistingInterviewQuestions(input.interviewId)
+      if (persisted.length === 0) {
+        throw new Error("Interview questions were prepared but could not be verified after saving")
       }
 
-      const verified = await verifyInterviewQuestionsPersisted(input.interviewId, generatedQuestions)
-      if (!verified) {
-        const existingQuestions = await fetchExistingInterviewQuestions(input.interviewId)
-        if (existingQuestions.length === 0) {
-          throw new Error("Interview questions were generated but could not be verified after saving")
-        }
-      }
+      console.log("Interview questions prepared", {
+        interviewId: input.interviewId,
+        mode: prepared.mode,
+        questionnaireVersionId: prepared.questionnaireVersionId,
+        structured: prepared.structuredQuestionCount,
+        resume: prepared.resumeQuestionCount,
+        openAiCalls: prepared.openAiCalls,
+        generatedQuestionnaire: prepared.generatedQuestionnaire,
+      })
 
       await markQuestionGenerationSucceeded(input.organizationId, input.interviewId)
       return { success: true }

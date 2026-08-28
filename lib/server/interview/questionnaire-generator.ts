@@ -362,3 +362,167 @@ export async function generateStructuredQuestionnaire(
     lastError
   )
 }
+
+const RESUME_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["questions"],
+  properties: {
+    questions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["question_text", "competency_label", "evaluation_criteria"],
+        properties: {
+          question_text: { type: "string" },
+          competency_label: { type: "string" },
+          evaluation_criteria: { type: "string" },
+        },
+      },
+    },
+  },
+} as const
+
+/**
+ * Candidate-specific questions drawn from the candidate's own background.
+ *
+ * This is deliberately candidate-specific and is NOT part of the shared
+ * structured core - two candidates for the same job should get different
+ * questions here. That is a feature of the product, not a break in
+ * standardisation.
+ *
+ * Returns [] without calling OpenAI when disabled, when the plan allocates no
+ * resume questions, or when there is no candidate background to work from.
+ */
+export async function generateResumeQuestions(input: {
+  jobTitle?: string | null
+  jobDescription?: string | null
+  experienceLevel?: string | null
+  candidateBackground?: string | null
+  questionCount: number
+  excludeQuestions?: string[]
+}): Promise<{ questions: GeneratedQuestion[]; openAiCalls: number }> {
+  const background = String(input.candidateBackground ?? "").trim()
+
+  if (input.questionCount <= 0 || background.length < 40 || !getApiKey()) {
+    return { questions: [], openAiCalls: 0 }
+  }
+
+  const system = [
+    "You write interview questions about a candidate's own prior experience.",
+    "You work across every industry and profession. Take all subject matter from the supplied material and never assume the role is technical.",
+    "",
+    "RULES",
+    "- Each question probes something the candidate has actually done.",
+    "- 8 to 22 words, plain spoken language, one competency each.",
+    "- Never quote the candidate's document or mention a resume, CV or application.",
+    "- Never open with phrases like 'You highlighted' or 'Your background includes'.",
+    "- Ask about decisions, ownership, difficulty and outcomes rather than duties.",
+    "- Only cover background that is relevant to the target role.",
+    "",
+    "For each question give one sentence describing what a strong answer demonstrates.",
+    "Return JSON only, matching the provided schema.",
+  ].join("\n")
+
+  const user = [
+    `Produce exactly ${input.questionCount} question(s).`,
+    input.excludeQuestions?.length
+      ? "Avoid repeating or paraphrasing anything in must_not_repeat."
+      : "",
+    "",
+    JSON.stringify(
+      {
+        role_title: input.jobTitle?.trim() || "Not supplied",
+        role_summary: input.jobDescription?.trim()?.slice(0, 2000) || "Not supplied",
+        experience_level: input.experienceLevel?.trim() || "Not supplied",
+        candidate_background: background.slice(0, 6000),
+        ...(input.excludeQuestions?.length
+          ? { must_not_repeat: input.excludeQuestions.slice(0, 60) }
+          : {}),
+      },
+      null,
+      2
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n")
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  try {
+    const apiKey = getApiKey()
+    const response = await fetch(OPENAI_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: QUESTIONNAIRE_MODEL,
+        temperature: 0,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "resume_questions",
+            strict: true,
+            schema: RESUME_RESPONSE_SCHEMA,
+          },
+        },
+      }),
+    })
+
+    if (!response.ok) {
+      return { questions: [], openAiCalls: 1 }
+    }
+
+    const payload = await response.json()
+    const content = payload?.choices?.[0]?.message?.content
+    if (typeof content !== "string" || !content.trim()) {
+      return { questions: [], openAiCalls: 1 }
+    }
+
+    const parsed = JSON.parse(content) as { questions?: unknown[] }
+    const raw = Array.isArray(parsed.questions) ? parsed.questions : []
+    const seen = new Set<string>()
+    const questions: GeneratedQuestion[] = []
+
+    for (const entry of raw) {
+      if (!entry || typeof entry !== "object") continue
+      const record = entry as Record<string, unknown>
+      const questionText = String(record.question_text ?? "").replace(/\s+/g, " ").trim()
+
+      if (!questionText || !validateQuestionStrict(questionText).valid) continue
+      const key = questionText.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+
+      questions.push({
+        questionText,
+        sourceType: "resume",
+        competencyLabel:
+          String(record.competency_label ?? "").replace(/\s+/g, " ").trim() || "Relevant experience",
+        questionType: "open_ended",
+        difficultyLevel: 3,
+        phaseHint: "core",
+        evaluationCriteria:
+          String(record.evaluation_criteria ?? "").replace(/\s+/g, " ").trim() ||
+          "Answer gives a specific first-hand account with a clear outcome.",
+      })
+    }
+
+    return { questions: questions.slice(0, input.questionCount), openAiCalls: 1 }
+  } catch {
+    // Resume questions are an enhancement, never a blocker: an interview is
+    // still valid with only its structured core.
+    return { questions: [], openAiCalls: 1 }
+  } finally {
+    clearTimeout(timer)
+  }
+}
