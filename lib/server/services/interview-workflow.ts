@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 
-import { generateInterviewQuestions, type InterviewQuestion } from "@/lib/interview-flow"
+import { type InterviewQuestion } from "@/lib/interview-flow"
+import { prepareInterviewQuestionSet } from "@/lib/server/interview/prepare-questions"
 import { InterviewQuestionType } from "@/lib/server/ai/interview-question-types"
 import {
   bucketSkill,
@@ -89,13 +90,19 @@ type GenerateQuestionInput = {
   organizationId: string
   interviewId: string
   candidateResumeText?: string
+  maxAttempts?: number
+  generationTimeoutMs?: number
+  previousQuestions?: string[]
+  /**
+   * Deprecated. Question count and distribution now come from a single
+   * authoritative source derived from the job's duration and seniority
+   * (lib/server/interview/question-plan). Accepted so existing callers keep
+   * compiling, but ignored.
+   */
   resumeSkills?: string[]
   totalQuestions?: number
   interviewDurationMinutes?: number
   similarityThreshold?: number
-  maxAttempts?: number
-  generationTimeoutMs?: number
-  previousQuestions?: string[]
 }
 
 async function getPriorCandidateJobQuestions(context: InterviewContextRow) {
@@ -348,6 +355,28 @@ export async function ensureInterviewWorkflowSchema() {
         create unique index if not exists idx_interviews_org_idempotency_key
           on public.interviews (organization_id, idempotency_key)
           where idempotency_key is not null
+      `)
+
+      // Retire the legacy database-side question seeding triggers.
+      //
+      // These generate interview questions from hardcoded PL/pgSQL templates,
+      // and the two force=true variants DELETE a job's dynamic
+      // interview_questions rows before reseeding. That would wipe a
+      // snapshotted questionnaire mid-interview and break the stable question
+      // identity chain. The templates are also not role-agnostic.
+      //
+      // This is repeated here rather than left to prisma/sql/prod/017 because
+      // schema changes in this codebase are applied out of band and other
+      // ensure* functions re-create dropped objects; a SQL-only drop does not
+      // hold. Same pattern as trial-credits.ts dropping its legacy trigger.
+      await prisma.$executeRawUnsafe(`
+        drop trigger if exists trg_prepare_interview_on_insert on public.interviews
+      `)
+      await prisma.$executeRawUnsafe(`
+        drop trigger if exists trg_refresh_questions_from_resume on public.candidate_resume_ai
+      `)
+      await prisma.$executeRawUnsafe(`
+        drop trigger if exists trg_refresh_questions_from_skill_map on public.interview_skill_map
       `)
 
       await prisma.$executeRawUnsafe(`
@@ -643,58 +672,51 @@ export async function prepareInterviewQuestionsWithRetry(input: GenerateQuestion
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const candidateResumeText = input.candidateResumeText || context.resume_text || undefined
-      const parsedResumeSkills = candidateResumeText ? parseResumeText(candidateResumeText).skills ?? [] : []
-      const resumeSkills = input.resumeSkills && input.resumeSkills.length > 0 ? input.resumeSkills : parsedResumeSkills
 
       const cleared = await clearInterviewQuestions(input.interviewId)
       if (!cleared) {
         throw new Error("Failed to clear existing interview questions")
       }
 
-      const generatedQuestions = await withTimeout(
-        generateInterviewQuestions({
-          jobDescription: context.job_description ?? undefined,
-          coreSkills: context.core_skills ?? [],
-          candidateResumeText,
-          candidateResumeSkills: resumeSkills,
-          candidateId: context.candidate_id,
+      // Routes by the job's interview mode. In STANDARD mode the structured
+      // core is generated once per job and snapshotted here, so this costs no
+      // OpenAI call per candidate; only the candidate-specific resume questions
+      // do. In INDIVIDUALIZED mode the structured core is generated per
+      // candidate, which is the previous behaviour.
+      const prepared = await withTimeout(
+        prepareInterviewQuestionSet({
+          organizationId: input.organizationId,
           jobId: context.job_id,
-          experienceLevel: String(context.experience_level_id ?? ""),
-          totalQuestions: input.totalQuestions,
-          interviewDurationMinutes: input.interviewDurationMinutes ?? context.interview_duration_minutes ?? undefined,
-          jobTitle: context.job_title ?? undefined,
-          codingRequired: context.coding_required,
-          codingRecommended: context.coding_recommended,
-          codingAssessmentType: context.coding_assessment_type,
-          codingDifficulty: context.coding_difficulty,
-          codingDurationMinutes: context.coding_duration_minutes,
-          codingLanguages: context.coding_languages ?? [],
-          previousQuestions,
-          similarityThreshold: input.similarityThreshold ?? 0.72,
+          interviewId: input.interviewId,
+          candidateBackground: candidateResumeText,
+          excludeQuestions: previousQuestions,
         }),
         input.generationTimeoutMs ?? CREATE_LINK_AI_TIMEOUT_MS,
         "AI question generation timed out"
       )
 
-      if (generatedQuestions.length < MIN_QUESTION_COUNT) {
-        throw new Error("Generated too few questions")
+      const totalQuestions = prepared.structuredQuestionCount + prepared.resumeQuestionCount
+
+      if (totalQuestions < MIN_QUESTION_COUNT) {
+        throw new Error(
+          `Prepared too few questions (${totalQuestions} < ${MIN_QUESTION_COUNT})`
+        )
       }
 
-      const replaced = await replaceInterviewQuestions(input.interviewId, generatedQuestions)
-      if (!replaced) {
-        const existingQuestions = await fetchExistingInterviewQuestions(input.interviewId)
-        if (existingQuestions.length === 0) {
-          throw new Error("Generated interview questions could not be saved")
-        }
+      const persisted = await fetchExistingInterviewQuestions(input.interviewId)
+      if (persisted.length === 0) {
+        throw new Error("Interview questions were prepared but could not be verified after saving")
       }
 
-      const verified = await verifyInterviewQuestionsPersisted(input.interviewId, generatedQuestions)
-      if (!verified) {
-        const existingQuestions = await fetchExistingInterviewQuestions(input.interviewId)
-        if (existingQuestions.length === 0) {
-          throw new Error("Interview questions were generated but could not be verified after saving")
-        }
-      }
+      console.log("Interview questions prepared", {
+        interviewId: input.interviewId,
+        mode: prepared.mode,
+        questionnaireVersionId: prepared.questionnaireVersionId,
+        structured: prepared.structuredQuestionCount,
+        resume: prepared.resumeQuestionCount,
+        openAiCalls: prepared.openAiCalls,
+        generatedQuestionnaire: prepared.generatedQuestionnaire,
+      })
 
       await markQuestionGenerationSucceeded(input.organizationId, input.interviewId)
       return { success: true }

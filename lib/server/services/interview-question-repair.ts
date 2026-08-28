@@ -1,11 +1,11 @@
 import { Prisma } from "@prisma/client"
 
-import { generateInterviewQuestions } from "@/lib/interview-flow"
+import { prepareInterviewQuestionSet } from "@/lib/server/interview/prepare-questions"
 import { inferRoleIntelligence, sanitizeSkillList } from "@/lib/server/ai/skills"
 import { prisma } from "@/lib/server/prisma"
 import {
+  clearInterviewQuestions,
   fetchExistingInterviewQuestions,
-  replaceInterviewQuestions,
 } from "@/lib/server/services/interview-questions"
 
 type RepairInterviewInput = {
@@ -213,34 +213,27 @@ export async function repairInterviewQuestions(input: RepairInterviewInput): Pro
         continue
       }
 
-      const generated = await generateInterviewQuestions({
-        jobDescription: interview.job.jobDescription ?? undefined,
-        coreSkills: sanitizedCoreSkills,
-        candidateResumeText: interview.candidate.resumeText ?? undefined,
-        experienceLevel: String(interview.job.experienceLevelId ?? ""),
-        jobTitle: interview.job.jobTitle ?? undefined,
-        previousQuestions: existingQuestions,
-        similarityThreshold: 0.8,
+      // Repair routes through the same authoritative preparation path as a
+      // normal interview, so there is exactly one way questions come into
+      // existence. Previously this was a second, divergent generator.
+      await clearInterviewQuestions(interview.interviewId)
+
+      const prepared = await prepareInterviewQuestionSet({
+        organizationId: input.organizationId,
+        jobId: interview.jobId,
+        interviewId: interview.interviewId,
+        candidateBackground: interview.candidate.resumeText ?? undefined,
+        excludeQuestions: existingQuestions,
       })
 
-      if (generated.length === 0) {
+      const producedCount = prepared.structuredQuestionCount + prepared.resumeQuestionCount
+
+      if (producedCount === 0) {
         items.push({
           interviewId: interview.interviewId,
           jobId: interview.jobId,
           status: "failed",
           reason: "No regenerated questions were produced.",
-        })
-        continue
-      }
-
-      const replaced = await replaceInterviewQuestions(interview.interviewId, generated)
-
-      if (!replaced) {
-        items.push({
-          interviewId: interview.interviewId,
-          jobId: interview.jobId,
-          status: "failed",
-          reason: "Generated questions could not be saved.",
         })
         continue
       }

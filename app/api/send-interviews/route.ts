@@ -165,11 +165,12 @@ async function prepareAndSendQueuedScreeningInvite(input: QueuedScreeningInvite)
   })
 
   try {
+    // Question count is no longer passed in: it is derived from the job's
+    // duration and seniority by the authoritative question plan. This route
+    // previously hardcoded 10 regardless of interview length.
     await prepareInterviewQuestionsWithRetry({
       organizationId: input.organizationId,
       interviewId: input.interviewId,
-      totalQuestions: 10,
-      interviewDurationMinutes: input.duration ?? undefined,
       maxAttempts: 1,
       generationTimeoutMs: 30000,
     })
