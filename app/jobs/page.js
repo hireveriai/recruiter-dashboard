@@ -130,7 +130,7 @@ function JobDescriptionCell({ description }) {
       : value || fallback
 
   return (
-    <div className="group relative max-w-[320px]">
+    <div className="group relative max-w-full">
       <div className="cursor-help leading-6 text-slate-400">
         {preview}
       </div>
@@ -155,7 +155,7 @@ function JobSkillsCell({ skills }) {
       : value || "-"
 
   return (
-    <div className="group relative max-w-[260px]">
+    <div className="group relative max-w-full">
       <div className="cursor-help leading-6 text-slate-300">
         {preview}
       </div>
@@ -489,7 +489,7 @@ export default function JobsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1096px] table-fixed text-sm">
+            <table className="w-full min-w-[1610px] table-fixed text-sm">
               <colgroup>
                 <col className="w-[52px]" />
                 <col className="w-[148px]" />
@@ -504,16 +504,22 @@ export default function JobsPage() {
               </colgroup>
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
-                  <th className="px-4 py-4 text-left font-medium">Job Title</th>
-                  <th className="px-4 py-4 text-left font-medium">Description</th>
-                  <th className="px-4 py-4 text-left font-medium">Status</th>
-                  <th className="px-4 py-4 text-left font-medium">Difficulty</th>
-                  <th className="px-4 py-4 text-left font-medium">Experience Level</th>
-                  <th className="px-4 py-4 text-left font-medium">Timeline</th>
-                  <th className="px-4 py-4 text-left font-medium">Interview Mode</th>
-                  <th className="px-4 py-4 text-left font-medium">Core Skills</th>
-                  <th className="px-4 py-4 text-left font-medium">Open Interviews</th>
-                  <th className="whitespace-nowrap px-4 py-4 text-right font-medium">Actions</th>
+                  {/*
+                    The table is table-fixed, so these widths are the only thing
+                    deciding column size - cell content is ignored. Every column
+                    needs one, or the browser splits the remaining space evenly
+                    and narrow-looking columns like Job Title get crushed.
+                  */}
+                  <th className="w-[220px] px-4 py-4 text-left font-medium">Job Title</th>
+                  <th className="w-[260px] px-4 py-4 text-left font-medium">Description</th>
+                  <th className="w-[110px] whitespace-nowrap px-4 py-4 text-left font-medium">Status</th>
+                  <th className="w-[110px] whitespace-nowrap px-4 py-4 text-left font-medium">Difficulty</th>
+                  <th className="w-[130px] px-4 py-4 text-left font-medium">Experience Level</th>
+                  <th className="w-[100px] whitespace-nowrap px-4 py-4 text-left font-medium">Timeline</th>
+                  <th className="w-[150px] whitespace-nowrap px-4 py-4 text-left font-medium">Interview Mode</th>
+                  <th className="w-[200px] px-4 py-4 text-left font-medium">Core Skills</th>
+                  <th className="w-[140px] px-4 py-4 text-left font-medium">Open Interviews</th>
+                  <th className="w-[190px] whitespace-nowrap px-4 py-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -528,12 +534,12 @@ export default function JobsPage() {
                 ) : (
                   filteredJobs.map((job) => (
                     <tr key={job.jobId} className="border-t border-slate-800/80 align-top text-slate-200">
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-4 align-top">
                         <button
                           type="button"
                           onClick={() => handleEdit(job)}
                           title={`Edit ${job.jobTitle}`}
-                          className="rounded text-left font-medium text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
+                          className="block w-full rounded text-left font-medium leading-6 text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
                         >
                           {job.jobTitle}
                         </button>
