@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 
 import { ApiError } from "@/lib/server/errors"
 import { getInterviewAppUrl } from "@/lib/server/interview-url"
+import { prepareRecoveryQuestionnaire } from "@/lib/server/interview/recovery-questionnaire"
 import { prisma } from "@/lib/server/prisma"
 
 const RECOVERY_LINK_TTL_HOURS = 24
@@ -374,11 +375,51 @@ export async function decideInterviewRecovery(params: {
     return { token, expiresAt, reused: false }
   })
 
+  // Prepare the alternate questionnaire now rather than when the candidate
+  // opens the link, so generation is never in their critical path. This is a
+  // no-op when the candidate had not yet seen a question, and is skipped if an
+  // alternate already exists from an earlier recovery.
+  //
+  // Never allowed to block recovery: a failure here leaves the original
+  // questionnaire in place, which is strictly better than denying access.
+  let questionnaire = null
+  try {
+    questionnaire = await prepareRecoveryQuestionnaire({
+      organizationId: params.organizationId,
+      interviewId: params.interviewId,
+    })
+
+    await prisma.$executeRaw(Prisma.sql`
+      insert into public.interview_recovery_events (
+        interview_id, attempt_id, event_type, reason, source, actor_id, idempotency_key, metadata
+      )
+      values (
+        ${row.interview_id}::uuid,
+        ${row.attempt_id}::uuid,
+        'RECOVERY_QUESTIONS_PREPARED',
+        ${questionnaire.outcome}::text,
+        'recruiter_dashboard',
+        ${params.recruiterId}::uuid,
+        ${`recovery_questions:${row.attempt_id}`}::text,
+        ${JSON.stringify(questionnaire)}::jsonb
+      )
+      on conflict (interview_id, idempotency_key)
+      where idempotency_key is not null
+      do nothing
+    `)
+  } catch (error) {
+    console.error("Recovery questionnaire preparation failed", {
+      interviewId: params.interviewId,
+      error: error instanceof Error ? error.message : error,
+    })
+  }
+
   return {
     status: "APPROVED",
     recoveryLink: `${appUrl}/interview/${result.token}`,
     expiresAt: result.expiresAt,
     reused: result.reused,
+    questionnaire,
   }
 }
 
