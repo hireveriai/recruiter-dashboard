@@ -29,21 +29,21 @@ const DEVICE_REQUIREMENT_OPTIONS = [
   {
     value: "ANY_DEVICE",
     label: "Laptop/Desktop or Mobile",
-    description: "Best for general screening and maximum completion.",
+    description: "Best for most roles and the highest completion rate.",
     icon: MonitorSmartphone,
     badge: "Default",
   },
   {
     value: "DESKTOP_ONLY",
     label: "Laptop/Desktop Only",
-    description: "Recommended for coding and technical interviews.",
+    description: "Best when the interview needs a full screen, a keyboard, or a hands-on exercise.",
     icon: Laptop,
     badge: "Recommended",
   },
   {
     value: "MOBILE_ONLY",
     label: "Mobile Only",
-    description: "Useful for field roles and quick video screens.",
+    description: "Useful for on-the-go roles and quick video screens.",
     icon: Smartphone,
     badge: null,
   },
@@ -82,6 +82,37 @@ const QUESTION_TYPE_OPTIONS = [
 // and select noticeably taller than the text they hold.
 const FIELD_CLASS =
   "w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]";
+
+// Selects hold short fixed options, so they should not stretch to the full
+// column width the way free-text inputs do.
+const SELECT_CLASS = FIELD_CLASS.replace("w-full", "w-full max-w-[260px]");
+
+const JOB_CONFIG_NOTES = [
+  {
+    title: "Scoped to your organization",
+    detail: "The job is created under the organization you are signed in to.",
+  },
+  {
+    title: "Skills are tidied up",
+    detail: "Comma-separated entries are cleaned and normalized automatically.",
+  },
+  {
+    title: "One timeline for every interview",
+    detail: "Each interview link generated from this job uses the same duration.",
+  },
+  {
+    title: "Assessment settings carry over",
+    detail: "Any additional assessment stays attached and applies to every interview.",
+  },
+  {
+    title: "Editing never duplicates",
+    detail: "Saving changes updates this role rather than creating a second one.",
+  },
+  {
+    title: "Questions come next",
+    detail: "VERIS drafts the questionnaire, and you can review it before inviting anyone.",
+  },
+];
 
 function createDefaultForm() {
   return {
@@ -408,7 +439,7 @@ export default function CreateJobModal({
                 <select
                   value={form.experience_level_id}
                   onChange={(e) => handleChange("experience_level_id", e.target.value)}
-                  className={FIELD_CLASS}
+                  className={SELECT_CLASS}
                 >
                   <option value="">Select Experience Level</option>
                   {levelOptions.map((lvl) => (
@@ -424,7 +455,7 @@ export default function CreateJobModal({
                 <select
                   value={form.difficulty_profile}
                   onChange={(e) => handleChange("difficulty_profile", e.target.value)}
-                  className={FIELD_CLASS}
+                  className={SELECT_CLASS}
                 >
                   <option value="JUNIOR">Junior</option>
                   <option value="MID">Mid</option>
@@ -597,7 +628,7 @@ export default function CreateJobModal({
                     <select
                       value={form.question_type_default}
                       onChange={(e) => handleChange("question_type_default", e.target.value)}
-                      className={FIELD_CLASS}
+                      className={SELECT_CLASS}
                     >
                       {QUESTION_TYPE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -708,12 +739,16 @@ export default function CreateJobModal({
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300">
-              - Job config is created under the authenticated organization
-              <br />- Skills are normalized from comma-separated input
-              <br />- Timeline applies to every interview generated from this job
-              <br />- Coding round settings stay attached to the job and carry into interview configuration
-              <br />- Edit mode updates the role without creating a duplicate
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {JOB_CONFIG_NOTES.map((note) => (
+                <div
+                  key={note.title}
+                  className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
+                >
+                  <p className="text-sm font-semibold text-white">{note.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">{note.detail}</p>
+                </div>
+              ))}
             </div>
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -727,7 +762,7 @@ export default function CreateJobModal({
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-indigo-500 px-6 py-3 text-sm font-medium text-white shadow-[0_18px_30px_rgba(139,92,246,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(124,58,237,0.22)] transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? loadingLabel : actionLabel}
               </button>

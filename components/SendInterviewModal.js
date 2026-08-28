@@ -96,7 +96,7 @@ function DateTimeField({ label, value, onChange }) {
         </div>
         <input
           type="datetime-local"
-          className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-11 py-3 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+          className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-10 py-2 text-sm text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
           value={value}
           onChange={onChange}
         />
@@ -831,11 +831,16 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
       <div className="hv-send-interview-modal hv-theme-modal relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-cyan-500/20 bg-[#06101f]/95 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_30%)]" />
         <div className="relative max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-h-[calc(100dvh-1.5rem)] sm:p-5 md:p-5">
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">Interview Access</p>
-              <h2 className="mt-1.5 text-2xl font-semibold text-white sm:text-3xl">Send Interview Link</h2>
-              <p className="mt-1.5 max-w-lg text-sm leading-6 text-slate-300">
+          <div className="mb-5 flex items-start justify-between gap-4 border-b border-slate-800/80 pb-4">
+            <div className="min-w-0">
+              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" aria-hidden="true" />
+                Interview Access
+              </span>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-[28px]">
+                Send Interview Link
+              </h2>
+              <p className="mt-1.5 max-w-lg text-sm leading-6 text-slate-400">
                 Add one or several candidates, apply one access window, and send every
                 secure interview invite in a single batch.
               </p>
@@ -923,7 +928,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                 <div className="w-full">
                   <label className="text-sm text-gray-400">Select Job *</label>
                   <select
-                    className="mt-1.5 w-full truncate rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                    className="mt-1.5 w-full truncate rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
                     value={jobId}
                     onChange={(e) => setJobId(e.target.value)}
                     disabled={jobsLoading}
@@ -955,7 +960,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                   <div>
                     <label className="text-sm text-gray-400">Candidate Full Name *</label>
                     <input
-                      className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                      className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
                       placeholder="Enter candidate name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -966,7 +971,7 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                     <label className="text-sm text-gray-400">Candidate Email *</label>
                     <input
                       type="email"
-                      className="mt-1.5 w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                      className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
                       placeholder="Enter email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -1230,14 +1235,14 @@ export default function SendInterviewModal({ isOpen, onClose, initialTrialCredit
                   />
                   <button
                     onClick={copy}
-                    className="w-full rounded-2xl border border-slate-600 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 transition hover:border-cyan-400/50 hover:bg-slate-800"
+                    className="w-full rounded-xl border border-slate-600 bg-slate-900/90 px-3.5 py-2 text-sm text-slate-100 transition hover:border-cyan-400/50 hover:bg-slate-800"
                   >
                     {copyStatus === "success" ? "Copied" : "Copy Link"}
                   </button>
                   <button
                     type="button"
                     onClick={startAnotherBatch}
-                    className="mt-3 w-full rounded-2xl border border-cyan-400/25 bg-cyan-400/[0.07] px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10"
+                    className="mt-3 w-full rounded-xl border border-cyan-400/25 bg-cyan-400/[0.07] px-3.5 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10"
                   >
                     Send another candidate
                   </button>
