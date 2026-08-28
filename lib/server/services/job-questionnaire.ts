@@ -371,6 +371,314 @@ export async function getFinalizedVersion(organizationId: string, jobId: string)
   return selectFinalizedVersion(prisma, organizationId, jobId)
 }
 
+// ---------------------------------------------------------------------------
+// Recruiter editing
+//
+// A FINALIZED version is immutable: interviews already reference it and their
+// reports must stay reproducible. Editing therefore never mutates a finalized
+// version - it forks a new DRAFT, and finalizing that DRAFT supersedes the old
+// one for FUTURE interviews only.
+// ---------------------------------------------------------------------------
+
+export type EditableQuestion = {
+  questionnaireQuestionId?: string | null
+  questionText: string
+  sourceType: string
+  competencyLabel: string | null
+  evaluationCriteria: string | null
+  difficultyLevel: number
+  phaseHint: string
+  questionType: string | null
+  origin: string
+}
+
+const EDITABLE_SOURCE_TYPES = new Set(["job", "experience", "behavioral", "resume"])
+const EDITABLE_PHASES = new Set(["warmup", "core", "probe", "closing"])
+
+function sanitizeEditableQuestion(question: EditableQuestion) {
+  const text = String(question.questionText ?? "").replace(/\s+/g, " ").trim()
+
+  if (!text) {
+    throw new ApiError(400, "QUESTION_TEXT_REQUIRED", "Every question needs text")
+  }
+  if (text.length > 500) {
+    throw new ApiError(400, "QUESTION_TEXT_TOO_LONG", "Question text is limited to 500 characters")
+  }
+
+  const difficulty = Number(question.difficultyLevel)
+
+  return {
+    questionText: text,
+    sourceType: EDITABLE_SOURCE_TYPES.has(question.sourceType) ? question.sourceType : "job",
+    competencyLabel: question.competencyLabel?.trim() || null,
+    evaluationCriteria: question.evaluationCriteria?.trim() || null,
+    difficultyLevel: Number.isFinite(difficulty) ? Math.min(5, Math.max(1, Math.round(difficulty))) : 3,
+    phaseHint: EDITABLE_PHASES.has(question.phaseHint) ? question.phaseHint : "core",
+    questionType: question.questionType?.trim() || (question.sourceType === "behavioral" ? "behavioral" : "open_ended"),
+    origin: question.origin === "RECRUITER" ? "RECRUITER" : "AI",
+  }
+}
+
+async function selectDraftVersion(
+  client: Prisma.TransactionClient | typeof prisma,
+  organizationId: string,
+  jobId: string
+) {
+  const rows = await client.$queryRaw<QuestionnaireVersionRow[]>(Prisma.sql`
+    select
+      v.questionnaire_version_id::text,
+      v.questionnaire_id::text,
+      v.version_number,
+      v.status,
+      v.generated_by,
+      v.interview_mode,
+      v.target_question_count,
+      v.interview_duration_minutes
+    from public.job_questionnaire_versions v
+    join public.job_questionnaires q on q.questionnaire_id = v.questionnaire_id
+    where q.job_id = ${jobId}::uuid
+      and q.organization_id = ${organizationId}::uuid
+      and v.status = 'DRAFT'
+    order by v.version_number desc
+    limit 1
+  `)
+
+  return rows[0] ?? null
+}
+
+export async function getVersionQuestions(organizationId: string, versionId: string) {
+  return prisma.$queryRaw<
+    Array<{
+      questionnaire_question_id: string
+      question_order: number
+      question_text: string
+      question_type: string | null
+      source_type: string
+      competency_label: string | null
+      evaluation_criteria: string | null
+      difficulty_level: number
+      phase_hint: string
+      origin: string
+    }>
+  >(Prisma.sql`
+    select
+      questionnaire_question_id::text,
+      question_order,
+      question_text,
+      question_type,
+      source_type,
+      competency_label,
+      evaluation_criteria,
+      difficulty_level,
+      phase_hint,
+      origin
+    from public.job_questionnaire_questions
+    where questionnaire_version_id = ${versionId}::uuid
+      and organization_id = ${organizationId}::uuid
+    order by question_order
+  `)
+}
+
+/**
+ * Returns the questionnaire a recruiter should be looking at, generating a first
+ * version if the job has none yet.
+ *
+ * Preference order: an open DRAFT, else the latest FINALIZED (read-only until
+ * they choose to edit), else generate.
+ */
+export async function getQuestionnaireForEditing(params: {
+  organizationId: string
+  jobId: string
+  createdBy?: string | null
+}) {
+  const draft = await selectDraftVersion(prisma, params.organizationId, params.jobId)
+  if (draft) {
+    return { version: draft, questions: await getVersionQuestions(params.organizationId, draft.questionnaire_version_id), openAiCalls: 0 }
+  }
+
+  const finalized = await getFinalizedVersion(params.organizationId, params.jobId)
+  if (finalized) {
+    return { version: finalized, questions: await getVersionQuestions(params.organizationId, finalized.questionnaire_version_id), openAiCalls: 0 }
+  }
+
+  const created = await ensureFinalizedQuestionnaireVersion({
+    organizationId: params.organizationId,
+    jobId: params.jobId,
+    createdBy: params.createdBy,
+  })
+
+  return {
+    version: created.version,
+    questions: await getVersionQuestions(params.organizationId, created.version.questionnaire_version_id),
+    openAiCalls: created.openAiCalls,
+  }
+}
+
+/**
+ * Persists a recruiter's edits.
+ *
+ * Always writes into a DRAFT. If the recruiter was viewing a FINALIZED version,
+ * a new DRAFT is forked from their submitted content, leaving the finalized one
+ * and every interview referencing it untouched.
+ */
+export async function saveQuestionnaireDraft(params: {
+  organizationId: string
+  jobId: string
+  questions: EditableQuestion[]
+  createdBy?: string | null
+}) {
+  if (params.questions.length === 0) {
+    throw new ApiError(400, "QUESTIONNAIRE_EMPTY", "A questionnaire needs at least one question")
+  }
+  if (params.questions.length > 40) {
+    throw new ApiError(400, "QUESTIONNAIRE_TOO_LONG", "A questionnaire is limited to 40 questions")
+  }
+
+  const sanitized = params.questions.map(sanitizeEditableQuestion)
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(
+      Prisma.sql`select pg_advisory_xact_lock(hashtext(${`job_questionnaire:${params.jobId}`}))`
+    )
+
+    let draft = await selectDraftVersion(tx, params.organizationId, params.jobId)
+
+    if (!draft) {
+      const questionnaireId = await ensureQuestionnaireRow(tx, params.organizationId, params.jobId)
+      const rows = await tx.$queryRaw<QuestionnaireVersionRow[]>(Prisma.sql`
+        insert into public.job_questionnaire_versions (
+          questionnaire_id, organization_id, version_number, status, generated_by,
+          interview_mode, created_by
+        )
+        select
+          ${questionnaireId}::uuid,
+          ${params.organizationId}::uuid,
+          coalesce(max(version_number), 0) + 1,
+          'DRAFT',
+          'RECRUITER_EDITED',
+          coalesce(
+            (select interview_mode from public.job_positions where job_id = ${params.jobId}::uuid),
+            'STANDARD'
+          ),
+          ${params.createdBy ?? null}::uuid
+        from public.job_questionnaire_versions
+        where questionnaire_id = ${questionnaireId}::uuid
+        returning
+          questionnaire_version_id::text, questionnaire_id::text, version_number,
+          status, generated_by, interview_mode, target_question_count,
+          interview_duration_minutes
+      `)
+      draft = rows[0]
+    }
+
+    await tx.$executeRaw(Prisma.sql`
+      delete from public.job_questionnaire_questions
+      where questionnaire_version_id = ${draft.questionnaire_version_id}::uuid
+    `)
+
+    for (const [index, question] of sanitized.entries()) {
+      await tx.$executeRaw(Prisma.sql`
+        insert into public.job_questionnaire_questions (
+          questionnaire_version_id, organization_id, question_order, question_text,
+          question_type, source_type, competency_label, difficulty_level,
+          phase_hint, evaluation_criteria, origin
+        )
+        values (
+          ${draft.questionnaire_version_id}::uuid,
+          ${params.organizationId}::uuid,
+          ${index + 1}::integer,
+          ${question.questionText},
+          ${question.questionType},
+          ${question.sourceType},
+          ${question.competencyLabel},
+          ${question.difficultyLevel}::integer,
+          ${question.phaseHint},
+          ${question.evaluationCriteria},
+          ${question.origin}
+        )
+      `)
+    }
+
+    await tx.$executeRaw(Prisma.sql`
+      update public.job_questionnaire_versions
+      set generated_by = 'RECRUITER_EDITED',
+          target_question_count = ${sanitized.length}::integer
+      where questionnaire_version_id = ${draft.questionnaire_version_id}::uuid
+    `)
+
+    return { version: draft, questionCount: sanitized.length }
+  })
+}
+
+/**
+ * Publishes the DRAFT. Previously finalized versions become SUPERSEDED, but are
+ * never deleted - interviews that used them keep resolving.
+ */
+export async function finalizeQuestionnaireDraft(params: {
+  organizationId: string
+  jobId: string
+  finalizedBy?: string | null
+}) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(
+      Prisma.sql`select pg_advisory_xact_lock(hashtext(${`job_questionnaire:${params.jobId}`}))`
+    )
+
+    const draft = await selectDraftVersion(tx, params.organizationId, params.jobId)
+    if (!draft) {
+      throw new ApiError(404, "NO_DRAFT_TO_FINALIZE", "There is no draft questionnaire to finalize")
+    }
+
+    const count = await tx.$queryRaw<{ n: number }[]>(Prisma.sql`
+      select count(*)::int as n
+      from public.job_questionnaire_questions
+      where questionnaire_version_id = ${draft.questionnaire_version_id}::uuid
+    `)
+
+    if ((count[0]?.n ?? 0) === 0) {
+      throw new ApiError(400, "QUESTIONNAIRE_EMPTY", "Cannot finalize an empty questionnaire")
+    }
+
+    await tx.$executeRaw(Prisma.sql`
+      update public.job_questionnaire_versions
+      set status = 'SUPERSEDED'
+      where questionnaire_id = ${draft.questionnaire_id}::uuid
+        and status = 'FINALIZED'
+    `)
+
+    await tx.$executeRaw(Prisma.sql`
+      update public.job_questionnaire_versions
+      set status = 'FINALIZED',
+          finalized_by = ${params.finalizedBy ?? null}::uuid,
+          finalized_at = now()
+      where questionnaire_version_id = ${draft.questionnaire_version_id}::uuid
+    `)
+
+    await tx.$executeRaw(Prisma.sql`
+      update public.job_questionnaires
+      set active_version_id = ${draft.questionnaire_version_id}::uuid,
+          updated_at = now()
+      where questionnaire_id = ${draft.questionnaire_id}::uuid
+    `)
+
+    return { versionId: draft.questionnaire_version_id, versionNumber: draft.version_number, questionCount: count[0].n }
+  })
+}
+
+/** Discards the open draft, reverting the recruiter to the finalized version. */
+export async function discardQuestionnaireDraft(params: { organizationId: string; jobId: string }) {
+  const draft = await selectDraftVersion(prisma, params.organizationId, params.jobId)
+  if (!draft) return { discarded: false }
+
+  await prisma.$executeRaw(Prisma.sql`
+    delete from public.job_questionnaire_versions
+    where questionnaire_version_id = ${draft.questionnaire_version_id}::uuid
+      and status = 'DRAFT'
+  `)
+
+  return { discarded: true }
+}
+
 /**
  * Copies a finalized version's questions into an interview.
  *
