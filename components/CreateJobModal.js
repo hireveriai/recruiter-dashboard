@@ -93,8 +93,8 @@ const JOB_CONFIG_NOTES = [
     detail: "The job is created under the organization you are signed in to.",
   },
   {
-    title: "Skills are tidied up",
-    detail: "Comma-separated entries are cleaned and normalized automatically.",
+    title: "Skills are cleaned up for you",
+    detail: "Separate entries with commas and VERIS formats and de-duplicates them.",
   },
   {
     title: "One timeline for every interview",
@@ -105,8 +105,8 @@ const JOB_CONFIG_NOTES = [
     detail: "Any additional assessment stays attached and applies to every interview.",
   },
   {
-    title: "Editing never duplicates",
-    detail: "Saving changes updates this role rather than creating a second one.",
+    title: "Edits update this job",
+    detail: "Saving changes updates the existing role instead of creating a copy.",
   },
   {
     title: "Questions come next",
@@ -688,7 +688,7 @@ export default function CreateJobModal({
                       <select
                         value={form.coding_assessment_type}
                         onChange={(e) => handleChange("coding_assessment_type", e.target.value)}
-                        className={FIELD_CLASS}
+                        className={SELECT_CLASS}
                       >
                         {CODING_ASSESSMENT_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -702,7 +702,7 @@ export default function CreateJobModal({
                         <select
                           value={form.coding_difficulty}
                           onChange={(e) => handleChange("coding_difficulty", e.target.value)}
-                          className={FIELD_CLASS}
+                          className={SELECT_CLASS}
                         >
                           <option value="EASY">Easy</option>
                           <option value="MEDIUM">Medium</option>
@@ -715,7 +715,7 @@ export default function CreateJobModal({
                         <select
                           value={form.coding_duration_minutes}
                           onChange={(e) => handleChange("coding_duration_minutes", Number(e.target.value))}
-                          className={FIELD_CLASS}
+                          className={SELECT_CLASS}
                         >
                           {[10, 15, 20, 30].map((minutes) => (
                             <option key={minutes} value={minutes}>
@@ -731,7 +731,7 @@ export default function CreateJobModal({
                           value={form.coding_languages}
                           onChange={(e) => handleChange("coding_languages", e.target.value)}
                           placeholder="JavaScript, Python, SQL"
-                          className={FIELD_CLASS}
+                          className={`${FIELD_CLASS} max-w-xl`}
                         />
                       </div>
                   </div>
@@ -743,10 +743,14 @@ export default function CreateJobModal({
               {JOB_CONFIG_NOTES.map((note) => (
                 <div
                   key={note.title}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
+                  className="group rounded-2xl border border-slate-800 bg-slate-900/60 p-4 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-cyan-400/[0.06] hover:shadow-[0_0_0_1px_rgba(103,232,249,0.18),0_14px_32px_rgba(34,211,238,0.18)]"
                 >
-                  <p className="text-sm font-semibold text-white">{note.title}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">{note.detail}</p>
+                  <p className="text-sm font-semibold text-white transition-colors group-hover:text-cyan-50">
+                    {note.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400 transition-colors group-hover:text-cyan-100/80">
+                    {note.detail}
+                  </p>
                 </div>
               ))}
             </div>

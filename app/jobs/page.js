@@ -32,24 +32,6 @@ function KebabIcon() {
   )
 }
 
-function EditIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
-    </svg>
-  )
-}
-
 function getDifficultyTone(profile) {
   const normalized = String(profile ?? "MID").toUpperCase()
 
@@ -522,7 +504,6 @@ export default function JobsPage() {
               </colgroup>
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
-                  <th className="w-[56px] px-4 py-4 text-left font-medium"></th>
                   <th className="px-4 py-4 text-left font-medium">Job Title</th>
                   <th className="px-4 py-4 text-left font-medium">Description</th>
                   <th className="px-4 py-4 text-left font-medium">Status</th>
@@ -538,25 +519,15 @@ export default function JobsPage() {
               <tbody>
                 {jobs.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="p-10 text-center text-slate-400">No jobs available</td>
+                    <td colSpan={10} className="p-10 text-center text-slate-400">No jobs available</td>
                   </tr>
                 ) : filteredJobs.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="p-10 text-center text-slate-400">No jobs match the current filters</td>
+                    <td colSpan={10} className="p-10 text-center text-slate-400">No jobs match the current filters</td>
                   </tr>
                 ) : (
                   filteredJobs.map((job) => (
                     <tr key={job.jobId} className="border-t border-slate-800/80 align-top text-slate-200">
-                      <td className="px-4 py-4">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(job)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-100"
-                          aria-label={`Edit ${job.jobTitle}`}
-                        >
-                          <EditIcon />
-                        </button>
-                      </td>
                       <td className="px-4 py-4 font-medium text-white">{job.jobTitle}</td>
                       <td className="px-4 py-4 text-slate-400">
                         <JobDescriptionCell description={job.jobDescription} />
