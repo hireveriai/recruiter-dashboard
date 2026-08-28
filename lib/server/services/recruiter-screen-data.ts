@@ -48,6 +48,9 @@ type JobRow = {
   isActive: boolean
   interviewMode: string | null
   resumeQuestionsEnabled: boolean | null
+  questionnaireFinalizedStatus: string | null
+  questionnaireVersionNumber: number | null
+  questionnaireHasDraft: boolean
   interviewCount: number
 }
 
@@ -147,6 +150,26 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
       ${hasIsActive ? Prisma.sql`jp.is_active` : Prisma.sql`true`} as "isActive",
       ${hasQuestionnaireConfig ? Prisma.sql`jp.interview_mode::text` : Prisma.sql`null`} as "interviewMode",
       ${hasQuestionnaireConfig ? Prisma.sql`jp.resume_questions_enabled` : Prisma.sql`null`} as "resumeQuestionsEnabled",
+      ${hasQuestionnaireConfig ? Prisma.sql`(
+        select v.status
+        from public.job_questionnaire_versions v
+        join public.job_questionnaires q on q.questionnaire_id = v.questionnaire_id
+        where q.job_id = jp.job_id and v.status = 'FINALIZED'
+        order by v.version_number desc limit 1
+      )` : Prisma.sql`null`} as "questionnaireFinalizedStatus",
+      ${hasQuestionnaireConfig ? Prisma.sql`(
+        select v.version_number
+        from public.job_questionnaire_versions v
+        join public.job_questionnaires q on q.questionnaire_id = v.questionnaire_id
+        where q.job_id = jp.job_id and v.status = 'FINALIZED'
+        order by v.version_number desc limit 1
+      )` : Prisma.sql`null`} as "questionnaireVersionNumber",
+      ${hasQuestionnaireConfig ? Prisma.sql`exists (
+        select 1
+        from public.job_questionnaire_versions v
+        join public.job_questionnaires q on q.questionnaire_id = v.questionnaire_id
+        where q.job_id = jp.job_id and v.status = 'DRAFT'
+      )` : Prisma.sql`false`} as "questionnaireHasDraft",
       count(i.interview_id)::int as "interviewCount"
     from public.job_positions jp
     left join public.interviews i
@@ -189,6 +212,13 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
       // which is the behaviour they already have.
       interviewMode: row.interviewMode ?? "INDIVIDUALIZED",
       resumeQuestionsEnabled: row.resumeQuestionsEnabled ?? true,
+      questionnaireStatus: row.questionnaireFinalizedStatus
+        ? "FINALIZED"
+        : row.questionnaireHasDraft
+          ? "DRAFT"
+          : "NOT_GENERATED",
+      questionnaireVersionNumber: row.questionnaireVersionNumber ?? null,
+      questionnaireHasDraft: Boolean(row.questionnaireHasDraft),
       _count: {
         interviews: row.interviewCount ?? 0,
       },

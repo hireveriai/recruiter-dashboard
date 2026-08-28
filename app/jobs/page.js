@@ -64,6 +64,46 @@ function getDifficultyTone(profile) {
   return "bg-blue-500/10 text-blue-300 border-blue-500/20"
 }
 
+function InterviewModeCell({ mode, questionnaireStatus, versionNumber, hasDraft }) {
+  const standard = String(mode ?? "INDIVIDUALIZED").toUpperCase() === "STANDARD"
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span
+        className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-medium ${
+          standard
+            ? "border-violet-500/20 bg-violet-500/10 text-violet-200"
+            : "border-slate-700 bg-slate-800/60 text-slate-300"
+        }`}
+        title={
+          standard
+            ? "Every candidate answers the same structured questionnaire"
+            : "Each candidate gets their own structured questions"
+        }
+      >
+        {standard ? "Standard" : "Individualized"}
+      </span>
+
+      {standard ? (
+        <span className="text-[11px] text-slate-400">
+          {questionnaireStatus === "FINALIZED" ? (
+            <>
+              Questionnaire v{versionNumber}
+              {hasDraft ? (
+                <span className="ml-1 text-amber-300">· draft pending</span>
+              ) : null}
+            </>
+          ) : questionnaireStatus === "DRAFT" ? (
+            <span className="text-amber-300">Draft not finalized</span>
+          ) : (
+            <span className="text-slate-500">Not generated yet</span>
+          )}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
 function getStatusTone(isActive) {
   return isActive
     ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
@@ -475,6 +515,7 @@ export default function JobsPage() {
                   <th className="px-4 py-4 text-left font-medium">Difficulty</th>
                   <th className="px-4 py-4 text-left font-medium">Experience Level</th>
                   <th className="px-4 py-4 text-left font-medium">Timeline</th>
+                  <th className="px-4 py-4 text-left font-medium">Interview Mode</th>
                   <th className="px-4 py-4 text-left font-medium">Core Skills</th>
                   <th className="px-4 py-4 text-left font-medium">Open Interviews</th>
                   <th className="whitespace-nowrap px-4 py-4 text-right font-medium">Actions</th>
@@ -483,11 +524,11 @@ export default function JobsPage() {
               <tbody>
                 {jobs.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-10 text-center text-slate-400">No jobs available</td>
+                    <td colSpan={11} className="p-10 text-center text-slate-400">No jobs available</td>
                   </tr>
                 ) : filteredJobs.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-10 text-center text-slate-400">No jobs match the current filters</td>
+                    <td colSpan={11} className="p-10 text-center text-slate-400">No jobs match the current filters</td>
                   </tr>
                 ) : (
                   filteredJobs.map((job) => (
@@ -530,6 +571,14 @@ export default function JobsPage() {
                       </td>
                       <td className="px-4 py-4 text-slate-300">{job.experienceLevelId ?? "-"}</td>
                       <td className="px-4 py-4 text-slate-300">{job.interviewDurationMinutes ?? 30} min</td>
+                      <td className="px-4 py-4">
+                        <InterviewModeCell
+                          mode={job.interviewMode}
+                          questionnaireStatus={job.questionnaireStatus}
+                          versionNumber={job.questionnaireVersionNumber}
+                          hasDraft={job.questionnaireHasDraft}
+                        />
+                      </td>
                       <td className="px-4 py-4 text-slate-300">
                         <JobSkillsCell skills={job.coreSkills} />
                       </td>

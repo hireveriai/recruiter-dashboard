@@ -389,7 +389,12 @@ async function fetchAnswerSummaries(attemptIds: string[]) {
         left join public.interview_questions iq
           on iq.interview_id = att.interview_id
           and (
-            iq.interview_question_id = ans.question_id
+            -- Preferred: the stable identity link recorded when the question
+            -- was presented. The fallbacks below match on ids that are NULL for
+            -- most historical rows, so without this the join silently resolved
+            -- nothing and skill/source came back empty.
+            iq.interview_question_id = sq.interview_question_id
+            or iq.interview_question_id = ans.question_id
             or iq.question_id = ans.question_id
             or iq.interview_question_id = ans.session_question_id
             or iq.question_id = sq.question_id
