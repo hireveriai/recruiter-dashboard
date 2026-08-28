@@ -90,13 +90,19 @@ type GenerateQuestionInput = {
   organizationId: string
   interviewId: string
   candidateResumeText?: string
+  maxAttempts?: number
+  generationTimeoutMs?: number
+  previousQuestions?: string[]
+  /**
+   * Deprecated. Question count and distribution now come from a single
+   * authoritative source derived from the job's duration and seniority
+   * (lib/server/interview/question-plan). Accepted so existing callers keep
+   * compiling, but ignored.
+   */
   resumeSkills?: string[]
   totalQuestions?: number
   interviewDurationMinutes?: number
   similarityThreshold?: number
-  maxAttempts?: number
-  generationTimeoutMs?: number
-  previousQuestions?: string[]
 }
 
 async function getPriorCandidateJobQuestions(context: InterviewContextRow) {
@@ -349,6 +355,28 @@ export async function ensureInterviewWorkflowSchema() {
         create unique index if not exists idx_interviews_org_idempotency_key
           on public.interviews (organization_id, idempotency_key)
           where idempotency_key is not null
+      `)
+
+      // Retire the legacy database-side question seeding triggers.
+      //
+      // These generate interview questions from hardcoded PL/pgSQL templates,
+      // and the two force=true variants DELETE a job's dynamic
+      // interview_questions rows before reseeding. That would wipe a
+      // snapshotted questionnaire mid-interview and break the stable question
+      // identity chain. The templates are also not role-agnostic.
+      //
+      // This is repeated here rather than left to prisma/sql/prod/017 because
+      // schema changes in this codebase are applied out of band and other
+      // ensure* functions re-create dropped objects; a SQL-only drop does not
+      // hold. Same pattern as trial-credits.ts dropping its legacy trigger.
+      await prisma.$executeRawUnsafe(`
+        drop trigger if exists trg_prepare_interview_on_insert on public.interviews
+      `)
+      await prisma.$executeRawUnsafe(`
+        drop trigger if exists trg_refresh_questions_from_resume on public.candidate_resume_ai
+      `)
+      await prisma.$executeRawUnsafe(`
+        drop trigger if exists trg_refresh_questions_from_skill_map on public.interview_skill_map
       `)
 
       await prisma.$executeRawUnsafe(`
