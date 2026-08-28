@@ -52,16 +52,16 @@ const DEVICE_REQUIREMENT_OPTIONS = [
 const INTERVIEW_MODE_OPTIONS = [
   {
     value: "STANDARD",
-    label: "Standard interview",
+    label: "Standard Interview",
     description:
-      "Every candidate answers the same structured questionnaire, so results compare like for like.",
+      "Every candidate receives the same structured questionnaire, so candidates can be evaluated consistently.",
     badge: "Default",
   },
   {
     value: "INDIVIDUALIZED",
-    label: "Individualized interview",
+    label: "Individualized Interview",
     description:
-      "Each candidate gets their own structured questions, still matched to this role's requirements and level.",
+      "Each candidate receives a different structured questionnaire, while questions remain aligned with this job's requirements, competencies, experience level, and evaluation criteria.",
     badge: null,
   },
 ];
@@ -77,6 +77,11 @@ const QUESTION_TYPE_OPTIONS = [
   { value: "mcq", label: "MCQ" },
   { value: "case_study", label: "Case Study" },
 ];
+
+// Shared control styling. Kept compact: the previous px-4 py-3 made every input
+// and select noticeably taller than the text they hold.
+const FIELD_CLASS =
+  "w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]";
 
 function createDefaultForm() {
   return {
@@ -95,7 +100,6 @@ function createDefaultForm() {
     coding_languages: "",
     is_active: true,
     interview_mode: "STANDARD",
-    resume_questions_enabled: true,
   };
 }
 
@@ -131,8 +135,6 @@ function mapJobToForm(job) {
     // Existing jobs keep whatever mode they already have. Only brand new jobs
     // default to STANDARD, so nothing already running changes behaviour.
     interview_mode: job.interviewMode ?? job.interview_mode ?? "INDIVIDUALIZED",
-    resume_questions_enabled:
-      job.resumeQuestionsEnabled ?? job.resume_questions_enabled ?? true,
   };
 }
 
@@ -193,6 +195,9 @@ export default function CreateJobModal({
   const actionLabel = isEditMode ? "Save Changes" : "Create Job";
   const loadingLabel = isEditMode ? "Saving..." : "Creating...";
   const showCodingDetails = form.coding_required !== "NO";
+  // Only an existing job has a questionnaire to review. A brand new job goes
+  // straight to its questionnaire after Create, so no link is needed here.
+  const jobIdForQuestions = initialJob?.jobId ?? initialJob?.job_id ?? null;
 
   const resetModalState = () => {
     setForm(createDefaultForm());
@@ -278,7 +283,6 @@ export default function CreateJobModal({
         skill_baseline: [],
         is_active: Boolean(form.is_active),
         interview_mode: form.interview_mode,
-        resume_questions_enabled: Boolean(form.resume_questions_enabled),
       };
 
       const endpoint = isEditMode
@@ -355,25 +359,37 @@ export default function CreateJobModal({
         <div className="hv-create-job-modal hv-theme-modal relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-violet-500/20 bg-[#0a1020]/95 text-white shadow-[0_0_60px_rgba(139,92,246,0.18)]">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_28%)]" />
           <div className="relative max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:max-h-[calc(100dvh-3rem)] sm:p-6 md:p-8">
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-violet-300/80">
+            <div className="mb-6 flex items-start justify-between gap-4 border-b border-slate-800/80 pb-5">
+              <div className="min-w-0">
+                <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-violet-300" aria-hidden="true" />
                   Role Configuration
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
+                </span>
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-[28px]">
                   {isEditMode ? "Edit Job" : "Create Job"}
                 </h2>
-                <p className="mt-2 max-w-2xl text-sm text-slate-300">
-                  Define the role, experience band, and evaluation context used to
-                  generate structured interview workflows.
+                <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">
+                  Define the role, experience level, and evaluation context VERIS uses to build
+                  the interview for this job.
                 </p>
               </div>
-              <button
-                onClick={handleClose}
-                className="rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-1 text-sm text-slate-300 transition hover:border-violet-400/60 hover:text-white"
-              >
-                Close
-              </button>
+
+              <div className="flex flex-none items-center gap-2">
+                {isEditMode && jobIdForQuestions ? (
+                  <a
+                    href={buildAuthUrl(`/jobs/${jobIdForQuestions}/questionnaire`, searchParams)}
+                    className="rounded-full border border-violet-400/40 bg-violet-500/10 px-3.5 py-1.5 text-sm font-medium text-violet-100 transition hover:bg-violet-500/20"
+                  >
+                    Questions
+                  </a>
+                ) : null}
+                <button
+                  onClick={handleClose}
+                  className="rounded-full border border-slate-700/80 bg-slate-900/80 px-3.5 py-1.5 text-sm text-slate-300 transition hover:border-violet-400/60 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -383,7 +399,7 @@ export default function CreateJobModal({
                   value={form.job_title}
                   onChange={(e) => handleChange("job_title", e.target.value)}
                   placeholder="Principal Data Engineer"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                  className={FIELD_CLASS}
                 />
               </div>
 
@@ -392,7 +408,7 @@ export default function CreateJobModal({
                 <select
                   value={form.experience_level_id}
                   onChange={(e) => handleChange("experience_level_id", e.target.value)}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                  className={FIELD_CLASS}
                 >
                   <option value="">Select Experience Level</option>
                   {levelOptions.map((lvl) => (
@@ -408,7 +424,7 @@ export default function CreateJobModal({
                 <select
                   value={form.difficulty_profile}
                   onChange={(e) => handleChange("difficulty_profile", e.target.value)}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                  className={FIELD_CLASS}
                 >
                   <option value="JUNIOR">Junior</option>
                   <option value="MID">Mid</option>
@@ -421,9 +437,9 @@ export default function CreateJobModal({
                 <textarea
                   value={form.job_description}
                   onChange={(e) => handleChange("job_description", e.target.value)}
-                  placeholder="Describe responsibilities, ownership, and the technical depth expected from this role."
-                  rows={6}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                  placeholder="Describe the responsibilities, expectations, and requirements for this role."
+                  rows={4}
+                  className={FIELD_CLASS}
                 />
               </div>
 
@@ -432,86 +448,101 @@ export default function CreateJobModal({
                 <input
                   value={form.core_skills}
                   onChange={(e) => handleChange("core_skills", e.target.value)}
-                  placeholder="PostgreSQL, Performance Tuning, Backup Strategy"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                  placeholder="Enter the key skills, qualifications, competencies, or requirements for this role."
+                  className={FIELD_CLASS}
                 />
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Interview Timeline</label>
-                <select
-                  value={form.interview_duration_minutes}
-                  onChange={(e) => handleChange("interview_duration_minutes", Number(e.target.value))}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
-                >
-                  {INTERVIEW_DURATION_OPTIONS.map((minutes) => (
-                    <option key={minutes} value={minutes}>
-                      {minutes} minutes
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex flex-none items-center gap-3">
+                  <label
+                    htmlFor="interview_duration_minutes"
+                    className="text-sm text-slate-300"
+                  >
+                    Interview Timeline
+                  </label>
+                  <select
+                    id="interview_duration_minutes"
+                    value={form.interview_duration_minutes}
+                    onChange={(e) =>
+                      handleChange("interview_duration_minutes", Number(e.target.value))
+                    }
+                    className="w-[132px] rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                  >
+                    {INTERVIEW_DURATION_OPTIONS.map((minutes) => (
+                      <option key={minutes} value={minutes}>
+                        {minutes} minutes
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100">
-                Every interview link created for this job will inherit the same interview duration.
+                <p className="text-xs leading-5 text-slate-400 sm:pl-1">
+                  Every interview link created for this job inherits this duration.
+                </p>
               </div>
 
               <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
-                <p className="text-sm font-medium text-white">Interview Mode</p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Controls the structured questions only. Every candidate still gets questions
-                  drawn from their own background, plus follow-up questions based on what they say.
+                <p className="text-sm font-semibold text-white">Interview Mode</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  Controls the structured questionnaire. Every candidate is also asked about their
+                  own background and receives follow-up questions based on their answers.
                 </p>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div
+                  className="mt-4 grid gap-3 md:grid-cols-2"
+                  role="radiogroup"
+                  aria-label="Interview mode"
+                >
                   {INTERVIEW_MODE_OPTIONS.map((option) => {
                     const selected = form.interview_mode === option.value;
+
                     return (
-                      <button
-                        type="button"
+                      <label
                         key={option.value}
-                        onClick={() => handleChange("interview_mode", option.value)}
-                        aria-pressed={selected}
-                        className={`rounded-2xl border px-4 py-4 text-left transition ${
+                        className={`cursor-pointer rounded-2xl border p-4 transition ${
                           selected
-                            ? "border-violet-400/60 bg-violet-500/10 shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
-                            : "border-slate-700 bg-slate-900/60 hover:border-slate-600"
+                            ? "border-violet-400/70 bg-violet-500/10 shadow-[0_0_0_1px_rgba(167,139,250,0.25)]"
+                            : "border-slate-700 bg-slate-900/50 hover:border-slate-500 hover:bg-slate-900/80"
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium text-white">{option.label}</span>
-                          {option.badge ? (
-                            <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
-                              {option.badge}
-                            </span>
-                          ) : null}
+                        <input
+                          type="radio"
+                          name="interview_mode"
+                          value={option.value}
+                          checked={selected}
+                          onChange={() => handleChange("interview_mode", option.value)}
+                          className="sr-only"
+                        />
+                        <div className="flex items-start gap-3">
+                          <span
+                            aria-hidden="true"
+                            className={`mt-0.5 flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full border-2 transition ${
+                              selected ? "border-violet-300" : "border-slate-600"
+                            }`}
+                          >
+                            {selected ? (
+                              <span className="h-2.5 w-2.5 rounded-full bg-violet-300" />
+                            ) : null}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-white">{option.label}</span>
+                              {option.badge ? (
+                                <span className="flex-none rounded-full border border-violet-300/25 bg-violet-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-100">
+                                  {option.badge}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1.5 text-xs leading-5 text-slate-400">
+                              {option.description}
+                            </p>
+                          </div>
                         </div>
-                        <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
-                          {option.description}
-                        </p>
-                      </button>
+                      </label>
                     );
                   })}
                 </div>
-
-                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(form.resume_questions_enabled)}
-                    onChange={(e) => handleChange("resume_questions_enabled", e.target.checked)}
-                    className="mt-0.5 h-4 w-4 accent-violet-500"
-                  />
-                  <span>
-                    <span className="block text-sm text-white">
-                      Ask about each candidate&apos;s own background
-                    </span>
-                    <span className="mt-0.5 block text-xs text-slate-400">
-                      Adds a small number of questions tailored to what each candidate has actually
-                      done. Turn this off only if every candidate must answer an identical
-                      interview.
-                    </span>
-                  </span>
-                </label>
               </div>
 
               <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
@@ -566,7 +597,7 @@ export default function CreateJobModal({
                     <select
                       value={form.question_type_default}
                       onChange={(e) => handleChange("question_type_default", e.target.value)}
-                      className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                      className={FIELD_CLASS}
                     >
                       {QUESTION_TYPE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -579,36 +610,54 @@ export default function CreateJobModal({
               </div>
 
               <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-white">Coding Assessment</p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">Additional Assessment: Coding</p>
                     <p className="mt-1 text-sm text-slate-400">
-                      Control whether this role should include a coding round and how that round should be shaped.
+                      Only for roles that require a hands-on coding exercise. Leave this off for
+                      roles assessed through discussion.
                     </p>
+                  </div>
+
+                  <div
+                    className="flex flex-none items-center gap-1 rounded-full border border-slate-700 bg-slate-900/70 p-1"
+                    role="radiogroup"
+                    aria-label="Include a coding assessment"
+                  >
+                    {[
+                      { value: "NO", label: "No" },
+                      { value: "YES", label: "Yes" },
+                    ].map((option) => {
+                      const selected = form.coding_required === option.value;
+
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => handleChange("coding_required", option.value)}
+                          className={`min-w-[64px] rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                            selected
+                              ? "bg-violet-500/90 text-white shadow-[0_0_0_1px_rgba(167,139,250,0.35)]"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm text-slate-300">Coding Required</label>
-                    <select
-                      value={form.coding_required}
-                      onChange={(e) => handleChange("coding_required", e.target.value)}
-                      className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
-                    >
-                      <option value="AUTO">Auto Recommend</option>
-                      <option value="YES">Yes</option>
-                      <option value="NO">No</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm text-slate-300">Assessment Type</label>
-                    {showCodingDetails ? (
+                {showCodingDetails ? (
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-sm text-slate-300">Assessment Type</label>
                       <select
                         value={form.coding_assessment_type}
                         onChange={(e) => handleChange("coding_assessment_type", e.target.value)}
-                        className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                        className={FIELD_CLASS}
                       >
                         {CODING_ASSESSMENT_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -616,21 +665,13 @@ export default function CreateJobModal({
                           </option>
                         ))}
                       </select>
-                    ) : (
-                      <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 px-4 py-3 text-sm text-slate-500">
-                        Hidden until coding is enabled.
-                      </div>
-                    )}
-                  </div>
-
-                  {showCodingDetails ? (
-                    <>
+                    </div>
                       <div>
                         <label className="mb-2 block text-sm text-slate-300">Coding Difficulty</label>
                         <select
                           value={form.coding_difficulty}
                           onChange={(e) => handleChange("coding_difficulty", e.target.value)}
-                          className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                          className={FIELD_CLASS}
                         >
                           <option value="EASY">Easy</option>
                           <option value="MEDIUM">Medium</option>
@@ -643,7 +684,7 @@ export default function CreateJobModal({
                         <select
                           value={form.coding_duration_minutes}
                           onChange={(e) => handleChange("coding_duration_minutes", Number(e.target.value))}
-                          className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                          className={FIELD_CLASS}
                         >
                           {[10, 15, 20, 30].map((minutes) => (
                             <option key={minutes} value={minutes}>
@@ -659,12 +700,11 @@ export default function CreateJobModal({
                           value={form.coding_languages}
                           onChange={(e) => handleChange("coding_languages", e.target.value)}
                           placeholder="JavaScript, Python, SQL"
-                          className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                          className={FIELD_CLASS}
                         />
                       </div>
-                    </>
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 
