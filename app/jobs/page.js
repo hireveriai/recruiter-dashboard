@@ -528,7 +528,16 @@ export default function JobsPage() {
                 ) : (
                   filteredJobs.map((job) => (
                     <tr key={job.jobId} className="border-t border-slate-800/80 align-top text-slate-200">
-                      <td className="px-4 py-4 font-medium text-white">{job.jobTitle}</td>
+                      <td className="px-4 py-4">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(job)}
+                          title={`Edit ${job.jobTitle}`}
+                          className="rounded text-left font-medium text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
+                        >
+                          {job.jobTitle}
+                        </button>
+                      </td>
                       <td className="px-4 py-4 text-slate-400">
                         <JobDescriptionCell description={job.jobDescription} />
                       </td>
