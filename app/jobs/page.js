@@ -122,12 +122,12 @@ function uniqueSorted(values) {
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+        className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -197,6 +197,7 @@ export default function JobsPage() {
   const [supportsJobActiveState, setSupportsJobActiveState] = useState(false)
   const [openSendInterview, setOpenSendInterview] = useState(false)
   const [openEditJob, setOpenEditJob] = useState(false)
+  const [openCreateJob, setOpenCreateJob] = useState(false)
   const [selectedJob, setSelectedJob] = useState(null)
   const [pendingJobId, setPendingJobId] = useState("")
   const [openActionMenuJobId, setOpenActionMenuJobId] = useState("")
@@ -437,17 +438,30 @@ export default function JobsPage() {
               </p>
             </div>
 
-            <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+            <div className="flex w-fit items-center gap-2">
+              <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedJob(null)
+                  setOpenCreateJob(true)
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(124,58,237,0.22)] transition hover:bg-violet-500"
+              >
+                Create Job
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-4 border-b border-slate-800 bg-slate-950/20 px-6 py-5 xl:grid-cols-[minmax(220px,1.2fr)_repeat(4,minmax(150px,0.7fr))_auto]">
-            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
               Search
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search title, skills, description"
-                className="h-11 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+                className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
               />
             </label>
             <FilterSelect
@@ -534,26 +548,14 @@ export default function JobsPage() {
                   filteredJobs.map((job) => (
                     <tr key={job.jobId} className="border-t border-slate-800/80 align-top text-slate-200">
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEdit(job)}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-100"
-                            aria-label={`Edit ${job.jobTitle}`}
-                          >
-                            <EditIcon />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              router.push(buildAuthUrl(`/jobs/${job.jobId}/questionnaire`, searchParams))
-                            }
-                            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 px-3 text-xs text-slate-300 transition hover:border-violet-400/40 hover:bg-violet-500/10 hover:text-violet-100"
-                            aria-label={`Interview questions for ${job.jobTitle}`}
-                          >
-                            Questions
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(job)}
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-100"
+                          aria-label={`Edit ${job.jobTitle}`}
+                        >
+                          <EditIcon />
+                        </button>
                       </td>
                       <td className="px-4 py-4 font-medium text-white">{job.jobTitle}</td>
                       <td className="px-4 py-4 text-slate-400">
@@ -636,9 +638,40 @@ export default function JobsPage() {
                                     </button>
                                   ) : null}
 
-                                  <div className="mt-1 rounded-xl px-3 py-2 text-xs text-slate-500">
-                                    More actions coming soon
-                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuJobId("")
+                                      router.push(
+                                        buildAuthUrl(`/jobs/${job.jobId}/questionnaire`, searchParams)
+                                      )
+                                    }}
+                                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white"
+                                  >
+                                    Interview questions
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuJobId("")
+                                      handleEdit(job)
+                                    }}
+                                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white"
+                                  >
+                                    Edit job
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuJobId("")
+                                      setOpenSendInterview(true)
+                                    }}
+                                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white"
+                                  >
+                                    Send interview link
+                                  </button>
                                 </div>
                               ) : null}
                             </div>
@@ -655,6 +688,17 @@ export default function JobsPage() {
       </main>
 
       <SendInterviewModal isOpen={openSendInterview} onClose={() => setOpenSendInterview(false)} />
+      {openCreateJob ? (
+        <CreateJobModal
+          open={openCreateJob}
+          setOpen={setOpenCreateJob}
+          onSuccess={(newJobId) => {
+            if (newJobId) {
+              router.push(buildAuthUrl(`/jobs/${newJobId}/questionnaire`, searchParams))
+            }
+          }}
+        />
+      ) : null}
       <CreateJobModal
         open={openEditJob}
         setOpen={setOpenEditJob}
