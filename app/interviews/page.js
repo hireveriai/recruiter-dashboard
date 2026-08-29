@@ -337,12 +337,12 @@ function getEvaluationState(interview) {
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 2xl:gap-2 2xl:text-xs 2xl:tracking-[0.18em]">
+    <label className="grid gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-slate-500 2xl:gap-1.5 2xl:text-[11px] 2xl:tracking-[0.14em]">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 2xl:h-11 2xl:text-sm"
+        className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 2xl:h-10 2xl:px-3"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -1021,14 +1021,14 @@ export default function InterviewsPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 border-b border-slate-800 bg-slate-950/20 px-5 py-4 lg:grid-cols-2 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto] 2xl:gap-4 2xl:px-6 2xl:py-5">
-            <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 2xl:gap-2 2xl:text-xs 2xl:tracking-[0.18em]">
+          <div className="grid gap-x-3 gap-y-2.5 border-b border-slate-800 bg-slate-950/20 px-5 py-3 lg:grid-cols-2 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto] 2xl:gap-x-4 2xl:px-6 2xl:py-4">
+            <label className="grid gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-slate-500 2xl:gap-1.5 2xl:text-[11px] 2xl:tracking-[0.14em]">
               Search
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search candidate, job, status"
-                className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 2xl:h-11 2xl:text-sm"
+                className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 2xl:h-10 2xl:px-3"
               />
             </label>
             <FilterSelect
@@ -1081,7 +1081,7 @@ export default function InterviewsPage() {
               type="button"
               onClick={clearFilters}
               disabled={!hasActiveFilters}
-              className="h-10 self-end rounded-xl border border-slate-700 px-4 text-[13px] 2xl:h-11 2xl:text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+              className="h-9 self-end rounded-lg border border-slate-700 px-3.5 text-[13px] 2xl:h-10 font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
             >
               Clear
             </button>
