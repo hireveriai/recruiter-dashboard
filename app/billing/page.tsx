@@ -520,7 +520,7 @@ export default function BillingPage() {
             {data.invoices.length === 0 ? (
               <p className="px-5 py-8 text-sm text-slate-400">No invoices generated yet. Invoices appear after verified Razorpay payments.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="hv-table-scroll">
                 <table className="min-w-[1080px] table-fixed text-left text-sm">
                   <thead className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
                     <tr>
@@ -630,7 +630,7 @@ export default function BillingPage() {
             ) : filteredPayments.length === 0 ? (
               <p className="px-5 py-8 text-sm text-slate-400">No payment records match the selected filters.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="hv-table-scroll">
                 <table className="min-w-[1280px] table-fixed text-left text-sm">
                   <thead className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
                     <tr>

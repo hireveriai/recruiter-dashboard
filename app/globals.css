@@ -1488,3 +1488,21 @@ a {
   color: #0369a1;
   background: rgba(8, 145, 178, 0.1);
 }
+
+/* Wide tables used to hang their horizontal scrollbar off the bottom of the
+   page: the recruiter had to scroll the whole page down before they could
+   scroll the table across. The container now owns both axes with a capped
+   height, so the horizontal scrollbar stays pinned inside the viewport, and
+   the header row sticks so the columns stay labelled while scrolling. */
+.hv-table-scroll {
+  max-height: calc(100vh - 260px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.hv-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--hv-table-head-bg, var(--color-slate-950));
+}

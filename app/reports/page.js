@@ -435,7 +435,7 @@ export default function ReportsPage() {
                 title="Candidate Ranking"
                 subtitle="Score-weighted ordering with recommendation and current risk posture."
               >
-                <div className="overflow-x-auto">
+                <div className="hv-table-scroll">
                   <table className="w-full min-w-[860px] text-sm">
                     <thead className="text-slate-400">
                       <tr className="border-b border-slate-800">
@@ -474,7 +474,7 @@ export default function ReportsPage() {
                 title="Role Insights"
                 subtitle="Performance distribution, failure trends, and recurring skill gaps per job."
               >
-                <div className="overflow-x-auto">
+                <div className="hv-table-scroll">
                   <table className="w-full min-w-[980px] text-sm">
                     <thead className="text-slate-400">
                       <tr className="border-b border-slate-800">

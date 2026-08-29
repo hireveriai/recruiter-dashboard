@@ -96,6 +96,18 @@ function normalizeSearch(value) {
   return String(value ?? "").trim().toLowerCase()
 }
 
+// The jobs list only carries experienceLevelId, so the table and the filter
+// used to render a bare "Level 3". Recruiters pick these by name when they
+// create a job, so the list now resolves the same names, from the same
+// endpoint the create form reads. FALLBACK_EXPERIENCE_LEVELS only covers the
+// endpoint being unavailable.
+const FALLBACK_EXPERIENCE_LEVELS = [
+  { experience_level_id: 1, label: "Fresher / Student" },
+  { experience_level_id: 2, label: "Junior" },
+  { experience_level_id: 3, label: "Mid" },
+  { experience_level_id: 4, label: "Senior" },
+]
+
 function uniqueSorted(values) {
   return Array.from(new Set(values.filter((value) => value !== null && value !== undefined && String(value).trim() !== "")))
     .map(String)
@@ -188,7 +200,57 @@ export default function JobsPage() {
   const [difficultyFilter, setDifficultyFilter] = useState("ALL")
   const [experienceFilter, setExperienceFilter] = useState("ALL")
   const [activityFilter, setActivityFilter] = useState("ALL")
+  const [experienceLevels, setExperienceLevels] = useState([])
   const actionMenuRef = useRef(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadExperienceLevels() {
+      try {
+        const response = await fetch(buildAuthUrl("/api/experience-levels", searchParams), {
+          credentials: "include",
+        })
+        const data = await response.json()
+
+        if (!isMounted) {
+          return
+        }
+
+        setExperienceLevels(Array.isArray(data) && data.length > 0 ? data : FALLBACK_EXPERIENCE_LEVELS)
+      } catch (error) {
+        console.error("Failed to load experience levels", error)
+
+        if (isMounted) {
+          setExperienceLevels(FALLBACK_EXPERIENCE_LEVELS)
+        }
+      }
+    }
+
+    loadExperienceLevels()
+
+    return () => {
+      isMounted = false
+    }
+  }, [searchParams])
+
+  const experienceLevelLabels = useMemo(() => {
+    const source = experienceLevels.length > 0 ? experienceLevels : FALLBACK_EXPERIENCE_LEVELS
+
+    return new Map(source.map((level) => [String(level.experience_level_id), level.label]))
+  }, [experienceLevels])
+
+  // Falls back to the raw id rather than hiding the value: a level the
+  // endpoint does not know about still tells the recruiter something.
+  const getExperienceLabel = (value) => {
+    const key = String(value ?? "").trim()
+
+    if (!key) {
+      return "-"
+    }
+
+    return experienceLevelLabels.get(key) ?? `Level ${key}`
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -290,6 +352,8 @@ export default function JobsPage() {
         job.jobDescription,
         difficulty,
         experience,
+        // So "senior" or "fresher" finds the role, not just the id behind it.
+        experienceLevelLabels.get(experience),
         ...(Array.isArray(job.coreSkills) ? job.coreSkills : []),
       ]
         .map((value) => String(value ?? "").toLowerCase())
@@ -309,7 +373,7 @@ export default function JobsPage() {
 
       return matchesSearch && matchesStatus && matchesDifficulty && matchesExperience && matchesActivity
     })
-  }, [jobs, searchTerm, statusFilter, difficultyFilter, experienceFilter, activityFilter])
+  }, [jobs, searchTerm, statusFilter, difficultyFilter, experienceFilter, activityFilter, experienceLevelLabels])
 
   const hasActiveFilters =
     searchTerm || statusFilter !== "ALL" || difficultyFilter !== "ALL" || experienceFilter !== "ALL" || activityFilter !== "ALL"
@@ -466,7 +530,7 @@ export default function JobsPage() {
               label="Experience"
               value={experienceFilter}
               onChange={setExperienceFilter}
-              options={[{ value: "ALL", label: "All Levels" }, ...filterOptions.experienceLevels.map((value) => ({ value, label: `Level ${value}` }))]}
+              options={[{ value: "ALL", label: "All Levels" }, ...filterOptions.experienceLevels.map((value) => ({ value, label: getExperienceLabel(value) }))]}
             />
             <FilterSelect
               label="Activity"
@@ -488,7 +552,7 @@ export default function JobsPage() {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="hv-table-scroll">
             <table className="w-full table-fixed text-sm" style={{ minWidth: "1610px" }}>
                 {/*
                   Column widths live here as real inline widths rather than
@@ -557,7 +621,7 @@ export default function JobsPage() {
                           {job.difficultyProfile ?? "MID"}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-slate-300">{job.experienceLevelId ?? "-"}</td>
+                      <td className="px-4 py-4 text-slate-300">{getExperienceLabel(job.experienceLevelId)}</td>
                       <td className="px-4 py-4 text-slate-300">{job.interviewDurationMinutes ?? 30} min</td>
                       <td className="px-4 py-4">
                         <InterviewModeCell

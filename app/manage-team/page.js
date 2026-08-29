@@ -782,7 +782,7 @@ export default function ManageTeamPage() {
             </div>
           ) : null}
 
-          <div className="mt-8 overflow-x-auto overflow-y-hidden rounded-[24px] border border-slate-800 bg-slate-950/30">
+          <div className="hv-table-scroll mt-8 rounded-[24px] border border-slate-800 bg-slate-950/30">
             <div className="min-w-[1180px]">
             <div className="hidden grid-cols-[250px_190px_112px_96px_minmax(300px,1fr)_160px] items-start gap-5 border-b border-slate-800 px-6 py-4 text-xs uppercase tracking-[0.18em] text-slate-500 xl:grid">
               <div>Team Member</div>
