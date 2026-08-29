@@ -1517,3 +1517,63 @@ a {
 :root[data-theme="light"] .hv-invited-table {
   --hv-table-head-bg: #ffffff;
 }
+
+/* The "Recent" markers beside the dashboard section headings rendered as a
+   flat, near-grey pill once the light theme washed out the cyan tint. They
+   now carry the same cyan gradient as the rest of the surface plus a live
+   dot, so the label reads as a freshness marker rather than a stray word. */
+.hv-recent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(34, 211, 238, 0.38);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(59, 130, 246, 0.16));
+  padding: 0.22rem 0.6rem 0.22rem 0.5rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: #a5f3fc;
+  box-shadow: 0 6px 18px rgba(8, 145, 178, 0.18);
+}
+
+.hv-recent-chip::before {
+  content: "";
+  height: 6px;
+  width: 6px;
+  flex: none;
+  border-radius: 9999px;
+  background: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
+  animation: hv-recent-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes hv-recent-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-recent-chip::before {
+    animation: none;
+  }
+}
+
+:root[data-theme="light"] .hv-recent-chip {
+  border-color: rgba(8, 145, 178, 0.35);
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.14), rgba(37, 99, 235, 0.12));
+  color: #0e7490;
+  box-shadow: 0 6px 16px rgba(8, 145, 178, 0.12);
+}
+
+:root[data-theme="light"] .hv-recent-chip::before {
+  background: #0891b2;
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.16);
+}

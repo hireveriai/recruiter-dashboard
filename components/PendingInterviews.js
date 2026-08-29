@@ -855,7 +855,7 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
         <div className="mb-4 flex items-center justify-between">
           <h2 className="hv-invited-section-heading flex flex-wrap items-center gap-2 text-xl font-semibold">
             Invited Interviews
-            <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+            <span className="hv-recent-chip">
               Recent
             </span>
           </h2>

@@ -199,7 +199,7 @@ export default function CandidateList({ initialCandidates, isLoading = false }) 
         <div className="flex justify-between items-center mb-4">
           <h2 className="flex flex-wrap items-center gap-2 text-xl font-semibold">
             Candidates
-            <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+            <span className="hv-recent-chip">
               Recent
             </span>
           </h2>

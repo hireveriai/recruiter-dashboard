@@ -205,7 +205,7 @@ export default function RecordedInterviews({ initialRecordedInterviews, organiza
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/70">Evidence Review</p>
             <h2 className="mt-1 flex flex-wrap items-center gap-2 text-xl font-semibold text-white">
               Recorded Interviews
-              <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+              <span className="hv-recent-chip">
                 Recent
               </span>
             </h2>

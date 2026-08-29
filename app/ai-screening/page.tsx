@@ -970,7 +970,7 @@ export default function AiScreeningPage() {
 
     async function loadExistingJobs() {
       try {
-        const jobsResponse = await fetch(authUrl("/api/jobs?view=selector&includeInactive=1"), {
+        const jobsResponse = await fetch(authUrl("/api/jobs?view=selector"), {
           credentials: "include",
           cache: "no-store",
         })
