@@ -8,6 +8,7 @@ import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { copyText } from "@/lib/client/copy-to-clipboard"
 import { formatDate, formatDateTime, formatTime } from "@/lib/client/date-format"
+import { formatLabel } from "@/lib/client/format-label"
 import { isSessionJsonCacheFresh, readSessionJsonCache, writeSessionJsonCache } from "@/lib/client/session-json-cache"
 
 import BackToDashboardLink from "../../components/BackToDashboardLink"
@@ -28,6 +29,10 @@ const RECRUITER_STATUS_DEFINITIONS = {
   COMPLETED: {
     label: "Completed",
     description: "Candidate completed the full interview and the result is ready for review.",
+  },
+  NEEDS_REVIEW: {
+    label: "Needs Review",
+    description: "The session did not finish cleanly, so any score shown is partial. Open the session and check what was captured before making a decision.",
   },
   INTERRUPTED: {
     label: "Interrupted",
@@ -83,7 +88,7 @@ const RECRUITER_STATUS_DEFINITIONS = {
   },
 }
 
-const STATUS_GUIDE_KEYS = ["COMPLETED", "INTERRUPTED", "INCOMPLETE", "EXITED_EARLY", "IN_PROGRESS", "READY"]
+const STATUS_GUIDE_KEYS = ["COMPLETED", "NEEDS_REVIEW", "INTERRUPTED", "INCOMPLETE", "EXITED_EARLY", "IN_PROGRESS", "READY"]
 
 function normalizeStatusKey(status) {
   return String(status ?? "").trim().toUpperCase()
@@ -103,6 +108,16 @@ function getRecruiterStatusKey(interview) {
   const answeredQuestionCount = Number(interview?.answeredQuestionCount ?? 0)
   const completedAllQuestions =
     requiredQuestionCount > 0 && answeredQuestionCount >= requiredQuestionCount
+
+  // Ahead of every completion check below, including isFinalized: a session the
+  // platform failed to capture must never present as a finished interview.
+  if (
+    status === "NEEDS_REVIEW" ||
+    interviewStatus === "NEEDS_REVIEW" ||
+    finalStatus === "TRANSCRIPT_REVIEW_REQUIRED"
+  ) {
+    return "NEEDS_REVIEW"
+  }
 
   if (isFinalized) {
     return "COMPLETED"
@@ -197,8 +212,9 @@ const INTERRUPTION_REASON_LABELS = {
 }
 
 function getInterruptionReason(interview) {
-  if (getRecruiterStatusKey(interview) !== "INTERRUPTED") return null
-
+  // Deliberately not gated on status any more: the caller decides when to show
+  // this, and gating here hid recorded causes on every session whose status was
+  // wrong. Returns null only when nothing was actually recorded.
   const rawReason = [
     interview?.interruptionReason,
     interview?.disconnectReason,
@@ -207,7 +223,7 @@ function getInterruptionReason(interview) {
   ].find((value) => String(value ?? "").trim())
 
   if (!rawReason) {
-    return "Technical interruption detected; no detailed reason was recorded."
+    return null
   }
 
   const normalized = normalizeStatusKey(rawReason)
@@ -221,9 +237,46 @@ function getInterruptionReason(interview) {
     : reason
 }
 
+// The info icon used to appear only when the status happened to be INTERRUPTED,
+// so on every session that was mislabelled COMPLETED the recruiter saw nothing
+// at all -- no icon, no reason -- even though the cause had been recorded. It
+// now shows for any session that did not finish cleanly, and leads with who was
+// responsible so a recruiter can answer "the candidate says it glitched"
+// without guessing.
+const FAULT_NOTE_STATUSES = new Set([
+  "NEEDS_REVIEW",
+  "INTERRUPTED",
+  "INCOMPLETE",
+  "EXITED_EARLY",
+])
+
+function getFaultNote(interview, statusKey) {
+  if (!FAULT_NOTE_STATUSES.has(statusKey)) {
+    return null
+  }
+
+  const attribution = interview?.faultAttribution
+  const legacyReason = getInterruptionReason(interview)
+
+  if (!attribution) {
+    return legacyReason
+      ? { party: "INDETERMINATE", tooltip: legacyReason }
+      : null
+  }
+
+  const evidence = Array.isArray(attribution.evidence) ? attribution.evidence : []
+  const tooltip = [
+    `${attribution.title}: ${attribution.detail}`,
+    ...(evidence.length > 0 ? [`\nWhat we recorded:\n- ${evidence.join("\n- ")}`] : []),
+  ].join("")
+
+  return { party: attribution.party, tooltip }
+}
+
 function getStatusBadge(status) {
   const normalized = String(status ?? "PENDING").toUpperCase()
   if (normalized === "COMPLETED") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+  if (normalized === "NEEDS_REVIEW") return "border-amber-400/25 bg-amber-400/10 text-amber-200"
   if (normalized === "EXITED_EARLY" || normalized === "EARLY_EXIT") return "border-amber-400/25 bg-amber-400/10 text-amber-200"
   if (normalized === "INCOMPLETE" || normalized === "ABANDONED") return "border-orange-400/25 bg-orange-400/10 text-orange-200"
   if (normalized === "INTERRUPTED") return "border-sky-400/25 bg-sky-400/10 text-sky-200"
@@ -284,12 +337,12 @@ function getEvaluationState(interview) {
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 2xl:gap-2 2xl:text-xs 2xl:tracking-[0.18em]">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+        className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 2xl:h-11 2xl:text-sm"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -398,7 +451,7 @@ const tableMutedChip =
 const tableProcessingChip =
   "inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-medium leading-none text-amber-100"
 const recordingAction =
-  "inline-flex max-w-full items-center justify-center gap-1.5 rounded-lg px-1.5 py-1 text-sm font-semibold leading-tight text-cyan-100 transition hover:bg-cyan-400/10 hover:text-white"
+  "hv-recording-action inline-flex max-w-full flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-[13px] font-semibold leading-tight transition"
 
 function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
@@ -498,7 +551,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                           <p className="mt-2 text-base font-medium leading-7 text-white">{answer.question}</p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
                             {answer.skill ? <span>{answer.skill}</span> : null}
-                            {answer.questionType ? <span>{answer.questionType}</span> : null}
+                            {answer.questionType ? <span>{formatLabel(answer.questionType)}</span> : null}
                             {answer.questionSource ? <span>{answer.questionSource}</span> : null}
                           </div>
                         </div>
@@ -774,6 +827,10 @@ export default function InterviewsPage() {
         recruiterDecision,
         interview.interviewType,
         getInterruptionReason(interview),
+        // Lets a recruiter search "verisnova" to pull up every session our own
+        // platform broke, or "candidate-side" for the converse.
+        interview.faultAttribution?.party,
+        interview.faultAttribution?.title,
         getAccessLabel(interview),
       ]
         .map((value) => String(value ?? "").toLowerCase())
@@ -898,39 +955,39 @@ export default function InterviewsPage() {
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
       <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="hv-elevated-section rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
-          <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+        <section className="hv-elevated-section rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.22)] 2xl:p-8">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between 2xl:gap-8">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Interview Registry</p>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">All Interviews</h1>
-              <p className="mt-4 text-base leading-7 text-slate-400">
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white 2xl:mt-4 2xl:text-4xl">All Interviews</h1>
+              <p className="mt-3 text-sm leading-6 text-slate-400 2xl:mt-4 2xl:text-base 2xl:leading-7">
                 Current interview operations across flexible and scheduled access windows, with score and decision visibility where evaluation is complete.
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[680px]">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Total Interviews</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.total}</p>
+            <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[600px] 2xl:min-w-[680px]">
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
+                <p className="text-xs text-slate-500 2xl:text-sm">Total Interviews</p>
+                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.total}</p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Active Queue</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.active}</p>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
+                <p className="text-xs text-slate-500 2xl:text-sm">Active Queue</p>
+                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.active}</p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Completed</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.completed}</p>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
+                <p className="text-xs text-slate-500 2xl:text-sm">Completed</p>
+                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.completed}</p>
               </div>
-              <div className="rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-4">
-                <p className="text-sm text-slate-500">Pending Review</p>
-                <p className="mt-3 text-3xl font-semibold text-cyan-100">{stats.pendingReview}</p>
+              <div className="rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-3.5 2xl:p-4">
+                <p className="text-xs text-slate-500 2xl:text-sm">Pending Review</p>
+                <p className="mt-2 text-2xl font-semibold text-cyan-100 2xl:mt-3 2xl:text-3xl">{stats.pendingReview}</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="hv-elevated-section mt-8 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
-          <div className="flex flex-col gap-4 border-b border-slate-800 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <section className="hv-elevated-section mt-6 overflow-hidden rounded-2xl 2xl:mt-8 border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+          <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between 2xl:px-6 2xl:py-5">
             <div>
               <h2 className="text-lg font-semibold text-white">Interview Register</h2>
               <p className="mt-1 text-sm text-slate-400">
@@ -941,7 +998,7 @@ export default function InterviewsPage() {
             <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
           </div>
 
-          <div className="border-b border-slate-800 bg-slate-950/30 px-6 py-5">
+          <div className="border-b border-slate-800 bg-slate-950/30 px-5 py-4 2xl:px-6 2xl:py-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Status Guide</p>
@@ -952,7 +1009,7 @@ export default function InterviewsPage() {
                   const item = RECRUITER_STATUS_DEFINITIONS[key]
 
                   return (
-                    <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3">
+                    <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/40 px-3.5 py-2.5 2xl:px-4 2xl:py-3">
                       <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em] ${getStatusBadge(key)}`}>
                         {item.label}
                       </span>
@@ -964,14 +1021,14 @@ export default function InterviewsPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 border-b border-slate-800 bg-slate-950/20 px-6 py-5 lg:grid-cols-2 xl:grid-cols-[minmax(210px,1.15fr)_repeat(5,minmax(132px,0.7fr))_auto]">
-            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <div className="grid gap-3 border-b border-slate-800 bg-slate-950/20 px-5 py-4 lg:grid-cols-2 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto] 2xl:gap-4 2xl:px-6 2xl:py-5">
+            <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 2xl:gap-2 2xl:text-xs 2xl:tracking-[0.18em]">
               Search
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search candidate, job, status"
-                className="h-11 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+                className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 2xl:h-11 2xl:text-sm"
               />
             </label>
             <FilterSelect
@@ -1024,14 +1081,14 @@ export default function InterviewsPage() {
               type="button"
               onClick={clearFilters}
               disabled={!hasActiveFilters}
-              className="h-11 self-end rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+              className="h-10 self-end rounded-xl border border-slate-700 px-4 text-[13px] 2xl:h-11 2xl:text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
             >
               Clear
             </button>
           </div>
 
           <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
-            <table className="w-full table-fixed text-sm">
+            <table className="w-full table-fixed text-[13px] 2xl:text-sm">
               <colgroup>
                 <col className="w-[13%]" />
                 <col className="w-[9%]" />
@@ -1046,16 +1103,16 @@ export default function InterviewsPage() {
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
-                  <th className="px-4 py-5 text-left font-medium"><span className="block">Candidate</span><span className="block">Name</span></th>
-                  <th className="px-3 py-5 text-center font-medium"><span className="block">Interview</span><span className="block">Recording</span></th>
-                  <th className="px-4 py-5 text-left font-medium"><span className="block">Applied</span><span className="block">Role</span></th>
-                  <th className="px-3 py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Status</span></th>
-                  <th className="px-3 py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Type</span></th>
-                  <th className="px-3 py-5 pr-5 text-left font-medium"><span className="block">Interview</span><span className="block">Score</span></th>
-                  <th className="px-5 py-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Decision</span></th>
-                  <th className="px-3 py-5 text-left font-medium"><span className="block">Recruiter</span><span className="block">Decision</span></th>
-                  <th className="px-3 py-5 text-left font-medium"><span className="block">Latest</span><span className="block">Activity</span></th>
-                  <th className="px-3 py-5 text-center font-medium"><span className="block">Hiring</span><span className="block">Actions</span></th>
+                  <th className="px-4 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Candidate</span><span className="block">Name</span></th>
+                  <th className="px-3 py-3.5 2xl:py-5 text-center font-medium"><span className="block">Interview</span><span className="block">Recording</span></th>
+                  <th className="px-4 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Applied</span><span className="block">Role</span></th>
+                  <th className="px-3 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Status</span></th>
+                  <th className="px-3 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Type</span></th>
+                  <th className="px-3 py-3.5 2xl:py-5 pr-5 text-left font-medium"><span className="block">Interview</span><span className="block">Score</span></th>
+                  <th className="px-5 py-3.5 2xl:py-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Decision</span></th>
+                  <th className="px-3 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Recruiter</span><span className="block">Decision</span></th>
+                  <th className="px-3 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Latest</span><span className="block">Activity</span></th>
+                  <th className="px-3 py-3.5 2xl:py-5 text-center font-medium"><span className="block">Hiring</span><span className="block">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -1070,7 +1127,7 @@ export default function InterviewsPage() {
                 ) : (
                   filteredInterviews.map((interview) => {
                     const recruiterStatus = getRecruiterStatus(interview)
-                    const interruptionReason = getInterruptionReason(interview)
+                    const faultNote = getFaultNote(interview, recruiterStatus.key)
                     const interviewStatus = normalizeStatusKey(interview.status)
                     const isEarlyExit = isEarlyExitInterview(interview)
                     const isCompleted = isCompletedInterview(interview)
@@ -1094,12 +1151,12 @@ export default function InterviewsPage() {
 
                     return (
                     <tr key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200">
-                      <td className="px-4 py-5 font-medium text-white">
+                      <td className="px-4 py-3.5 2xl:py-5 font-medium text-white">
                         <span className="block break-words leading-snug" title={interview.candidateName || "Candidate"}>
                           {interview.candidateName}
                         </span>
                       </td>
-                      <td className="px-4 py-5 text-center">
+                      <td className="px-4 py-3.5 2xl:py-5 text-center">
                         {interview.hasRecording && interview.recordingUrl ? (
                           <Link
                             href={interview.recordingUrl}
@@ -1108,11 +1165,11 @@ export default function InterviewsPage() {
                             className={recordingAction}
                             aria-label={`View recording for ${interview.candidateName}`}
                           >
-                            <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
-                            <span className="text-left leading-tight">
-                              <span className="block">View</span>
-                              <span className="block">Recording</span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
+                              <span>View</span>
                             </span>
+                            <span className="block">Recording</span>
                           </Link>
                         ) : interview.recordingId ? (
                           <span className={tableProcessingChip}>
@@ -1124,8 +1181,8 @@ export default function InterviewsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
-                      <td className="overflow-hidden px-4 py-5">
+                      <td className="px-4 py-3.5 2xl:py-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
+                      <td className="overflow-hidden px-4 py-3.5 2xl:py-5">
                         <div className="flex min-w-0 items-center gap-1.5">
                           <span
                             className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.08em] ${getStatusBadge(recruiterStatus.key)}`}
@@ -1133,22 +1190,26 @@ export default function InterviewsPage() {
                           >
                             {recruiterStatus.label}
                           </span>
-                          {recruiterStatus.key === "INTERRUPTED" && interruptionReason ? (
+                          {faultNote ? (
                             <span
                               tabIndex={0}
-                              className="inline-flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-sky-200/75 outline-none transition hover:bg-sky-400/10 hover:text-sky-100 focus-visible:bg-sky-400/10 focus-visible:text-sky-100 focus-visible:ring-2 focus-visible:ring-sky-300/60"
-                              title={interruptionReason}
-                              aria-label={`Interruption details: ${interruptionReason}`}
+                              className={`inline-flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full outline-none transition focus-visible:ring-2 ${
+                                faultNote.party === "VERISNOVA"
+                                  ? "text-rose-200/80 hover:bg-rose-400/10 hover:text-rose-100 focus-visible:bg-rose-400/10 focus-visible:text-rose-100 focus-visible:ring-rose-300/60"
+                                  : "text-sky-200/75 hover:bg-sky-400/10 hover:text-sky-100 focus-visible:bg-sky-400/10 focus-visible:text-sky-100 focus-visible:ring-sky-300/60"
+                              }`}
+                              title={faultNote.tooltip}
+                              aria-label={faultNote.tooltip}
                             >
                               <Info className="h-4 w-4" aria-hidden="true" />
                             </span>
                           ) : null}
                         </div>
                       </td>
-                      <td className="px-3 py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
-                      <td className="px-3 py-5 pr-5 text-slate-300">{formatScore(interview.score)}</td>
-                      <td className="px-5 py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
-                      <td className="px-3 py-5">
+                      <td className="px-3 py-3.5 2xl:py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
+                      <td className="px-3 py-3.5 2xl:py-5 pr-5 text-slate-300">{formatScore(interview.score)}</td>
+                      <td className="px-5 py-3.5 2xl:py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
+                      <td className="px-3 py-3.5 2xl:py-5">
                         {interview.recruiterDecisionStatus ? (
                           <DecisionPill status={interview.recruiterDecisionStatus} />
                         ) : isCompleted && !isEarlyExit ? (
@@ -1159,11 +1220,11 @@ export default function InterviewsPage() {
                           <span className="text-slate-600">-</span>
                         )}
                       </td>
-                      <td className="px-3 py-5 text-[13px] leading-snug text-slate-400">
+                      <td className="px-3 py-3.5 2xl:py-5 text-[13px] leading-snug text-slate-400">
                         <span className="block whitespace-nowrap">{latestActivity.date}</span>
                         <span className="mt-0.5 block whitespace-nowrap text-slate-500">{latestActivity.time}</span>
                       </td>
-                      <td className="px-3 py-5 align-middle">
+                      <td className="px-3 py-3.5 2xl:py-5 align-middle">
                         <div className="flex items-center justify-center gap-2">
                           {hasHiringActions ? (
                             <DropdownMenu>

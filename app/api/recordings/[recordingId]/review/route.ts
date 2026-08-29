@@ -132,7 +132,12 @@ function getSignalSeverity(type: string, value: unknown): "low" | "medium" | "hi
     type === "low_microphone_volume" ||
     type === "audio_intermittently_unavailable" ||
     type === "background_noise_detected" ||
-    type === "transcript_recovered_from_recording"
+    type === "transcript_recovered_from_recording" ||
+    // Derived purely from sustained gaze direction, with no device evidence
+    // behind it. Pinned here, ahead of both the payload's own severity and the
+    // `external_device` regex below, so a review cue can never be rendered as a
+    // medium- or high-severity finding.
+    type === "external_device_suspected"
   ) {
     return "low"
   }

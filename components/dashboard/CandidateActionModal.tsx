@@ -91,8 +91,19 @@ function getRiskLevel(candidate: CandidateReviewItem | null) {
 }
 
 function getCompletionStatus(candidate: CandidateReviewItem | null) {
+  // An abandoned or partially-transcribed session also has an endedAt, so the
+  // timestamp alone cannot stand in for completion -- reading it that way
+  // reported "Completed" for sessions the platform had failed to capture.
+  const status = String(candidate?.status ?? "").toUpperCase()
+
+  if (status === "NEEDS_REVIEW") {
+    return candidate?.endedAt
+      ? `Ended ${formatDateTime(candidate.endedAt)} — needs review`
+      : "Needs review"
+  }
+
   if (candidate?.endedAt) return `Completed ${formatDateTime(candidate.endedAt)}`
-  if (String(candidate?.status ?? "").toUpperCase() === "COMPLETED") return "Completed"
+  if (status === "COMPLETED") return "Completed"
   return "Completion pending"
 }
 

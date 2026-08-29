@@ -62,6 +62,7 @@ type PipelineRow = {
   total_review_required: number
   interview_id: string | null
   interview_status: string | null
+  final_status: string | null
   question_status: string | null
   email_status: string | null
   latest_attempt_id: string | null
@@ -140,6 +141,7 @@ function getRecovery(row: PipelineRow) {
 function getDisplayStatus(row: PipelineRow) {
   return deriveInterviewStatus({
     interviewStatus: row.interview_status,
+    finalStatus: row.final_status,
     questionStatus: row.question_status,
     emailStatus: row.email_status,
     latestAttempt: row.latest_attempt_id
@@ -233,6 +235,7 @@ export async function getDashboardPipelineData(
       select
         i.interview_id,
         i.status as interview_status,
+        i.final_status,
         i.question_status,
         i.email_status,
         i.failure_reason,
@@ -314,6 +317,14 @@ export async function getDashboardPipelineData(
         case
           when upper(coalesce(interview_status, '')) = 'FAILED' or upper(coalesce(question_status, '')) = 'FAILED' then 'PREPARATION_FAILED'
           when upper(coalesce(interview_status, '')) = 'PREPARING' or upper(coalesce(question_status, '')) = 'GENERATING' then 'PREPARING_INTERVIEW'
+          -- Integrity checks precede the completion check. Note the old
+          -- COMPLETED arm below treats any non-null latest_attempt_ended_at as
+          -- completed, which is true of abandoned attempts too -- so without
+          -- these arms first, a broken session reads as a finished one.
+          when upper(coalesce(interview_status, '')) = 'NEEDS_REVIEW'
+            or upper(coalesce(final_status, '')) = 'TRANSCRIPT_REVIEW_REQUIRED'
+            or upper(coalesce(latest_attempt_status, '')) = 'ABANDONED'
+            then 'NEEDS_REVIEW'
           when upper(coalesce(interview_status, '')) = 'COMPLETED'
             or upper(coalesce(latest_attempt_status, '')) = 'COMPLETED'
             or latest_attempt_ended_at is not null

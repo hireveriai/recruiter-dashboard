@@ -938,13 +938,44 @@ function isSignalEventLog(columns: Set<string>) {
   return columns.has("type") && columns.has("value") && !columns.has("multi_face_count")
 }
 
+/**
+ * Gaze-derived signals recorded before this timestamp came from a head-pose
+ * classifier whose thresholds sat inside its own noise floor: a ±0.05-of-face-
+ * width horizontal rule (smaller than TinyFaceDetector's landmark jitter, and
+ * permanently tripped by a webcam mounted off-centre from the face) and a 0.27
+ * vertical "looking down" rule that overlapped the ~0.23-0.28 resting offset of
+ * an ordinary face. Attention was then scored as lost after only two samples,
+ * about four seconds.
+ *
+ * Those events cannot be re-scored. The stored payloads carry only `direction`
+ * and a constant `durationMs`, never the face box or landmark geometry, so
+ * there is no way to replay the corrected thresholds against them and recover
+ * which ones were genuine. They are therefore excluded from behavioural counts
+ * outright rather than recomputed -- a candidate should not carry a flag that
+ * the evidence can no longer support.
+ *
+ * The rows themselves are left untouched: interview_signals is an append-only
+ * event log and stays a truthful record of what the classifier emitted. Only
+ * the interpretation changes, here in the reader.
+ *
+ * Set to the actual deploy timestamp of the classifier fix; signals written
+ * from that moment on use the corrected thresholds and count normally.
+ */
+const GAZE_CLASSIFIER_FIX_DEPLOYED_AT =
+  process.env.GAZE_CLASSIFIER_FIX_DEPLOYED_AT ?? "2026-08-30T00:00:00Z"
+
 function numericFromValue(key: string) {
   // jsonb values are free-form; only fold in the ones that really are numbers.
   return `nullif(s.value->>'${key}', '')::numeric`
 }
 
-function signalEventLogSelect() {
-  const focusOnly = `filter (where lower(s.type) = 'focus_metrics' and s.value->>'{key}' ~ '^-?[0-9]+(\\.[0-9]+)?$')`
+function signalEventLogSelect(gazeCutoffParam: string) {
+  // Only signals derived from the head-pose classifier are gated. multi_face,
+  // tab_switch and no_face come from independent detectors that the threshold
+  // defect never touched, so their history still counts.
+  const trustedGaze = `s.created_at >= ${gazeCutoffParam}::timestamptz`
+
+  const focusOnly = `filter (where lower(s.type) = 'focus_metrics' and ${trustedGaze} and s.value->>'{key}' ~ '^-?[0-9]+(\\.[0-9]+)?$')`
 
   return [
     `s.attempt_id::text as attempt_id`,
@@ -954,10 +985,18 @@ function signalEventLogSelect() {
     // Brief natural glances are logged as attention_loss with severity "low".
     // Counting them flagged candidates whose focus the same pipeline rated
     // excellent, so only sustained losses count as a behavioural signal.
-    `count(*) filter (where lower(s.type) = 'attention_loss' and lower(coalesce(s.value->>'severity', 'medium')) <> 'low')::int as attention_loss_count`,
-    `count(*) filter (where lower(s.type) = 'long_gaze_away')::int as long_gaze_away_count`,
+    //
+    // Note the coalesce default: rows written before the client began stamping
+    // a severity have no such key, and defaulting those to "medium" made every
+    // one of them count. The cutoff below is what actually excludes them, since
+    // that whole era predates the classifier fix.
+    `count(*) filter (where lower(s.type) = 'attention_loss' and ${trustedGaze} and lower(coalesce(s.value->>'severity', 'medium')) <> 'low')::int as attention_loss_count`,
+    `count(*) filter (where lower(s.type) = 'long_gaze_away' and ${trustedGaze})::int as long_gaze_away_count`,
     `count(*) filter (where lower(s.type) = 'no_face')::int as no_face_count`,
-    `count(*) filter (where lower(s.type) = 'focus_metrics')::int as focus_metrics_count`,
+    // focus_metrics is gated on the same cutoff: focusRatio is accumulated from
+    // the very same `attention` flag the classifier produced, so a pre-fix ratio
+    // measures the defect rather than the candidate.
+    `count(*) filter (where lower(s.type) = 'focus_metrics' and ${trustedGaze})::int as focus_metrics_count`,
     `avg(${numericFromValue("focusRatio")}) ${focusOnly.replace("{key}", "focusRatio")} as avg_focus_ratio`,
     `max(${numericFromValue("maxLookAwayDuration")}) ${focusOnly.replace("{key}", "maxLookAwayDuration")} as max_look_away_duration`,
     `avg(${numericFromValue("lookAwayEvents")}) ${focusOnly.replace("{key}", "lookAwayEvents")} as avg_look_away_events`,
@@ -980,13 +1019,15 @@ async function fetchSignalRows(organizationId: string) {
   if (isSignalEventLog(columns)) {
     const query = `
       select
-        ${signalEventLogSelect().join(",\n        ")}
+        ${signalEventLogSelect("$2").join(",\n        ")}
       ${SIGNAL_EVENT_LOG_FROM}
       where i.organization_id = $1::uuid
       group by 1, 2
     `
 
-    return prisma.$queryRawUnsafe<SignalAggRow[]>(query, organizationId).catch(() => [] as SignalAggRow[])
+    return prisma
+      .$queryRawUnsafe<SignalAggRow[]>(query, organizationId, GAZE_CLASSIFIER_FIX_DEPLOYED_AT)
+      .catch(() => [] as SignalAggRow[])
   }
 
   const selectParts = [
@@ -1032,7 +1073,7 @@ async function fetchSignalRowsForAttempts(organizationId: string, attemptIds: st
 
     const query = `
       select
-        ${signalEventLogSelect().join(",\n        ")}
+        ${signalEventLogSelect("$4").join(",\n        ")}
       ${SIGNAL_EVENT_LOG_FROM}
       where i.organization_id = $1::uuid
         and (${scopeFilters.join(" or ")})
@@ -1040,7 +1081,13 @@ async function fetchSignalRowsForAttempts(organizationId: string, attemptIds: st
     `
 
     return prisma
-      .$queryRawUnsafe<SignalAggRow[]>(query, organizationId, attemptIds, interviewIds)
+      .$queryRawUnsafe<SignalAggRow[]>(
+        query,
+        organizationId,
+        attemptIds,
+        interviewIds,
+        GAZE_CLASSIFIER_FIX_DEPLOYED_AT
+      )
       .catch(() => [] as SignalAggRow[])
   }
 

@@ -1467,3 +1467,24 @@ a {
     @apply font-sans;
   }
 }
+
+.hv-recording-action {
+  color: #a5f3fc;
+  text-align: center;
+}
+
+.hv-recording-action:hover,
+.hv-recording-action:focus-visible {
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.12);
+}
+
+:root[data-theme="light"] .hv-recording-action {
+  color: #0e7490;
+}
+
+:root[data-theme="light"] .hv-recording-action:hover,
+:root[data-theme="light"] .hv-recording-action:focus-visible {
+  color: #0369a1;
+  background: rgba(8, 145, 178, 0.1);
+}

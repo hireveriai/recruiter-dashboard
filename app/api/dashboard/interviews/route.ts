@@ -6,6 +6,7 @@ import { evaluateCandidateResponse } from "@/lib/server/ai/interview-flow"
 import { errorResponse } from "@/lib/server/response"
 import { prisma } from "@/lib/server/prisma"
 import { getInterviewAppUrl } from "@/lib/server/interview-url"
+import { attributeInterviewFault, type FaultAttribution } from "@/lib/server/services/interview-fault-attribution"
 import { deriveInterviewStatus } from "@/lib/server/services/interview-status"
 import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
 import { getRecruiterDecisionsForInterviews } from "@/lib/server/services/recruiter-decisions"
@@ -68,6 +69,7 @@ type AttemptExitMetadata = {
   disconnectReason: string | null
   terminationDetectedAt: string | null
   completionPercentage: number | null
+  faultAttribution: FaultAttribution
 }
 
 type AttemptExitMetadataRow = {
@@ -79,6 +81,15 @@ type AttemptExitMetadataRow = {
   disconnect_reason: string | null
   termination_detected_at: string | null
   completion_percentage: unknown | null
+  attempt_status: string | null
+  recording_status: string | null
+  reconnect_count: number | null
+  transcript_integrity: {
+    status?: string | null
+    remainingIssues?: number | null
+    createdPlaceholders?: number | null
+    repairedAnswers?: number | null
+  } | null
 }
 
 type AttemptTranscriptRow = {
@@ -640,7 +651,15 @@ async function fetchAttemptExitMetadata(attemptIds: string[]) {
         ${selectColumn("interruption_reason", "null::text")} as interruption_reason,
         ${selectColumn("disconnect_reason", "null::text")} as disconnect_reason,
         ${selectColumn("termination_detected_at", "null::timestamptz")}::text as termination_detected_at,
-        ${selectColumn("completion_percentage", "null::numeric")} as completion_percentage
+        ${selectColumn("completion_percentage", "null::numeric")} as completion_percentage,
+        ${selectColumn("status", "null::text")} as attempt_status,
+        ${selectColumn("recording_status", "null::text")} as recording_status,
+        ${selectColumn("reconnect_count", "null::int")} as reconnect_count,
+        ${
+          columns.has("termination_metadata")
+            ? "ia.termination_metadata -> 'transcript_integrity'"
+            : "null::jsonb"
+        } as transcript_integrity
       from public.interview_attempts ia
       where ia.attempt_id = any($1::uuid[])
     `,
@@ -658,6 +677,18 @@ async function fetchAttemptExitMetadata(attemptIds: string[]) {
         disconnectReason: row.disconnect_reason,
         terminationDetectedAt: row.termination_detected_at,
         completionPercentage: toNumberOrNull(row.completion_percentage),
+        // Answers "was this VerisNova's fault or the candidate's?" from the
+        // evidence already on the attempt row, so a recruiter facing a
+        // candidate who says "it glitched" can actually check.
+        faultAttribution: attributeInterviewFault({
+          interruptionReason: row.interruption_reason,
+          disconnectReason: row.disconnect_reason,
+          terminationType: row.termination_type,
+          attemptStatus: row.attempt_status,
+          recordingStatus: row.recording_status,
+          reconnectCount: row.reconnect_count,
+          transcriptIntegrity: row.transcript_integrity,
+        }),
       },
     ])
   )
@@ -849,6 +880,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       ["MANUAL_EXIT", "EARLY_EXIT"].includes(normalizedAttemptStatus) || normalizedTerminationType === "MANUAL_EXIT"
     const status = deriveInterviewStatus({
       interviewStatus: interview.status,
+      finalStatus: interview.finalStatus ?? null,
       questionStatus,
       emailStatus,
       latestAttempt: latestAttempt
@@ -891,6 +923,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       disconnectReason: exitMetadata?.disconnectReason ?? null,
       terminationDetectedAt: exitMetadata?.terminationDetectedAt ?? null,
       completionPercentage: exitMetadata?.completionPercentage ?? null,
+      faultAttribution: exitMetadata?.faultAttribution ?? null,
       requiredQuestionCount: completionStats?.requiredQuestionCount ?? interview.questionCount ?? null,
       askedQuestionCount: completionStats?.askedQuestionCount ?? 0,
       answeredQuestionCount: completionStats?.answeredQuestionCount ?? 0,

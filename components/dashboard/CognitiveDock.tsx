@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+
+import { formatLabel } from "@/lib/client/format-label";
 import {
   ArrowRight,
   BarChart3,
@@ -414,7 +416,7 @@ export default function CognitiveDock({
         id: `candidate-${id}`,
         type: "Candidate",
         title: readText(candidate.candidateName, "Candidate"),
-        meta: [readText(candidate.jobTitle, "Unassigned role"), readText(candidate.status, "Pipeline"), candidate.decision ? `Decision: ${candidate.decision}` : null]
+        meta: [readText(candidate.jobTitle, "Unassigned role"), formatLabel(candidate.status, "Pipeline"), candidate.decision ? `Decision: ${formatLabel(candidate.decision)}` : null]
           .filter(Boolean)
           .join(" - "),
         href: canViewCandidates ? pageHref("/candidates") : undefined,
@@ -431,7 +433,7 @@ export default function CognitiveDock({
         id: `interview-${id}`,
         type: "Interview",
         title: readText(interview.candidateName, "Candidate interview"),
-        meta: [readText(interview.jobTitle, "Interview"), readText(interview.status, "Status pending"), interview.decision ? `Decision: ${interview.decision}` : null]
+        meta: [readText(interview.jobTitle, "Interview"), formatLabel(interview.status, "Status pending"), interview.decision ? `Decision: ${formatLabel(interview.decision)}` : null]
           .filter(Boolean)
           .join(" - "),
         href: canViewInterviews ? pageHref("/interviews") : undefined,

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 
+import { formatLabel } from "@/lib/client/format-label"
+
 const STATUS_TABS = [
   { key: "PENDING_REVIEW", label: "Pending review" },
   { key: "APPROVED", label: "Approved" },
@@ -173,7 +175,7 @@ export default function AdminTrialRequestsPage() {
                     Risk {request.riskLevel} · {request.riskScore}
                   </span>
                   <span className="rounded-lg border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-300">
-                    {request.status}
+                    {formatLabel(request.status)}
                   </span>
                   {request.granted ? (
                     <span className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
@@ -201,7 +203,7 @@ export default function AdminTrialRequestsPage() {
                       key={reason}
                       className="rounded-lg border border-slate-700 bg-slate-950/50 px-2.5 py-1 text-[11px] text-slate-300"
                     >
-                      {reason}
+                      {formatLabel(reason)}
                     </span>
                   ))}
                 </div>

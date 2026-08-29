@@ -12,6 +12,7 @@ import { isSessionJsonCacheFresh, readSessionJsonCache, writeSessionJsonCache } 
 
 import Navbar from "../../components/Navbar"
 import SendInterviewModal from "../../components/SendInterviewModal"
+import { formatLabel } from "@/lib/client/format-label"
 import { CandidateActionModal } from "../../components/dashboard/CandidateActionModal"
 import { DecisionPill } from "../../components/dashboard/DecisionPill"
 import { VerisGlobeLoader } from "../../components/system/loaders"
@@ -284,7 +285,7 @@ function CompletedCandidateDetails({ candidate, onClose }) {
                           <p className="mt-2 text-base font-medium leading-7 text-white">{answer.question}</p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
                             {answer.skill ? <span>{answer.skill}</span> : null}
-                            {answer.questionType ? <span>{answer.questionType}</span> : null}
+                            {answer.questionType ? <span>{formatLabel(answer.questionType)}</span> : null}
                             {answer.questionSource ? <span>{answer.questionSource}</span> : null}
                           </div>
                         </div>

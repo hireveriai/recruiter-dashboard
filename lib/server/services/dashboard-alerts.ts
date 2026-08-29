@@ -4,7 +4,12 @@ import { prisma } from "@/lib/server/prisma"
 
 export type DashboardAlert = {
   id: string
-  type: "INTERVIEW_STARTED" | "INTERVIEW_COMPLETED" | "INTERVIEW_INTERRUPTED" | "INTERVIEW_FAILED"
+  type:
+    | "INTERVIEW_STARTED"
+    | "INTERVIEW_COMPLETED"
+    | "INTERVIEW_NEEDS_REVIEW"
+    | "INTERVIEW_INTERRUPTED"
+    | "INTERVIEW_FAILED"
   title: string
   message: string
   tone: "info" | "success" | "warning" | "danger"
@@ -124,6 +129,19 @@ function buildAlert(row: AlertRow): DashboardAlert {
     }
   }
 
+  if (type === "INTERVIEW_NEEDS_REVIEW") {
+    return {
+      id: row.alert_id,
+      type,
+      title: "Interview needs review",
+      message: `${candidateName}'s ${jobTitle} session did not complete cleanly. Any score shown is partial — check the session before deciding.`,
+      tone: "warning",
+      candidateName,
+      jobTitle,
+      occurredAt: toIso(row.occurred_at),
+    }
+  }
+
   if (type === "INTERVIEW_INTERRUPTED") {
     return {
       id: row.alert_id,
@@ -190,6 +208,14 @@ export async function getDashboardAlerts(organizationId: string, limit?: number 
         case
           when upper(coalesce(la.attempt_status, i.status, '')) in ('INTERRUPTED', 'RECOVERY_ALLOWED') then 'INTERVIEW_INTERRUPTED'
           when upper(coalesce(i.status, la.attempt_status, '')) in ('FAILED', 'PREPARATION_FAILED') then 'INTERVIEW_FAILED'
+          -- Ahead of the completion arm: that arm treats any attempt with an
+          -- ended_at as completed, which is true of abandoned attempts too, so
+          -- a dropped session raised a success-toned "interview completed"
+          -- alert on the recruiter's feed.
+          when upper(coalesce(i.status, '')) = 'NEEDS_REVIEW'
+            or upper(coalesce(i.final_status, '')) = 'TRANSCRIPT_REVIEW_REQUIRED'
+            or upper(coalesce(la.attempt_status, '')) in ('ABANDONED', 'TIME_EXPIRED')
+            then 'INTERVIEW_NEEDS_REVIEW'
           when upper(coalesce(i.status, la.attempt_status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED') or la.ended_at is not null then 'INTERVIEW_COMPLETED'
           when la.started_at is not null then 'INTERVIEW_STARTED'
           else null

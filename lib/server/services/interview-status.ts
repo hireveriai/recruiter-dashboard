@@ -17,6 +17,7 @@ type AttemptStatusInput = {
 
 type DeriveInterviewStatusInput = {
   interviewStatus: string | null
+  finalStatus?: string | null
   questionStatus?: string | null
   emailStatus?: string | null
   latestAttempt?: AttemptStatusInput | null
@@ -65,12 +66,14 @@ export function isAttemptAbandoned(attempt: AttemptStatusInput) {
 
 export function deriveInterviewStatus({
   interviewStatus,
+  finalStatus,
   questionStatus,
   emailStatus,
   latestAttempt,
   latestInvite,
 }: DeriveInterviewStatusInput) {
   const normalizedInterviewStatus = normalizeStatus(interviewStatus)
+  const normalizedFinalStatus = normalizeStatus(finalStatus)
   const normalizedQuestionStatus = normalizeStatus(questionStatus)
   const normalizedEmailStatus = normalizeStatus(emailStatus)
   const normalizedInviteStatus = normalizeStatus(latestInvite?.status)
@@ -84,19 +87,37 @@ export function deriveInterviewStatus({
     return "PREPARING_INTERVIEW"
   }
 
+  // Integrity checks run BEFORE the completion check, not after. These
+  // branches used to sit below it and were unreachable for exactly the cases
+  // that needed them: the backend wrote COMPLETED into interviewStatus for
+  // abandoned and partially-transcribed sessions, so the first branch matched
+  // and the truthful attempt-level signals below were never consulted.
+  // An attempt that answered everything asked of it is complete even if its
+  // status was left stale -- that case must still win, so it gates the
+  // integrity branches rather than sitting after them.
+  const attemptAnsweredEverything = latestAttempt ? isAttemptCompleted(latestAttempt) : false
+
+  if (normalizedInterviewStatus === "NEEDS_REVIEW") {
+    return "NEEDS_REVIEW"
+  }
+
+  if (normalizedFinalStatus === "TRANSCRIPT_REVIEW_REQUIRED") {
+    return "NEEDS_REVIEW"
+  }
+
+  if (
+    latestAttempt &&
+    !attemptAnsweredEverything &&
+    (isAttemptAbandoned(latestAttempt) || isAttemptManualExit(latestAttempt))
+  ) {
+    return "NEEDS_REVIEW"
+  }
+
   if (
     ["COMPLETED", "SUBMITTED", "EVALUATED"].includes(normalizedInterviewStatus) ||
-    (latestAttempt ? isAttemptCompleted(latestAttempt) : false)
+    attemptAnsweredEverything
   ) {
     return "COMPLETED"
-  }
-
-  if (latestAttempt && isAttemptManualExit(latestAttempt)) {
-    return "EARLY_EXIT"
-  }
-
-  if (latestAttempt && isAttemptAbandoned(latestAttempt)) {
-    return "ABANDONED"
   }
 
   if (normalizedInterviewStatus === "FLAGGED") {
