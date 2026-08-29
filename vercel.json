@@ -11,6 +11,10 @@
       "schedule": "15 0 * * *"
     },
     {
+      "path": "/api/cron/refund-platform-failures",
+      "schedule": "*/10 * * * *"
+    },
+    {
       "path": "/api/cron/send-interview-notifications",
       "schedule": "* * * * *"
     }

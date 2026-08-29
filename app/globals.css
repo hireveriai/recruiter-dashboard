@@ -1506,3 +1506,14 @@ a {
   z-index: 5;
   background: var(--hv-table-head-bg, var(--color-slate-950));
 }
+
+/* The invited interviews panel paints its own surface rather than using the
+   slate scale, so its sticky header needs the matching value per theme --
+   the shared default would leave a dark band across the table in light mode. */
+.hv-invited-table {
+  --hv-table-head-bg: #111a2e;
+}
+
+:root[data-theme="light"] .hv-invited-table {
+  --hv-table-head-bg: #ffffff;
+}

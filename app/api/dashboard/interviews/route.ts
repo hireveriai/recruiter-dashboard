@@ -10,6 +10,7 @@ import { attributeInterviewFault, type FaultAttribution } from "@/lib/server/ser
 import { deriveInterviewStatus } from "@/lib/server/services/interview-status"
 import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
 import { getRecruiterDecisionsForInterviews } from "@/lib/server/services/recruiter-decisions"
+import { getPlatformFailureRefundedInterviewIds } from "@/lib/server/services/trial-credits"
 import {
   cleanRecoveredCandidateAnswer,
   extractCandidateAnswersFromTranscript,
@@ -70,6 +71,10 @@ type AttemptExitMetadata = {
   terminationDetectedAt: string | null
   completionPercentage: number | null
   faultAttribution: FaultAttribution
+  /** Answers VerisNova had to rebuild after the session, from the existing audit. */
+  reconstructedResponses: number
+  /** Answers VerisNova could not recover at all, from the existing audit. */
+  unrecoveredResponses: number
 }
 
 type AttemptExitMetadataRow = {
@@ -689,6 +694,14 @@ async function fetchAttemptExitMetadata(attemptIds: string[]) {
           reconnectCount: row.reconnect_count,
           transcriptIntegrity: row.transcript_integrity,
         }),
+        reconstructedResponses: Math.max(
+          Number(row.transcript_integrity?.createdPlaceholders ?? 0) || 0,
+          0
+        ),
+        unrecoveredResponses: Math.max(
+          Number(row.transcript_integrity?.remainingIssues ?? 0) || 0,
+          0
+        ),
       },
     ])
   )
@@ -790,6 +803,19 @@ function getInterviewActivityTime(interview: {
 async function getInterviewsScreenData(auth: RecruiterRequestContext, options: InterviewScreenOptions = {}) {
   if (options.finalizeStale !== false) {
     await finalizeStaleInterviewAttempts(auth.organizationId)
+  }
+
+  // READ ONLY. Reading the interviews screen must never move a credit balance.
+  // The refund itself is performed by the scheduled job at
+  // /api/cron/refund-platform-failures; this only reports what it has already
+  // done, so refreshing the page has no financial side effect at all.
+  let platformFailureRefundedIds = new Set<string>()
+  try {
+    platformFailureRefundedIds = await getPlatformFailureRefundedInterviewIds(
+      auth.organizationId
+    )
+  } catch (refundLookupError) {
+    console.warn("Platform-failure refund lookup skipped", refundLookupError)
   }
 
   const interviews = await prisma.interview.findMany({
@@ -924,6 +950,17 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       terminationDetectedAt: exitMetadata?.terminationDetectedAt ?? null,
       completionPercentage: exitMetadata?.completionPercentage ?? null,
       faultAttribution: exitMetadata?.faultAttribution ?? null,
+      reconstructedResponses: exitMetadata?.reconstructedResponses ?? 0,
+      unrecoveredResponses: exitMetadata?.unrecoveredResponses ?? 0,
+      // Derived from data the backend already stores -- no new columns. Only
+      // meaningful once questions were actually asked.
+      evidenceCompleteness: (() => {
+        const asked = Number(completionStats?.askedQuestionCount ?? 0)
+        const unrecovered = exitMetadata?.unrecoveredResponses ?? 0
+        if (asked <= 0) return null
+        return { available: Math.max(asked - unrecovered, 0), total: asked }
+      })(),
+      creditRefunded: platformFailureRefundedIds.has(interview.interviewId),
       requiredQuestionCount: completionStats?.requiredQuestionCount ?? interview.questionCount ?? null,
       askedQuestionCount: completionStats?.askedQuestionCount ?? 0,
       answeredQuestionCount: completionStats?.answeredQuestionCount ?? 0,

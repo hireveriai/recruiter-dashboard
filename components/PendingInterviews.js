@@ -871,7 +871,7 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
           ) : null}
         </div>
 
-        <div className="hv-theme-panel hv-table-scroll rounded-lg bg-[#111a2e] [--hv-table-head-bg:#111a2e]">
+        <div className="hv-theme-panel hv-table-scroll hv-invited-table rounded-lg bg-[#111a2e]">
           <table className="w-full min-w-[760px] text-sm">
             <thead className="border-b border-gray-700 text-gray-400">
               <tr>

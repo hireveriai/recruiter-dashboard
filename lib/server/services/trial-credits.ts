@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client"
 
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
+import { attributeInterviewFault } from "@/lib/server/services/interview-fault-attribution"
 
 import {
   evaluateEntitlementGate,
@@ -577,10 +578,15 @@ async function insertRefundEvent(input: {
   return rows.length > 0
 }
 
+/**
+ * Returns one interview credit to whichever balance it was taken from. Takes
+ * only the balance fields (not a full invite row) so both the expired-link
+ * refund and the platform-failure refund can share it unchanged.
+ */
 async function refundOneInterviewCredit(input: {
   client: QueryClient
   organizationId: string
-  invite: RefundableInviteRow
+  invite: Pick<RefundableInviteRow, "balance_source" | "subscription_id">
 }) {
   if (input.invite.balance_source === "subscription" && input.invite.subscription_id) {
     const updated = await input.client.$executeRaw(Prisma.sql`
@@ -910,4 +916,311 @@ async function recordCreditDeductionEvents(input: {
       on conflict do nothing
     `)
   }
+}
+
+// ---------------------------------------------------------------------------
+// Platform-failure interview credit refunds
+//
+// When VerisNova itself fails to capture an interview -- a lost answer record,
+// a transcript our own repair pipeline could not recover, our media service
+// restarting, a recording we failed to store -- the recruiter should not pay
+// for it, and should not have to ask.
+//
+// This deliberately reuses the existing ledger rather than adding a parallel
+// one. Idempotency comes from the partial unique index on
+// (organization_id, kind, source, source_id): the refund event is inserted
+// first with `on conflict do nothing`, and the balance is only moved when that
+// insert actually created a row. A retried request, a page refresh, or two
+// concurrent requests can therefore never refund the same interview twice.
+// ---------------------------------------------------------------------------
+
+const PLATFORM_FAILURE_REFUND_EVENT_SOURCE = "platform_failure_refund"
+const PLATFORM_FAILURE_REFUND_REASON = "Platform-side interview recording failure"
+
+export type PlatformFailureRefundCandidate = {
+  interview_id: string
+  organization_id: string
+  balance_source: CreditBalanceSource
+  subscription_id: string | null
+  attempt_status: string | null
+  interruption_reason: string | null
+  disconnect_reason: string | null
+  termination_type: string | null
+  recording_status: string | null
+  reconnect_count: number | null
+  transcript_integrity: {
+    status?: string | null
+    remainingIssues?: number | null
+    createdPlaceholders?: number | null
+    repairedAnswers?: number | null
+  } | null
+}
+
+/**
+ * Narrows to interviews that (a) actually had a credit deducted, (b) carry at
+ * least one platform-failure marker, and (c) have not already been refunded.
+ *
+ * This SQL only pre-filters; the authoritative verdict is still
+ * attributeInterviewFault() in TypeScript, so the refund rule and the message
+ * shown to the recruiter can never disagree.
+ */
+async function getPlatformFailureRefundCandidates(
+  organizationId: string,
+  interviewIds?: string[]
+) {
+  const interviewFilter =
+    interviewIds && interviewIds.length > 0
+      ? Prisma.sql`and i.interview_id = any(${interviewIds}::uuid[])`
+      : Prisma.empty
+
+  return prisma.$queryRaw<PlatformFailureRefundCandidate[]>(Prisma.sql`
+    with latest_attempt as (
+      select distinct on (ia.interview_id)
+        ia.interview_id,
+        ia.status,
+        ia.interruption_reason,
+        ia.disconnect_reason,
+        ia.termination_type,
+        ia.recording_status,
+        ia.reconnect_count,
+        ia.termination_metadata -> 'transcript_integrity' as transcript_integrity
+      from public.interview_attempts ia
+      order by ia.interview_id, ia.started_at desc nulls last
+    )
+    select
+      i.interview_id::text,
+      i.organization_id::text,
+      coalesce(deduction.metadata->>'balanceSource', 'trial') as balance_source,
+      nullif(deduction.metadata->>'subscriptionId', '') as subscription_id,
+      la.status as attempt_status,
+      la.interruption_reason,
+      la.disconnect_reason,
+      la.termination_type,
+      la.recording_status,
+      la.reconnect_count,
+      la.transcript_integrity
+    from public.interviews i
+    inner join latest_attempt la
+      on la.interview_id = i.interview_id
+    inner join public.workspace_trial_credit_events deduction
+      on deduction.organization_id = i.organization_id
+      and deduction.kind = 'INTERVIEW'
+      and deduction.source in ('interview_link', 'interview_batch')
+      and deduction.source_id = i.interview_id::text
+    where i.organization_id = ${organizationId}::uuid
+      ${interviewFilter}
+      and (
+        coalesce((la.transcript_integrity->>'createdPlaceholders')::int, 0) > 0
+        or coalesce((la.transcript_integrity->>'remainingIssues')::int, 0) > 0
+        or la.transcript_integrity->>'status' = 'needs_review'
+        or upper(coalesce(la.recording_status, '')) = 'FAILED'
+        or lower(coalesce(la.interruption_reason, '') || ' ' || coalesce(la.disconnect_reason, '')) like '%camera stream interrupted%'
+        or lower(coalesce(la.interruption_reason, '') || ' ' || coalesce(la.disconnect_reason, '')) like '%realtime interview link was interrupted%'
+        or lower(coalesce(la.interruption_reason, '') || ' ' || coalesce(la.disconnect_reason, '')) like '%realtime interview connection ended unexpectedly%'
+      )
+      and not exists (
+        select 1
+        from public.workspace_trial_credit_events refund
+        where refund.organization_id = i.organization_id
+          and refund.kind = 'INTERVIEW'
+          and refund.source = ${PLATFORM_FAILURE_REFUND_EVENT_SOURCE}
+          and refund.source_id = i.interview_id::text
+      )
+    limit 250
+  `)
+}
+
+async function insertPlatformFailureRefundEvent(input: {
+  client: QueryClient
+  organizationId: string
+  interviewId: string
+  faultCode: string
+  unrecoveredResponses: number
+  reconstructedResponses: number
+}) {
+  const rows = await input.client.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    insert into public.workspace_trial_credit_events (
+      organization_id,
+      kind,
+      amount,
+      source,
+      source_id,
+      metadata
+    )
+    values (
+      ${input.organizationId}::uuid,
+      'INTERVIEW',
+      1,
+      ${PLATFORM_FAILURE_REFUND_EVENT_SOURCE},
+      ${input.interviewId},
+      ${JSON.stringify({
+        refund: true,
+        reason: PLATFORM_FAILURE_REFUND_REASON,
+        faultParty: "VERISNOVA",
+        faultCode: input.faultCode,
+        interviewId: input.interviewId,
+        unrecoveredResponses: input.unrecoveredResponses,
+        reconstructedResponses: input.reconstructedResponses,
+        refundedAt: new Date().toISOString(),
+      })}::jsonb
+    )
+    on conflict do nothing
+    returning id::text
+  `)
+
+  return rows.length > 0
+}
+
+/**
+ * Refunds one interview credit for every interview in this workspace whose
+ * latest attempt is attributable to a VerisNova platform failure.
+ *
+ * Safe to call on every page load: the pre-filter returns nothing for healthy
+ * workspaces, and the unique index makes repeat calls no-ops.
+ */
+export async function refundPlatformFailureInterviewCredits(input: {
+  organizationId: string
+  interviewIds?: string[]
+}) {
+  if (!UUID_REGEX.test(input.organizationId)) {
+    throw new ApiError(400, "INVALID_ORGANIZATION_ID", "Invalid recruiter workspace.")
+  }
+
+  await ensureTrialCreditSchema()
+
+  const candidates = await getPlatformFailureRefundCandidates(
+    input.organizationId,
+    input.interviewIds
+  )
+
+  const refundedInterviewIds: string[] = []
+
+  for (const candidate of candidates) {
+    const fault = attributeInterviewFault({
+      interruptionReason: candidate.interruption_reason,
+      disconnectReason: candidate.disconnect_reason,
+      terminationType: candidate.termination_type,
+      attemptStatus: candidate.attempt_status,
+      recordingStatus: candidate.recording_status,
+      reconnectCount: candidate.reconnect_count,
+      transcriptIntegrity: candidate.transcript_integrity,
+    })
+
+    // The classifier is the single authority. A candidate-side cause never
+    // triggers a refund, even if the SQL pre-filter surfaced the row.
+    if (fault.party !== "VERISNOVA") {
+      continue
+    }
+
+    const didRefund = await prisma.$transaction(async (tx) => {
+      const eventInserted = await insertPlatformFailureRefundEvent({
+        client: tx,
+        organizationId: input.organizationId,
+        interviewId: candidate.interview_id,
+        faultCode: fault.code,
+        unrecoveredResponses: Number(candidate.transcript_integrity?.remainingIssues ?? 0),
+        reconstructedResponses: Number(candidate.transcript_integrity?.createdPlaceholders ?? 0),
+      })
+      if (!eventInserted) return false
+
+      await refundOneInterviewCredit({
+        client: tx,
+        organizationId: input.organizationId,
+        invite: {
+          balance_source: candidate.balance_source,
+          subscription_id: candidate.subscription_id,
+        },
+      })
+      return true
+    })
+
+    if (didRefund) {
+      refundedInterviewIds.push(candidate.interview_id)
+    }
+  }
+
+  if (refundedInterviewIds.length > 0) {
+    invalidateTrialCreditDashboardCache(input.organizationId)
+  }
+
+  return { refunded: refundedInterviewIds.length, refundedInterviewIds }
+}
+
+/** Interview ids in this workspace already refunded for a platform failure. */
+export async function getPlatformFailureRefundedInterviewIds(organizationId: string) {
+  if (!UUID_REGEX.test(organizationId)) {
+    return new Set<string>()
+  }
+
+  const rows = await prisma.$queryRaw<Array<{ source_id: string }>>(Prisma.sql`
+    select source_id
+    from public.workspace_trial_credit_events
+    where organization_id = ${organizationId}::uuid
+      and kind = 'INTERVIEW'
+      and source = ${PLATFORM_FAILURE_REFUND_EVENT_SOURCE}
+      and source_id is not null
+  `)
+
+  return new Set(rows.map((row) => row.source_id))
+}
+
+/**
+ * Workspace-wide sweep for platform-failure refunds, mirroring
+ * refundAllExpiredUnusedInterviewCredits. Driven by cron so that the credit
+ * mutation lives in a background lifecycle rather than in a GET request.
+ *
+ * Deliberately has no date floor: interviews that already failed before this
+ * shipped are refunded on the first run, which is the intended behaviour.
+ */
+export async function refundAllPlatformFailureInterviewCredits() {
+  await ensureTrialCreditSchema()
+
+  const organizations = await prisma.$queryRaw<Array<{ organization_id: string }>>(Prisma.sql`
+    with latest_attempt as (
+      select distinct on (ia.interview_id)
+        ia.interview_id,
+        ia.interruption_reason,
+        ia.disconnect_reason,
+        ia.recording_status,
+        ia.termination_metadata -> 'transcript_integrity' as transcript_integrity
+      from public.interview_attempts ia
+      order by ia.interview_id, ia.started_at desc nulls last
+    )
+    select distinct i.organization_id::text as organization_id
+    from public.interviews i
+    inner join latest_attempt la
+      on la.interview_id = i.interview_id
+    inner join public.workspace_trial_credit_events deduction
+      on deduction.organization_id = i.organization_id
+      and deduction.kind = 'INTERVIEW'
+      and deduction.source in ('interview_link', 'interview_batch')
+      and deduction.source_id = i.interview_id::text
+    where (
+        coalesce((la.transcript_integrity->>'createdPlaceholders')::int, 0) > 0
+        or coalesce((la.transcript_integrity->>'remainingIssues')::int, 0) > 0
+        or la.transcript_integrity->>'status' = 'needs_review'
+        or upper(coalesce(la.recording_status, '')) = 'FAILED'
+        or lower(coalesce(la.interruption_reason, '') || ' ' || coalesce(la.disconnect_reason, '')) like '%camera stream interrupted%'
+        or lower(coalesce(la.interruption_reason, '') || ' ' || coalesce(la.disconnect_reason, '')) like '%realtime interview link was interrupted%'
+        or lower(coalesce(la.interruption_reason, '') || ' ' || coalesce(la.disconnect_reason, '')) like '%realtime interview connection ended unexpectedly%'
+      )
+      and not exists (
+        select 1
+        from public.workspace_trial_credit_events refund
+        where refund.organization_id = i.organization_id
+          and refund.kind = 'INTERVIEW'
+          and refund.source = ${PLATFORM_FAILURE_REFUND_EVENT_SOURCE}
+          and refund.source_id = i.interview_id::text
+      )
+  `)
+
+  let refunded = 0
+  for (const organization of organizations) {
+    const result = await refundPlatformFailureInterviewCredits({
+      organizationId: organization.organization_id,
+    })
+    refunded += result.refunded
+  }
+
+  return { organizations: organizations.length, refunded }
 }

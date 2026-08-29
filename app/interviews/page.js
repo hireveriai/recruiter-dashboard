@@ -250,6 +250,15 @@ const FAULT_NOTE_STATUSES = new Set([
   "EXITED_EARLY",
 ])
 
+function pluralResponses(count) {
+  return `${count} ${count === 1 ? "response" : "responses"}`
+}
+
+/**
+ * Recruiter-facing account of what went wrong. When the cause was ours it says
+ * so plainly and clears the candidate, because a recruiter reading a partial
+ * score must never be left thinking the candidate skipped an answer.
+ */
 function getFaultNote(interview, statusKey) {
   if (!FAULT_NOTE_STATUSES.has(statusKey)) {
     return null
@@ -260,17 +269,69 @@ function getFaultNote(interview, statusKey) {
 
   if (!attribution) {
     return legacyReason
-      ? { party: "INDETERMINATE", tooltip: legacyReason }
+      ? { party: "INDETERMINATE", heading: "Session issue", tooltip: legacyReason }
       : null
   }
 
-  const evidence = Array.isArray(attribution.evidence) ? attribution.evidence : []
-  const tooltip = [
-    `${attribution.title}: ${attribution.detail}`,
-    ...(evidence.length > 0 ? [`\nWhat we recorded:\n- ${evidence.join("\n- ")}`] : []),
-  ].join("")
+  const isPlatformFault = attribution.party === "VERISNOVA"
+  const reconstructed = Number(interview?.reconstructedResponses ?? 0)
+  const unrecovered = Number(interview?.unrecoveredResponses ?? 0)
 
-  return { party: attribution.party, tooltip }
+  if (!isPlatformFault) {
+    const evidence = Array.isArray(attribution.evidence) ? attribution.evidence : []
+    return {
+      party: attribution.party,
+      heading: attribution.title,
+      tooltip: [attribution.detail, ...(evidence.length > 0 ? ["", ...evidence.map((line) => `• ${line}`)] : [])].join("\n"),
+    }
+  }
+
+  const recovered = []
+  if (reconstructed > 0) recovered.push(`• ${pluralResponses(reconstructed)} reconstructed`)
+  if (unrecovered > 0) recovered.push(`• ${pluralResponses(unrecovered)} unavailable`)
+
+  const lines = [
+    "PLATFORM RECORDING ISSUE",
+    "",
+    "VerisNova was unable to record one or more candidate responses.",
+    "",
+    "The candidate is not at fault. Some interview evidence is incomplete, so the score and VERIS decision should be reviewed before making a hiring decision.",
+  ]
+
+  if (recovered.length > 0) {
+    lines.push("", "What we recovered:", ...recovered)
+  }
+
+  if (interview?.creditRefunded) {
+    lines.push("", "Interview credit:", "✓ Refunded")
+  }
+
+  return {
+    party: attribution.party,
+    heading: "Platform recording issue",
+    tooltip: lines.join("\n"),
+  }
+}
+
+/**
+ * True when the platform lost evidence this interview was scored on. The score
+ * is still shown -- the backend already calculated it -- but it must never read
+ * as a complete, final assessment.
+ */
+function hasIncompleteEvidence(interview, statusKey) {
+  if (!FAULT_NOTE_STATUSES.has(statusKey)) return false
+  if (interview?.faultAttribution?.party !== "VERISNOVA") return false
+  return Number(interview?.unrecoveredResponses ?? 0) > 0
+}
+
+function getEvidenceCompleteness(interview) {
+  const completeness = interview?.evidenceCompleteness
+  if (!completeness) return null
+  const total = Number(completeness.total ?? 0)
+  const available = Number(completeness.available ?? 0)
+  if (!Number.isFinite(total) || total <= 0) return null
+  if (available >= total) return null
+  return { available, total }
 }
 
 function getStatusBadge(status) {
@@ -1128,6 +1189,11 @@ export default function InterviewsPage() {
                   filteredInterviews.map((interview) => {
                     const recruiterStatus = getRecruiterStatus(interview)
                     const faultNote = getFaultNote(interview, recruiterStatus.key)
+                    const evidenceIncomplete = hasIncompleteEvidence(interview, recruiterStatus.key)
+                    const evidenceCompleteness = evidenceIncomplete ? getEvidenceCompleteness(interview) : null
+                    const incompleteEvidenceNote = evidenceIncomplete
+                      ? `Incomplete evidence — ${pluralResponses(Number(interview.unrecoveredResponses ?? 0))} could not be recovered. Review manually before making a hiring decision.`
+                      : ""
                     const interviewStatus = normalizeStatusKey(interview.status)
                     const isEarlyExit = isEarlyExitInterview(interview)
                     const isCompleted = isCompletedInterview(interview)
@@ -1205,10 +1271,47 @@ export default function InterviewsPage() {
                             </span>
                           ) : null}
                         </div>
+                        {faultNote?.party === "VERISNOVA" ? (
+                          <span className="mt-1 block whitespace-nowrap text-[11px] text-rose-200/70">
+                            Platform recording issue
+                          </span>
+                        ) : null}
+                        {interview.creditRefunded ? (
+                          <span
+                            className="mt-0.5 block whitespace-nowrap text-[11px] text-emerald-300/80"
+                            title="This interview was affected by a VerisNova recording issue. 1 interview credit has been returned to your account."
+                          >
+                            ✓ Interview credit refunded
+                          </span>
+                        ) : null}
                       </td>
                       <td className="px-3 py-3.5 2xl:py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
-                      <td className="px-3 py-3.5 2xl:py-5 pr-5 text-slate-300">{formatScore(interview.score)}</td>
-                      <td className="px-5 py-3.5 2xl:py-5 text-slate-300"><span className="block truncate">{interview.decision ?? "-"}</span></td>
+                      <td className="px-3 py-3.5 2xl:py-5 pr-5 text-slate-300">
+                        <span className="whitespace-nowrap">
+                          {formatScore(interview.score)}
+                          {evidenceIncomplete ? (
+                            <span className="text-amber-300" title={incompleteEvidenceNote}>*</span>
+                          ) : null}
+                        </span>
+                        {evidenceCompleteness ? (
+                          <span className="mt-1 block whitespace-nowrap text-[11px] text-amber-300/70">
+                            Evidence {evidenceCompleteness.available}/{evidenceCompleteness.total}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-5 py-3.5 2xl:py-5 text-slate-300">
+                        <span className="block truncate">
+                          {interview.decision ?? "-"}
+                          {evidenceIncomplete && interview.decision ? (
+                            <span className="text-amber-300" title={incompleteEvidenceNote}>*</span>
+                          ) : null}
+                        </span>
+                        {evidenceIncomplete ? (
+                          <span className="mt-1 block text-[11px] leading-snug text-amber-300/70">
+                            Review manually before deciding
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-3 py-3.5 2xl:py-5">
                         {interview.recruiterDecisionStatus ? (
                           <DecisionPill status={interview.recruiterDecisionStatus} />
