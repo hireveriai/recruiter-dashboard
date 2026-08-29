@@ -1010,7 +1010,7 @@ export default function InterviewsPage() {
 
                   return (
                     <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/40 px-3.5 py-2.5 2xl:px-4 2xl:py-3">
-                      <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em] ${getStatusBadge(key)}`}>
+                      <span className={`inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getStatusBadge(key)}`}>
                         {item.label}
                       </span>
                       <p className="mt-2 text-xs leading-5 text-slate-400">{item.description}</p>
@@ -1093,12 +1093,12 @@ export default function InterviewsPage() {
                 <col className="w-[13%]" />
                 <col className="w-[9%]" />
                 <col className="w-[11%]" />
-                <col className="w-[10%]" />
+                <col className="w-[12%]" />
                 <col className="w-[8%]" />
                 <col className="w-[7%]" />
                 <col className="w-[9%]" />
                 <col className="w-[11%]" />
-                <col className="w-[14%]" />
+                <col className="w-[12%]" />
                 <col className="w-[8%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
@@ -1185,7 +1185,7 @@ export default function InterviewsPage() {
                       <td className="overflow-hidden px-4 py-3.5 2xl:py-5">
                         <div className="flex min-w-0 items-center gap-1.5">
                           <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.08em] ${getStatusBadge(recruiterStatus.key)}`}
+                            className={`inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium ${getStatusBadge(recruiterStatus.key)}`}
                             title={recruiterStatus.description}
                           >
                             {recruiterStatus.label}
