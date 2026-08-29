@@ -1272,13 +1272,13 @@ export default function InterviewsPage() {
                           ) : null}
                         </div>
                         {faultNote?.party === "VERISNOVA" ? (
-                          <span className="mt-1 block whitespace-nowrap text-[11px] text-rose-200/70">
+                          <span className="mt-1 block break-words text-[11px] leading-snug text-rose-200/70">
                             Platform recording issue
                           </span>
                         ) : null}
                         {interview.creditRefunded ? (
                           <span
-                            className="mt-0.5 block whitespace-nowrap text-[11px] text-emerald-300/80"
+                            className="mt-0.5 block break-words text-[11px] leading-snug text-emerald-300/80"
                             title="This interview was affected by a VerisNova recording issue. 1 interview credit has been returned to your account."
                           >
                             ✓ Interview credit refunded
