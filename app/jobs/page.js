@@ -131,7 +131,7 @@ function JobDescriptionCell({ description }) {
 
   return (
     <div className="group relative max-w-full">
-      <div className="cursor-help leading-6 text-slate-400">
+      <div className="cursor-help break-words leading-6 text-slate-400">
         {preview}
       </div>
 
@@ -156,7 +156,7 @@ function JobSkillsCell({ skills }) {
 
   return (
     <div className="group relative max-w-full">
-      <div className="cursor-help leading-6 text-slate-300">
+      <div className="cursor-help break-words leading-6 text-slate-300">
         {preview}
       </div>
 
@@ -489,19 +489,19 @@ export default function JobsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1610px] table-fixed text-sm">
-              <colgroup>
-                <col className="w-[52px]" />
-                <col className="w-[148px]" />
-                <col className="w-[152px]" />
-                <col className="w-[104px]" />
-                <col className="w-[104px]" />
-                <col className="w-[84px]" />
-                <col className="w-[82px]" />
-                <col className="w-[132px]" />
-                <col className="w-[92px]" />
-                <col className="w-[146px]" />
-              </colgroup>
+            <table className="w-full table-fixed text-sm" style={{ minWidth: "1610px" }}>
+                {/*
+                  Column widths live here as real inline widths rather than
+                  utility classes. The table is table-fixed, so these are the
+                  only thing deciding column size, and a colgroup is honoured
+                  by the browser directly with no dependency on CSS generation.
+                  They sum to the table min-width so nothing is squeezed.
+                */}
+                <colgroup>
+                  {[220, 260, 110, 110, 130, 100, 150, 200, 140, 190].map((width, index) => (
+                    <col key={index} style={{ width: `${width}px` }} />
+                  ))}
+                </colgroup>
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
                   {/*
@@ -510,16 +510,16 @@ export default function JobsPage() {
                     needs one, or the browser splits the remaining space evenly
                     and narrow-looking columns like Job Title get crushed.
                   */}
-                  <th className="w-[220px] px-4 py-4 text-left font-medium">Job Title</th>
-                  <th className="w-[260px] px-4 py-4 text-left font-medium">Description</th>
-                  <th className="w-[110px] whitespace-nowrap px-4 py-4 text-left font-medium">Status</th>
-                  <th className="w-[110px] whitespace-nowrap px-4 py-4 text-left font-medium">Difficulty</th>
-                  <th className="w-[130px] px-4 py-4 text-left font-medium">Experience Level</th>
-                  <th className="w-[100px] whitespace-nowrap px-4 py-4 text-left font-medium">Timeline</th>
-                  <th className="w-[150px] whitespace-nowrap px-4 py-4 text-left font-medium">Interview Mode</th>
-                  <th className="w-[200px] px-4 py-4 text-left font-medium">Core Skills</th>
-                  <th className="w-[140px] px-4 py-4 text-left font-medium">Open Interviews</th>
-                  <th className="w-[190px] whitespace-nowrap px-4 py-4 text-right font-medium">Actions</th>
+                  <th className="px-4 py-4 text-left font-medium">Job Title</th>
+                  <th className="px-4 py-4 text-left font-medium">Description</th>
+                  <th className="whitespace-nowrap px-4 py-4 text-left font-medium">Status</th>
+                  <th className="whitespace-nowrap px-4 py-4 text-left font-medium">Difficulty</th>
+                  <th className="px-4 py-4 text-left font-medium">Experience Level</th>
+                  <th className="whitespace-nowrap px-4 py-4 text-left font-medium">Timeline</th>
+                  <th className="whitespace-nowrap px-4 py-4 text-left font-medium">Interview Mode</th>
+                  <th className="px-4 py-4 text-left font-medium">Core Skills</th>
+                  <th className="px-4 py-4 text-left font-medium">Open Interviews</th>
+                  <th className="whitespace-nowrap px-4 py-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -539,7 +539,7 @@ export default function JobsPage() {
                           type="button"
                           onClick={() => handleEdit(job)}
                           title={`Edit ${job.jobTitle}`}
-                          className="block w-full rounded text-left font-medium leading-6 text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
+                          className="block w-full break-words rounded text-left font-medium leading-6 text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
                         >
                           {job.jobTitle}
                         </button>
