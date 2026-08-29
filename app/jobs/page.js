@@ -672,7 +672,7 @@ export default function JobsPage() {
                               </button>
 
                               {openActionMenuJobId === job.jobId ? (
-                                <div className="hv-preserve-dark absolute right-0 top-[calc(100%+10px)] z-30 w-44 overflow-hidden rounded-2xl border border-slate-800 bg-[#111a2d]/98 p-2 shadow-[0_20px_60px_rgba(2,6,23,0.42)]">
+                                <div className="absolute right-0 top-[calc(100%+10px)] z-30 w-44 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-[0_20px_60px_rgba(2,6,23,0.42)]">
                                   {supportsJobActiveState ? (
                                     <button
                                       type="button"
