@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Download, Ellipsis, FileText, Info, Link2, MessageSquare, RotateCw, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
@@ -332,6 +332,89 @@ function getEvidenceCompleteness(interview) {
   if (!Number.isFinite(total) || total <= 0) return null
   if (available >= total) return null
   return { available, total }
+}
+
+// The fault note used to ride on the native title attribute, which Chrome
+// paints as browser chrome: a black box regardless of the page theme. It is
+// a real element now so it can follow light mode. Positioned fixed rather
+// than absolute because the status cell clips its overflow and the table
+// body scrolls -- an absolute panel would be cut off at the cell edge.
+const FAULT_TOOLTIP_WIDTH = 380
+
+function FaultNote({ note }) {
+  const anchorRef = useRef(null)
+  const [position, setPosition] = useState(null)
+
+  const show = () => {
+    const rect = anchorRef.current?.getBoundingClientRect()
+
+    if (!rect) {
+      return
+    }
+
+    const left = Math.max(12, Math.min(rect.left, window.innerWidth - FAULT_TOOLTIP_WIDTH - 12))
+    // Flip above the icon when the panel would run past the bottom of the
+    // viewport, which it does for the last rows of a full table.
+    const opensUpward = rect.bottom + 260 > window.innerHeight && rect.top > 260
+
+    setPosition({
+      left,
+      top: opensUpward ? undefined : rect.bottom + 8,
+      bottom: opensUpward ? window.innerHeight - rect.top + 8 : undefined,
+    })
+  }
+
+  const hide = () => setPosition(null)
+
+  // A fixed panel does not travel with the row, so anything that moves the
+  // anchor underneath it has to close it rather than leave it stranded.
+  useEffect(() => {
+    if (!position) {
+      return undefined
+    }
+
+    const close = () => setPosition(null)
+
+    window.addEventListener("scroll", close, true)
+    window.addEventListener("resize", close)
+
+    return () => {
+      window.removeEventListener("scroll", close, true)
+      window.removeEventListener("resize", close)
+    }
+  }, [position])
+
+  return (
+    <span className="inline-flex">
+      <span
+        ref={anchorRef}
+        tabIndex={0}
+        role="button"
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        aria-label={note.tooltip}
+        className={`inline-flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full outline-none transition focus-visible:ring-2 ${
+          note.party === "VERISNOVA"
+            ? "text-rose-200/80 hover:bg-rose-400/10 hover:text-rose-100 focus-visible:bg-rose-400/10 focus-visible:text-rose-100 focus-visible:ring-rose-300/60"
+            : "text-sky-200/75 hover:bg-sky-400/10 hover:text-sky-100 focus-visible:bg-sky-400/10 focus-visible:text-sky-100 focus-visible:ring-sky-300/60"
+        }`}
+      >
+        <Info className="h-4 w-4" aria-hidden="true" />
+      </span>
+
+      {position ? (
+        <span
+          role="tooltip"
+          style={{ left: position.left, top: position.top, bottom: position.bottom, width: FAULT_TOOLTIP_WIDTH }}
+          className="hv-fault-tooltip pointer-events-none fixed z-50 max-w-[86vw] whitespace-pre-wrap rounded-xl border px-4 py-3 text-left text-xs font-normal leading-5"
+        >
+          {note.tooltip}
+        </span>
+      ) : null}
+    </span>
+  )
 }
 
 function getStatusBadge(status) {
@@ -1256,20 +1339,7 @@ export default function InterviewsPage() {
                           >
                             {recruiterStatus.label}
                           </span>
-                          {faultNote ? (
-                            <span
-                              tabIndex={0}
-                              className={`inline-flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full outline-none transition focus-visible:ring-2 ${
-                                faultNote.party === "VERISNOVA"
-                                  ? "text-rose-200/80 hover:bg-rose-400/10 hover:text-rose-100 focus-visible:bg-rose-400/10 focus-visible:text-rose-100 focus-visible:ring-rose-300/60"
-                                  : "text-sky-200/75 hover:bg-sky-400/10 hover:text-sky-100 focus-visible:bg-sky-400/10 focus-visible:text-sky-100 focus-visible:ring-sky-300/60"
-                              }`}
-                              title={faultNote.tooltip}
-                              aria-label={faultNote.tooltip}
-                            >
-                              <Info className="h-4 w-4" aria-hidden="true" />
-                            </span>
-                          ) : null}
+                          {faultNote ? <FaultNote note={faultNote} /> : null}
                         </div>
                         {faultNote?.party === "VERISNOVA" ? (
                           <span className="mt-1 block break-words text-[11px] leading-snug text-rose-200/70">
