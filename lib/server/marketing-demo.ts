@@ -33,35 +33,41 @@ const profile = {
   sessionValidatedVia: "marketing_demo",
 }
 
+// Roles here are deliberately spread across industries and functions. VerisNova
+// builds an interview from a role's requirements rather than assuming a
+// technical role, and these fixtures are what public marketing screenshots
+// show, so they should not read as an engineering-only product.
 const jobs = [
   {
     jobId: JOB_ID,
-    jobTitle: "Senior Platform Engineer",
-    jobDescription: "Lead resilient cloud platform initiatives, improve developer velocity, and guide evidence-based architecture decisions across distributed systems.",
+    jobTitle: "Regional Operations Manager",
+    jobDescription: "Lead regional service operations, own performance targets, and develop frontline team capability across multiple sites.",
     experienceLevelId: 4,
     difficultyProfile: "ADVANCED",
     interviewDurationMinutes: 45,
     questionTypeDefault: "MIXED",
-    deviceRequirement: "DESKTOP_RECOMMENDED",
-    coreSkills: ["Distributed Systems", "Kubernetes", "TypeScript", "PostgreSQL"],
-    codingRequired: "YES",
-    codingAssessmentType: "LIVE_PROBLEM_SOLVING",
-    codingDifficulty: "ADVANCED",
-    codingDurationMinutes: 25,
-    codingLanguages: ["TypeScript", "Python"],
+    deviceRequirement: "ANY",
+    coreSkills: ["Team Leadership", "Service Operations", "Budget Ownership", "Stakeholder Management"],
+    interviewMode: "STANDARD",
+    codingRequired: "NO",
+    codingAssessmentType: null,
+    codingDifficulty: null,
+    codingDurationMinutes: null,
+    codingLanguages: [],
     isActive: true,
     _count: { interviews: 12 },
   },
   {
     jobId: "44444444-4444-4444-8444-444444444444",
-    jobTitle: "Product Data Analyst",
-    jobDescription: "Turn product telemetry into trusted decision support for growth and product teams.",
+    jobTitle: "Clinical Nurse Manager",
+    jobDescription: "Oversee ward staffing, uphold patient care standards, and support clinical teams through escalation and review.",
     experienceLevelId: 3,
     difficultyProfile: "INTERMEDIATE",
     interviewDurationMinutes: 40,
     questionTypeDefault: "BEHAVIORAL",
     deviceRequirement: "ANY",
-    coreSkills: ["SQL", "Experimentation", "Analytics"],
+    coreSkills: ["Patient Care Standards", "Clinical Governance", "Rostering", "Team Development"],
+    interviewMode: "INDIVIDUALIZED",
     codingRequired: "NO",
     codingAssessmentType: null,
     codingDifficulty: null,
@@ -70,14 +76,37 @@ const jobs = [
     isActive: true,
     _count: { interviews: 8 },
   },
+  {
+    jobId: "4b4b4b4b-4b4b-4b4b-8b4b-4b4b4b4b4b4b",
+    jobTitle: "Enterprise Account Executive",
+    jobDescription: "Own complex enterprise sales cycles end to end, from qualification through negotiation and close.",
+    experienceLevelId: 4,
+    difficultyProfile: "ADVANCED",
+    interviewDurationMinutes: 45,
+    questionTypeDefault: "MIXED",
+    deviceRequirement: "ANY",
+    coreSkills: ["Consultative Selling", "Pipeline Management", "Negotiation", "Forecasting"],
+    interviewMode: "STANDARD",
+    codingRequired: "NO",
+    codingAssessmentType: null,
+    codingDifficulty: null,
+    codingDurationMinutes: null,
+    codingLanguages: [],
+    isActive: true,
+    _count: { interviews: 6 },
+  },
 ]
 
+// Order matters: the first three rows are what the candidate list shows above
+// the fold, so they deliberately span all three roles. Index positions are also
+// load-bearing further down (index 2 is the INVITED candidate with no start
+// time, indexes 0 and 4 are the completed ones, index 3 is mid-interview).
 const candidates = [
-  ["Ishita Rao", "Senior Platform Engineer", "COMPLETED", 91, "STRONG_HIRE"],
-  ["Kabir Shah", "Senior Platform Engineer", "REVIEW_REQUIRED", 84, "REVIEW"],
-  ["Mira Nair", "Product Data Analyst", "INVITED", 79, "PENDING"],
-  ["Arjun Bose", "Senior Platform Engineer", "IN_PROGRESS", 87, "PENDING"],
-  ["Nyla Kapoor", "Product Data Analyst", "COMPLETED", 82, "HIRE"],
+  ["Ishita Rao", "Regional Operations Manager", "COMPLETED", 91, "STRONG_HIRE"],
+  ["Arjun Bose", "Enterprise Account Executive", "REVIEW_REQUIRED", 84, "REVIEW"],
+  ["Mira Nair", "Clinical Nurse Manager", "INVITED", 79, "PENDING"],
+  ["Kabir Shah", "Regional Operations Manager", "IN_PROGRESS", 87, "PENDING"],
+  ["Nyla Kapoor", "Clinical Nurse Manager", "COMPLETED", 82, "HIRE"],
 ].map((row, index) => ({
   candidateId: `55555555-5555-4555-8${String(index + 1).padStart(3, "0")}-555555555555`,
   interviewId: `66666666-6666-4666-8${String(index + 1).padStart(3, "0")}-666666666666`,
@@ -88,7 +117,7 @@ const candidates = [
   score: row[3],
   verisScreeningScore: row[3],
   aiSummaryShort: "Structured evidence shows strong role alignment and clear, measured communication.",
-  aiSummaryFull: "The candidate demonstrated practical systems thinking, explained trade-offs clearly, and connected technical decisions to measurable business outcomes. Human review remains the final decision point.",
+  aiSummaryFull: "The candidate worked through realistic scenarios methodically, explained trade-offs clearly, and connected their decisions to measurable outcomes. Human review remains the final decision point.",
   decision: row[4],
   recruiterDecisionStatus: null,
   recruiterDecisionAt: null,
@@ -112,7 +141,7 @@ const recordings = candidates.slice(0, 2).map((candidate, index) => ({
   audioUrl: "",
   storagePath: null,
   hasRecordingFile: false,
-  transcriptPreview: "I would compare reliability, migration risk, operating cost, and rollback strategy using one shared decision framework.",
+  transcriptPreview: "I would weigh service impact, cost, team capacity and recovery options against one shared decision framework.",
   transcriptReady: true,
   cognitiveAnalysisReady: true,
   aiSummaryPreview: "Clear reasoning with strong ownership and practical risk awareness.",
@@ -133,8 +162,8 @@ const veris = candidates.slice(0, 3).map((candidate, index) => ({
   recommendation: index === 0 ? "STRONG HIRE" : index === 1 ? "REVIEW RECOMMENDED" : "PROCEED",
   recommendationReason: "Evidence supports progression; final decision remains recruiter controlled.",
   scoreLabel: `${candidate.score}%`,
-  strengthsShort: "Systems thinking, clear trade-offs, calm communication",
-  weaknessesShort: index === 1 ? "Probe deeper on incident leadership" : "Validate scale assumptions in follow-up",
+  strengthsShort: "Structured judgment, clear trade-offs, calm communication",
+  weaknessesShort: index === 1 ? "Probe deeper on escalation ownership" : "Validate resourcing assumptions in follow-up",
   behavioralFlagsShort: index === 1 ? "Integrity signal: brief attention shift; review context" : "No material integrity concerns",
 }))
 
@@ -263,7 +292,7 @@ const reports = {
   },
   interviewTimeline: [
     { id: "event-1", at: "2026-08-01T09:15:00.000Z", title: "Interview started", detail: "Secure device check completed", severity: "info", recordingUrl: "" },
-    { id: "event-2", at: "2026-08-01T09:28:00.000Z", title: "Architecture evidence", detail: "Candidate compared reliability and rollback trade-offs", severity: "info", recordingUrl: "" },
+    { id: "event-2", at: "2026-08-01T09:28:00.000Z", title: "Scenario evidence", detail: "Candidate compared cost, risk and recovery trade-offs", severity: "info", recordingUrl: "" },
     { id: "event-3", at: "2026-08-01T09:41:00.000Z", title: "Integrity signal", detail: "Brief attention shift; contextual review recommended", severity: "warning", recordingUrl: "" },
   ],
   fraudDetection: {
@@ -291,7 +320,7 @@ const reports = {
     flaggedInterviews: 1,
     selectedCandidates: index === 0 ? 4 : 3,
     failureTrend: "Stable",
-    skillGaps: index === 0 ? ["Multi-region failover"] : ["Experiment design"],
+    skillGaps: index === 0 ? ["Cross-site escalation"] : ["Workforce planning"],
   })),
   auditLogs: [
     { id: "audit-1", at: DEMO_NOW, actor: "Aarav Mehta", action: "Reviewed evidence", target: "Ishita Rao", source: "War Room", detail: "Recommendation retained; final decision pending" },
