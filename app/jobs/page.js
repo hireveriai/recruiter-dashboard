@@ -116,12 +116,12 @@ function uniqueSorted(values) {
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+    <label className="grid gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-slate-500 2xl:gap-1.5 2xl:text-[11px] 2xl:tracking-[0.14em]">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+        className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 text-[13px] font-medium 2xl:px-3 normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -444,42 +444,42 @@ export default function JobsPage() {
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
       <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
-          <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.22)] 2xl:p-8">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between 2xl:gap-8">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Role Portfolio</p>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">All Jobs</h1>
-              <p className="mt-4 text-base leading-7 text-slate-400">
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white 2xl:mt-4 2xl:text-4xl">All Jobs</h1>
+              <p className="mt-3 text-sm leading-6 text-slate-400 2xl:mt-4 2xl:text-base 2xl:leading-7">
                 Live role inventory for your hiring organization, including experience band, evaluation depth, and current interview activity.
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[680px]">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Total Jobs</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.total}</p>
+            <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[600px] 2xl:min-w-[680px]">
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
+                <p className="text-xs text-slate-500 2xl:text-sm">Total Jobs</p>
+                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.total}</p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Active Jobs</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.activeJobs}</p>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
+                <p className="text-xs text-slate-500 2xl:text-sm">Active Jobs</p>
+                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.activeJobs}</p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Active Interview Tracks</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.totalInterviews}</p>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
+                <p className="text-xs text-slate-500 2xl:text-sm">Active Interview Tracks</p>
+                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.totalInterviews}</p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Senior Roles</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.seniorRoles}</p>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
+                <p className="text-xs text-slate-500 2xl:text-sm">Senior Roles</p>
+                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.seniorRoles}</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
-          <div className="flex flex-col gap-4 border-b border-slate-800 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)] 2xl:mt-8">
+          <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between 2xl:px-6 2xl:py-5">
             <div>
               <h2 className="text-lg font-semibold text-white">Created Job Roles</h2>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-[13px] text-slate-400 2xl:text-sm">
                 Showing {filteredJobs.length} of {jobs.length} jobs created under the current recruiter organization.
               </p>
             </div>
@@ -501,13 +501,13 @@ export default function JobsPage() {
           </div>
 
           <div className="grid gap-4 border-b border-slate-800 bg-slate-950/20 px-6 py-5 xl:grid-cols-[minmax(220px,1.2fr)_repeat(4,minmax(150px,0.7fr))_auto]">
-            <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            <label className="grid gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-slate-500 2xl:gap-1.5 2xl:text-[11px] 2xl:tracking-[0.14em]">
               Search
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search title, skills, description"
-                className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+                className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 text-[13px] font-medium 2xl:px-3 normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
               />
             </label>
             <FilterSelect
@@ -546,14 +546,14 @@ export default function JobsPage() {
               type="button"
               onClick={clearFilters}
               disabled={!hasActiveFilters}
-              className="h-11 self-end rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+              className="h-9 self-end rounded-lg border border-slate-700 px-3.5 text-[13px] font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
             >
               Clear
             </button>
           </div>
 
           <div className="hv-table-scroll">
-            <table className="w-full table-fixed text-sm" style={{ minWidth: "1610px" }}>
+            <table className="w-full table-fixed text-[13px] 2xl:text-sm" style={{ minWidth: "1610px" }}>
                 {/*
                   Column widths live here as real inline widths rather than
                   utility classes. The table is table-fixed, so these are the
@@ -574,16 +574,16 @@ export default function JobsPage() {
                     needs one, or the browser splits the remaining space evenly
                     and narrow-looking columns like Job Title get crushed.
                   */}
-                  <th className="px-4 py-4 text-left font-medium">Job Title</th>
-                  <th className="px-4 py-4 text-left font-medium">Description</th>
-                  <th className="whitespace-nowrap px-4 py-4 text-left font-medium">Status</th>
-                  <th className="whitespace-nowrap px-4 py-4 text-left font-medium">Difficulty</th>
-                  <th className="px-4 py-4 text-left font-medium">Experience Level</th>
-                  <th className="whitespace-nowrap px-4 py-4 text-left font-medium">Timeline</th>
-                  <th className="whitespace-nowrap px-4 py-4 text-left font-medium">Interview Mode</th>
-                  <th className="px-4 py-4 text-left font-medium">Core Skills</th>
-                  <th className="px-4 py-4 text-left font-medium">Open Interviews</th>
-                  <th className="whitespace-nowrap px-4 py-4 text-right font-medium">Actions</th>
+                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Job Title</th>
+                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Description</th>
+                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-left font-medium">Status</th>
+                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-left font-medium">Difficulty</th>
+                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Experience Level</th>
+                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-left font-medium">Timeline</th>
+                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-left font-medium">Interview Mode</th>
+                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Core Skills</th>
+                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Open Interviews</th>
+                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -598,7 +598,7 @@ export default function JobsPage() {
                 ) : (
                   filteredJobs.map((job) => (
                     <tr key={job.jobId} className="border-t border-slate-800/80 align-top text-slate-200">
-                      <td className="px-4 py-4 align-top">
+                      <td className="px-4 py-3 2xl:py-4 align-top">
                         <button
                           type="button"
                           onClick={() => handleEdit(job)}
@@ -608,22 +608,22 @@ export default function JobsPage() {
                           {job.jobTitle}
                         </button>
                       </td>
-                      <td className="px-4 py-4 text-slate-400">
+                      <td className="px-4 py-3 2xl:py-4 text-slate-400">
                         <JobDescriptionCell description={job.jobDescription} />
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3 2xl:py-4">
                         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${getStatusTone(job.isActive !== false)}`}>
                           {job.isActive !== false ? "ACTIVE" : "INACTIVE"}
                         </span>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3 2xl:py-4">
                         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${getDifficultyTone(job.difficultyProfile)}`}>
                           {job.difficultyProfile ?? "MID"}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-slate-300">{getExperienceLabel(job.experienceLevelId)}</td>
-                      <td className="px-4 py-4 text-slate-300">{job.interviewDurationMinutes ?? 30} min</td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3 2xl:py-4 text-slate-300">{getExperienceLabel(job.experienceLevelId)}</td>
+                      <td className="px-4 py-3 2xl:py-4 text-slate-300">{job.interviewDurationMinutes ?? 30} min</td>
+                      <td className="px-4 py-3 2xl:py-4">
                         <InterviewModeCell
                           mode={job.interviewMode}
                           questionnaireStatus={job.questionnaireStatus}
@@ -631,11 +631,11 @@ export default function JobsPage() {
                           hasDraft={job.questionnaireHasDraft}
                         />
                       </td>
-                      <td className="px-4 py-4 text-slate-300">
+                      <td className="px-4 py-3 2xl:py-4 text-slate-300">
                         <JobSkillsCell skills={job.coreSkills} />
                       </td>
-                      <td className="px-4 py-4 text-slate-300">{job._count?.interviews ?? 0}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-right">
+                      <td className="px-4 py-3 2xl:py-4 text-slate-300">{job._count?.interviews ?? 0}</td>
+                      <td className="whitespace-nowrap px-3 py-3 2xl:py-4 text-right">
                         <div className="flex justify-end">
                           <div
                             className="flex w-full items-center justify-end gap-2"
