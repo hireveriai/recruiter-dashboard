@@ -1,3 +1,5 @@
+import { openAiFetch } from "@/lib/server/ai-usage-log"
+
 export type ParsedResume = {
   name: string | null
   email: string | null
@@ -233,7 +235,8 @@ export async function parseResumeWithAI(text: string): Promise<ParsedResume> {
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await openAiFetch("https://api.openai.com/v1/responses", {
+      aiUsage: { operation: "screening.resume_parse" },
       method: "POST",
       headers: {
         "Content-Type": "application/json",

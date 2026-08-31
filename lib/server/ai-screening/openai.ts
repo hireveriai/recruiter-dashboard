@@ -1,3 +1,4 @@
+import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { deriveSkillsFromText, sanitizeSkillList } from "@/lib/server/ai/skills"
 import type { ParsedResume } from "@/lib/server/resumeParser"
 
@@ -76,7 +77,8 @@ async function callOpenAIJson<T>(input: {
     return null
   }
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await openAiFetch("https://api.openai.com/v1/responses", {
+    aiUsage: { operation: "screening.candidate_match" },
     method: "POST",
     headers: {
       "Content-Type": "application/json",

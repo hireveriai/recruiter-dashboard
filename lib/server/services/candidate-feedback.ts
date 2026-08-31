@@ -1,3 +1,4 @@
+import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { prisma } from "@/lib/server/prisma"
 import { ApiError } from "@/lib/server/errors"
 import { fetchAnswerSummaries, type InterviewAnswerSummary } from "@/lib/server/services/interview-summary"
@@ -72,7 +73,8 @@ async function generateFeedbackText(input: {
   const timeout = setTimeout(() => controller.abort(), 20_000)
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await openAiFetch("https://api.openai.com/v1/chat/completions", {
+      aiUsage: { operation: "interview.candidate_feedback" },
       method: "POST",
       signal: controller.signal,
       headers: {

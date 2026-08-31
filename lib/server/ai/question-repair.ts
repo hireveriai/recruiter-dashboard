@@ -1,3 +1,4 @@
+import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { inferRoleIntelligence, normalizeSkillName, presentSkillName, type RoleFamily } from "@/lib/server/ai/skills"
 
 export type RepairQuestionInput = {
@@ -453,7 +454,8 @@ question: "${original}"
 `
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await openAiFetch("https://api.openai.com/v1/responses", {
+      aiUsage: { operation: "interview.question_repair" },
       method: "POST",
       headers: {
         "Content-Type": "application/json",

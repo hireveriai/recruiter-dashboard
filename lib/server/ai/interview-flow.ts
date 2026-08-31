@@ -1,3 +1,4 @@
+import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { Question } from "@/lib/server/ai/behavioral"
 import { regenerateQuestionWithValidation, validateQuestionQuality } from "@/lib/server/ai/brain"
 import { generateRoleAwareQuestions } from "./role-aware-generator"
@@ -3043,7 +3044,8 @@ export async function generateBaseInterviewQuestionsAI(
                       },
                     }
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await openAiFetch("https://api.openai.com/v1/responses", {
+      aiUsage: { operation: "interview.base_question_generation" },
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -3714,7 +3716,8 @@ export async function generateFollowUpWithAI(input: FollowUpInput): Promise<Foll
   const model = process.env.OPENAI_FOLLOWUP_MODEL ?? OPENAI_FOLLOWUP_MODEL
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await openAiFetch("https://api.openai.com/v1/responses", {
+      aiUsage: { operation: "interview.followup_generation", model },
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -21,6 +21,7 @@
  * regenerating and hoping for the same output.
  */
 
+import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { validateQuestionStrict } from "@/lib/server/ai/question-validator"
 import {
   resolveInterviewQuestionPlan,
@@ -219,7 +220,8 @@ async function callOpenAi(system: string, user: string, signal: AbortSignal) {
     throw new QuestionnaireGenerationError("OPENAI_API_KEY is not configured")
   }
 
-  const response = await fetch(OPENAI_URL, {
+  const response = await openAiFetch(OPENAI_URL, {
+    aiUsage: { operation: "job.questionnaire_generation" },
     method: "POST",
     signal,
     headers: {
@@ -453,7 +455,8 @@ export async function generateResumeQuestions(input: {
 
   try {
     const apiKey = getApiKey()
-    const response = await fetch(OPENAI_URL, {
+    const response = await openAiFetch(OPENAI_URL, {
+      aiUsage: { operation: "job.resume_questions" },
       method: "POST",
       signal: controller.signal,
       headers: {

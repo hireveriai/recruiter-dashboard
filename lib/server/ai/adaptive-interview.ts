@@ -1,3 +1,4 @@
+import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { presentSkillName } from "@/lib/server/ai/skills"
 import {
   evaluateCandidateResponse,
@@ -364,7 +365,8 @@ export async function generateFollowUpWithAI(input: FollowUpInput): Promise<Foll
   const model = process.env.OPENAI_FOLLOWUP_MODEL ?? OPENAI_FOLLOWUP_MODEL
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await openAiFetch("https://api.openai.com/v1/responses", {
+      aiUsage: { operation: "interview.adaptive_generation" },
       method: "POST",
       headers: {
         "Content-Type": "application/json",

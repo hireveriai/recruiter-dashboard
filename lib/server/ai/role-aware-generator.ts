@@ -1,3 +1,4 @@
+import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { BaseGenerationInput, InterviewQuestion } from "./interview-flow"
 import { mapQuestionToSkill, classifySkillType, deriveSkillsFromText, sanitizeSkillList } from "./skills"
 import { validateQuestionStrict } from "./question-validator"
@@ -29,7 +30,8 @@ async function callLLM(prompt: string) {
     throw new Error("Missing OpenAI API key")
   }
 
-  const res = await fetch("https://api.openai.com/v1/responses", {
+  const res = await openAiFetch("https://api.openai.com/v1/responses", {
+    aiUsage: { operation: "interview.role_aware_generation" },
     method: "POST",
     headers: {
       "Content-Type": "application/json",
