@@ -60,6 +60,27 @@ function writeCachedOverview(overview) {
   }
 }
 
+/**
+ * Sends the recruiter to the auth app's recruiter login, carrying the page they
+ * were on as `next` (same contract as middleware.ts). Used whenever the session
+ * is gone — expired outright, or idled out past the 12h inactivity window — so
+ * an ended session lands on the login screen instead of an interstitial the
+ * recruiter has to click through.
+ */
+function redirectToRecruiterLogin() {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  try {
+    const loginUrl = new URL(getRecruiterLoginUrl())
+    loginUrl.searchParams.set("next", window.location.href)
+    window.location.replace(loginUrl.toString())
+  } catch {
+    window.location.replace(getRecruiterLoginUrl())
+  }
+}
+
 function WorkspaceShell({ tone = "loading", title, message, ctaLabel, onCtaClick }) {
   const isError = tone === "error"
 
@@ -201,18 +222,23 @@ export default function RecruiterDashboardBootstrap({ children }) {
         }
 
         if (overviewResponse.status === 401) {
+          // The session is over — signed out elsewhere, expired, or idle past
+          // the 12h inactivity window. There is nothing for the recruiter to
+          // decide here, so go straight to the login screen rather than parking
+          // them on a "workspace access blocked" card with a single button.
+          active = false
           clearVerisnovaSessionCookie()
-          setState({
-            status: "error",
-            profile: null,
-            overview: null,
-            message: overviewData?.error?.code
-              ? `Session could not be validated (${overviewData.error.code}). Please sign in again.`
-              : "Session could not be validated. Please sign in again.",
-          })
           if (typeof window !== "undefined") {
             window.sessionStorage.removeItem(DASHBOARD_CACHE_KEY)
+            window.sessionStorage.removeItem(DASHBOARD_INVALIDATED_KEY)
           }
+          setState({
+            status: "redirecting",
+            profile: null,
+            overview: null,
+            message: "",
+          })
+          redirectToRecruiterLogin()
           return
         }
 
@@ -414,6 +440,20 @@ export default function RecruiterDashboardBootstrap({ children }) {
     return () => window.clearTimeout(timer)
   }, [state.status])
 
+  // Session gone: the browser is already navigating to the recruiter login.
+  // Hold the loading shell so nothing flashes during the handoff.
+  if (state.status === "redirecting") {
+    return (
+      <WorkspaceShell
+        tone="loading"
+        title="Signing you back in"
+        message="Your session has ended. Taking you to the recruiter login…"
+      />
+    )
+  }
+
+  // Reserved for genuine workspace failures (server errors, unreachable API).
+  // Session problems never land here — they redirect above.
   if (state.status === "error") {
     return (
       <WorkspaceShell
@@ -421,7 +461,7 @@ export default function RecruiterDashboardBootstrap({ children }) {
         title="Workspace access blocked"
         message={state.message}
         ctaLabel="Go to Recruiter Login"
-        onCtaClick={() => window.location.replace(getRecruiterLoginUrl())}
+        onCtaClick={redirectToRecruiterLogin}
       />
     )
   }

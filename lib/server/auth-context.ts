@@ -16,6 +16,7 @@ type AuthSessionRow = {
   session_id: string
   identity_id: string
   is_active: boolean | null
+  idle_expired: boolean
 }
 
 type AuthIdentityRow = {
@@ -84,6 +85,13 @@ const DEV_AUTH_BYPASS =
     process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true")
 const AUTH_SERVICE_CACHE_TTL_MS = 60_000
 const AUTH_SERVICE_CACHE_MAX_ENTRIES = 500
+/**
+ * Inactivity ceiling for a recruiter session, independent of auth_sessions
+ * .expires_at (30 days). Every validated request stamps last_seen_at; a session
+ * left untouched for this long is retired and the recruiter goes back to the
+ * recruiter login screen. Keep in sync with auth/lib/session/idle-timeout.ts.
+ */
+const IDLE_SESSION_TIMEOUT_HOURS = 12
 
 function getAuthServiceCache() {
   if (!global.__verisnovaRecruiterAuthServiceCache) {
@@ -131,6 +139,10 @@ function setCachedAuthServiceRecruiter(sessionId: string, recruiter: RecruiterLo
     expiresAt: Date.now() + AUTH_SERVICE_CACHE_TTL_MS,
     recruiter,
   })
+}
+
+function clearCachedAuthServiceRecruiter(sessionId: string) {
+  getAuthServiceCache().delete(sessionId)
 }
 
 function parseCookieEntries(cookieHeader: string | null): CookieEntry[] {
@@ -868,19 +880,10 @@ async function reconcileRecruiterIdentity(
   }
 }
 
-async function reactivateAuthSessionIfNeeded(session: AuthSessionRow) {
-  if (session.is_active === false) {
-    try {
-      await prisma.$queryRaw(Prisma.sql`
-        update public.auth_sessions
-        set is_active = true
-        where session_id::text = ${session.session_id}
-      `)
-    } catch (error) {
-      console.warn("Failed to reactivate recruiter session", error)
-    }
-  }
-}
+// reactivateAuthSessionIfNeeded() lived here. It was already unused, and it
+// directly contradicts the idle-timeout policy in lookupActiveAuthSession():
+// resurrecting a deactivated row would undo an idle expiry. Removed rather than
+// left as a trap.
 
 async function lookupDevBypassRecruiter(): Promise<RecruiterLookupRow | null> {
   try {
@@ -909,6 +912,19 @@ async function lookupDevBypassRecruiter(): Promise<RecruiterLookupRow | null> {
   }
 }
 
+/**
+ * Resolves a hireveri_session cookie against auth_sessions and, in the same
+ * statement, applies the inactivity policy:
+ *
+ * - idle within IDLE_SESSION_TIMEOUT_HOURS -> last_seen_at is bumped, so an
+ *   in-use session stays alive indefinitely (up to expires_at).
+ * - idle beyond it -> the row is deactivated and returned with
+ *   idle_expired = true, so the caller can fail the request instead of letting
+ *   a stale session fall through to the identity/auth-service fallbacks.
+ *
+ * Sessions are no longer unique per identity, so several devices can hold live
+ * sessions at once; each one ages out on its own last_seen_at.
+ */
 async function lookupActiveAuthSession(sessionId: string): Promise<AuthSessionRow | null> {
   if (!UUID_REGEX.test(sessionId)) {
     return null
@@ -916,15 +932,24 @@ async function lookupActiveAuthSession(sessionId: string): Promise<AuthSessionRo
 
   try {
     const sessionRows = await prisma.$queryRaw<AuthSessionRow[]>(Prisma.sql`
-      select
-        s.session_id::text as session_id,
-        s.identity_id::text as identity_id,
-        s.is_active
-      from public.auth_sessions s
+      update public.auth_sessions s
+      set
+        is_active = case
+          when s.last_seen_at <= now() - make_interval(hours => ${IDLE_SESSION_TIMEOUT_HOURS}::int) then false
+          else s.is_active
+        end,
+        last_seen_at = case
+          when s.last_seen_at <= now() - make_interval(hours => ${IDLE_SESSION_TIMEOUT_HOURS}::int) then s.last_seen_at
+          else now()
+        end
       where s.session_id::text = ${sessionId}
         and s.is_active = true
         and (s.expires_at is null or s.expires_at > now())
-      limit 1
+      returning
+        s.session_id::text as session_id,
+        s.identity_id::text as identity_id,
+        s.is_active,
+        (s.is_active = false) as idle_expired
     `)
 
     return sessionRows[0] ?? null
@@ -1025,6 +1050,18 @@ export async function getRecruiterRequestContext(request: Request): Promise<Recr
 
     if (!matchedSession?.identity_id) {
       continue
+    }
+
+    // The recruiter has been inactive past the idle window. Fail here rather
+    // than falling through to the auth-service / identity-cookie fallbacks —
+    // those would happily re-authenticate a session we just retired.
+    if (matchedSession.idle_expired) {
+      clearCachedAuthServiceRecruiter(sessionId)
+      throw new ApiError(
+        401,
+        "SESSION_IDLE_TIMEOUT",
+        `Recruiter session expired after ${IDLE_SESSION_TIMEOUT_HOURS} hours of inactivity`
+      )
     }
 
     const recruiter = await lookupRecruiterForIdentity(matchedSession.identity_id)
