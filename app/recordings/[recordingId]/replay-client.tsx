@@ -235,7 +235,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
 
   if (error) {
     return (
-      <main className="hv-replay-shell min-h-screen px-6 py-8 text-white">
+      <main className="hv-surface-page min-h-screen px-6 py-8 text-white">
         <div className="mx-auto max-w-3xl rounded-2xl border border-rose-400/25 bg-rose-500/10 p-6 text-rose-100">
           {error}
         </div>
@@ -245,7 +245,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
 
   if (!data) {
     return (
-      <main className="hv-replay-shell min-h-screen px-6 py-8 text-white">
+      <main className="hv-surface-page min-h-screen px-6 py-8 text-white">
         <div className="mx-auto max-w-6xl animate-pulse space-y-5">
           <div className="h-28 rounded-2xl bg-slate-800/60" />
           <div className="grid gap-5 lg:grid-cols-[1.4fr_0.8fr]">
@@ -258,8 +258,8 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
   }
 
   return (
-    <main className="hv-replay-shell min-h-screen text-white">
-      <section className="border-b border-slate-800 hv-replay-header px-4 py-6 sm:px-6 lg:px-8">
+    <main className="hv-surface-page min-h-screen text-white">
+      <section className="border-b border-slate-800 hv-surface-header px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/75">Enterprise Interview Replay</p>
@@ -308,7 +308,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
 
       <section className="mx-auto grid max-w-[1500px] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(390px,0.75fr)] lg:px-8">
         <div className="min-w-0">
-          <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-slate-800 hv-replay-panel px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-slate-800 hv-surface-raised px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-white">Video orientation</p>
               <p className="mt-1 text-xs leading-5 text-slate-400">
@@ -338,12 +338,12 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-800 hv-replay-stage shadow-[0_22px_80px_rgba(2,6,23,0.42)]">
+          <div className="overflow-hidden rounded-2xl border border-slate-800 hv-surface-media shadow-[0_22px_80px_rgba(2,6,23,0.42)]">
             <video
               ref={videoRef}
               src={mediaUrl}
               playsInline
-              className={`aspect-video w-full hv-replay-stage object-contain ${videoMode === "mirror" ? "-scale-x-100" : ""}`}
+              className={`aspect-video w-full hv-surface-media object-contain ${videoMode === "mirror" ? "-scale-x-100" : ""}`}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onEnded={() => setIsPlaying(false)}
@@ -378,7 +378,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-slate-800 hv-replay-panel p-5">
+          <div className="mt-4 rounded-2xl border border-slate-800 hv-surface-raised p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-semibold">Review Flag Timeline</h2>
@@ -442,7 +442,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
           </div>
         </div>
 
-        <aside className="min-w-0 rounded-2xl border border-slate-800 hv-replay-panel p-5">
+        <aside className="min-w-0 rounded-2xl border border-slate-800 hv-surface-raised p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Synchronized Review</p>
@@ -484,7 +484,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                 ))}
               </div>
               {activeItem.feedback ? (
-                <p className="mt-4 rounded-lg border border-slate-800 hv-replay-inset p-3 text-sm leading-6 text-slate-300">{activeItem.feedback}</p>
+                <p className="mt-4 rounded-lg border border-slate-800 hv-surface-sunken p-3 text-sm leading-6 text-slate-300">{activeItem.feedback}</p>
               ) : null}
             </article>
           ) : null}
@@ -513,7 +513,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
       </section>
 
       <section className="mx-auto max-w-[1500px] px-4 pb-8 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-slate-800 hv-replay-panel p-5">
+        <div className="rounded-2xl border border-slate-800 hv-surface-raised p-5">
           <h2 className="text-base font-semibold">Complete Transcript</h2>
           <pre className="mt-4 max-h-[420px] whitespace-pre-wrap overflow-auto rounded-xl border border-slate-800 bg-slate-950/45 p-4 text-sm leading-7 text-slate-300">{mergedTranscript}</pre>
         </div>

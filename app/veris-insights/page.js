@@ -201,7 +201,7 @@ export default function VerisInsightsPage() {
 
   if (isLoading) {
     return (
-      <div className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
+      <div className="hv-surface-page min-h-screen text-white">
         <Navbar />
         <VerisGlobeLoader
           eyebrow="VERIS Insights"
@@ -219,7 +219,7 @@ export default function VerisInsightsPage() {
   }
 
   return (
-    <div className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
+    <div className="hv-surface-page min-h-screen text-white">
       <Navbar />
       <main className="px-6 py-8">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -249,7 +249,7 @@ export default function VerisInsightsPage() {
                 ["Review Queue", counts.review],
                 ["High Risk", counts.highRisk],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-lg border border-slate-800 bg-[#111a2e] px-4 py-3">
+                <div key={label} className="rounded-lg border border-slate-800 hv-surface-raised px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
                   <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
                 </div>
@@ -257,7 +257,7 @@ export default function VerisInsightsPage() {
             </div>
 
             {summaries.length === 0 ? (
-              <div className="rounded-lg border border-slate-800 bg-[#111a2e] p-6 text-center text-slate-400">
+              <div className="rounded-lg border border-slate-800 hv-surface-raised p-6 text-center text-slate-400">
                 No VERIS insights available yet.
               </div>
             ) : (
@@ -267,7 +267,7 @@ export default function VerisInsightsPage() {
                   const isExpanded = expandedIds.has(item.attemptId)
 
                   return (
-                    <article key={item.attemptId} className="rounded-lg border border-slate-800 bg-[#111a2e] p-4">
+                    <article key={item.attemptId} className="rounded-lg border border-slate-800 hv-surface-raised p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <h2 className="truncate text-base font-semibold text-white">{item.candidateName}</h2>

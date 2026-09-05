@@ -681,49 +681,72 @@ body {
 }
 
 /*
- * Interview replay surfaces (app/recordings/[recordingId]).
+ * Themed page surfaces.
  *
- * The replay page used to be pinned to the dark palette with
- * .hv-preserve-dark plus hard-coded hex backgrounds, so "View Recording"
- * dropped a recruiter working in the light workspace into a dark page. Its
- * surfaces are named here instead, which lets the slate/gray/text-white
- * remapping above carry the rest of the page into whichever theme is active.
+ * Several recruiter pages (interview replay, subscription, VERIS Insights)
+ * used to pin their whole shell to the dark palette with .hv-preserve-dark
+ * plus hard-coded hex backgrounds. That dropped a recruiter working in the
+ * light workspace into a dark page, and — because the Navbar renders inside
+ * those shells — it also dragged the profile avatar, initials and org name
+ * back to dark while the bar around them stayed light. Naming the surfaces
+ * here lets the slate/gray/text-white remapping above carry the rest of each
+ * page into whichever theme is active.
  */
-.hv-replay-shell {
+.hv-surface-page {
   background: #08111f;
 }
 
-.hv-replay-header {
+.hv-surface-header {
   background: #0b1424;
 }
 
-.hv-replay-panel {
+.hv-surface-raised {
   background: #0f172a;
 }
 
-.hv-replay-inset {
+.hv-surface-sunken {
   background: #08111f;
 }
 
-/* Letterboxing around the video frame stays black in both themes. */
-.hv-replay-stage {
+.hv-surface-accent {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(34, 211, 238, 0.16), transparent 28%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.94));
+}
+
+.hv-surface-featured {
+  background: linear-gradient(180deg, rgba(8, 47, 73, 0.45), rgba(15, 23, 42, 0.96));
+}
+
+/* Letterboxing around a video frame stays black in both themes. */
+.hv-surface-media {
   background: #000000;
 }
 
-:root[data-theme="light"] .hv-replay-shell {
+:root[data-theme="light"] .hv-surface-page {
   background: transparent;
 }
 
-:root[data-theme="light"] .hv-replay-header {
+:root[data-theme="light"] .hv-surface-header {
   background: rgba(255, 255, 255, 0.94);
 }
 
-:root[data-theme="light"] .hv-replay-panel {
+:root[data-theme="light"] .hv-surface-raised {
   background: #ffffff;
 }
 
-:root[data-theme="light"] .hv-replay-inset {
+:root[data-theme="light"] .hv-surface-sunken {
   background: #f4f7fb;
+}
+
+:root[data-theme="light"] .hv-surface-accent {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(8, 145, 178, 0.12), transparent 32%),
+    linear-gradient(135deg, #ffffff, #eaf2fa);
+}
+
+:root[data-theme="light"] .hv-surface-featured {
+  background: linear-gradient(180deg, #ecfeff, #ffffff);
 }
 
 .hv-chart-donut {

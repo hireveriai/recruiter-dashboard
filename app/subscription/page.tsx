@@ -36,8 +36,8 @@ function PlanCard({ plan, featured = false }: { plan: Plan; featured?: boolean }
   return (
     <article className={`flex h-full flex-col rounded-[28px] border p-5 shadow-[0_18px_70px_rgba(2,6,23,0.32)] transition duration-300 hover:-translate-y-1 ${
       featured
-        ? "border-cyan-300/35 bg-[linear-gradient(180deg,rgba(8,47,73,0.45),rgba(15,23,42,0.96))]"
-        : "border-slate-800 bg-[#0f172a]"
+        ? "border-cyan-300/35 hv-surface-featured"
+        : "border-slate-800 hv-surface-raised"
     }`}>
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -167,7 +167,7 @@ export default function SubscriptionPage() {
 
   if (loading) {
     return (
-      <main className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
+      <main className="hv-surface-page min-h-screen text-white">
         <Navbar onSendInterviewClick={() => undefined} />
         <VerisGlobeLoader
           eyebrow="Subscription"
@@ -185,10 +185,10 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <main className="hv-preserve-dark min-h-screen bg-[#08111f] text-white">
+    <main className="hv-surface-page min-h-screen text-white">
       <Navbar onSendInterviewClick={() => undefined} />
       <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:pl-28 lg:px-8 lg:pl-32">
-        <section className="overflow-hidden rounded-[32px] border border-cyan-400/16 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.16),transparent_28%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(2,6,23,0.94))] p-6 shadow-[0_24px_90px_rgba(2,6,23,0.42)] sm:p-8">
+        <section className="overflow-hidden rounded-[32px] border border-cyan-400/16 hv-surface-accent p-6 shadow-[0_24px_90px_rgba(2,6,23,0.42)] sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-200/75">VerisNova Subscription</p>
           <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
             <div>
