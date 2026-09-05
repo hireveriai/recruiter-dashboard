@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { AlertTriangle, FileText, Gauge, Pause, Play, ShieldCheck, Video } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AlertTriangle, Download, FileText, Gauge, Maximize2, Minimize2, Pause, Play, ShieldCheck, Video } from "lucide-react"
 
 type RiskLevel = "low" | "medium" | "high"
 
@@ -124,6 +124,8 @@ function getMergedTranscript(timeline: TimelineItem[], fallback: string | null) 
 
 export default function ReplayClient({ recordingId }: { recordingId: string }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const videoFrameRef = useRef<HTMLDivElement | null>(null)
+  const transcriptScrollRef = useRef<HTMLDivElement | null>(null)
   const [data, setData] = useState<ReviewPayload | null>(null)
   const [error, setError] = useState("")
   const [activeId, setActiveId] = useState("")
@@ -131,6 +133,29 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
   const [videoDurationMs, setVideoDurationMs] = useState(0)
   const [videoMode, setVideoMode] = useState<"raw" | "mirror">("raw")
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // The frame — video plus its own controls — goes fullscreen rather than the
+  // bare <video>, so the scrubber and orientation toggle stay reachable.
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(document.fullscreenElement === videoFrameRef.current)
+
+    document.addEventListener("fullscreenchange", syncFullscreen)
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen)
+  }, [])
+
+  const toggleFullscreen = useCallback(() => {
+    const frame = videoFrameRef.current
+    if (!frame) {
+      return
+    }
+
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined)
+    } else {
+      void frame.requestFullscreen().catch(() => undefined)
+    }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -188,10 +213,35 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
   const mediaUrl = data
     ? `${data.recording.mediaUrl}${typeof window !== "undefined" ? window.location.search : ""}`
     : ""
+  const downloadUrl = mediaUrl ? `${mediaUrl}${mediaUrl.includes("?") ? "&" : "?"}download=1` : ""
+
+  /**
+   * Brings a question's block into view inside the transcript panel only.
+   *
+   * The block is looked up in the DOM rather than through a ref map: playback
+   * re-renders this component on every timeupdate, which detaches and
+   * reattaches element refs constantly, and the lookup has to be reliable at
+   * the instant of the click.
+   */
+  function revealTranscript(itemId: string) {
+    const container = transcriptScrollRef.current
+    const block = container?.querySelector<HTMLElement>(`[data-transcript-id="${CSS.escape(itemId)}"]`)
+
+    if (!container || !block) {
+      return
+    }
+
+    // scrollIntoView would drag the whole page around, so the offset is
+    // applied to the transcript's own scroll box instead. The jump is
+    // deliberately instant: a smooth scroll is silently dropped by browsers
+    // with reduced motion enabled, which would leave the panel unmoved.
+    container.scrollTop = Math.max(0, block.offsetTop - 12)
+  }
 
   function seekTo(ms: number, itemId?: string) {
     if (itemId) {
       setActiveId(itemId)
+      revealTranscript(itemId)
     }
 
     if (videoRef.current) {
@@ -268,22 +318,22 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[720px]">
-            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+            <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
               <FileText className="h-4 w-4 text-cyan-200" />
               <p className="mt-3 text-xs text-slate-500">VERIS Questions</p>
               <p className="mt-1 text-2xl font-semibold">{data.summary.questionCount}</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+            <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
               <Video className="h-4 w-4 text-blue-200" />
               <p className="mt-3 text-xs text-slate-500">Video Status</p>
               <p className="mt-1 truncate text-lg font-semibold capitalize">{data.recording.status ?? "ready"}</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+            <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
               <AlertTriangle className="h-4 w-4 text-amber-200" />
               <p className="mt-3 text-xs text-slate-500">Review Flags</p>
               <p className="mt-1 text-2xl font-semibold">{data.summary.signalCount}</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+            <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
               <Gauge className="h-4 w-4 text-rose-200" />
               <p className="mt-3 text-xs text-slate-500">Highest Review Confidence</p>
               <p className="mt-1 text-2xl font-semibold">{data.summary.maxFraudScore}%</p>
@@ -338,12 +388,15 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-800 hv-surface-media shadow-[0_22px_80px_rgba(2,6,23,0.42)]">
+          <div
+            ref={videoFrameRef}
+            className="hv-replay-frame overflow-hidden rounded-2xl border border-slate-800 hv-surface-media shadow-[0_22px_80px_rgba(2,6,23,0.42)]"
+          >
             <video
               ref={videoRef}
               src={mediaUrl}
               playsInline
-              className={`aspect-video w-full hv-surface-media object-contain ${videoMode === "mirror" ? "-scale-x-100" : ""}`}
+              className={`hv-replay-video aspect-video w-full hv-surface-media object-contain ${videoMode === "mirror" ? "-scale-x-100" : ""}`}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onEnded={() => setIsPlaying(false)}
@@ -354,7 +407,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
               }}
               onDurationChange={(event) => updateVideoDuration(event.currentTarget)}
             />
-            <div className="flex flex-col gap-3 border-t border-slate-800 bg-slate-950 px-4 py-3 sm:flex-row sm:items-center">
+            <div className="hv-surface-inset-soft flex flex-col gap-3 border-t border-slate-800 bg-slate-950 px-4 py-3 sm:flex-row sm:items-center">
               <button
                 type="button"
                 onClick={togglePlayback}
@@ -375,6 +428,28 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
               <p className="shrink-0 font-mono text-xs text-slate-400">
                 {formatTime(currentTimeMs)} / {formatTime(videoDurationMs || fallbackDurationMs)}
               </p>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 text-xs font-semibold text-slate-300 transition hover:border-cyan-300/40 hover:text-cyan-100"
+                  aria-label={isFullscreen ? "Exit full screen" : "Watch full screen"}
+                  title={isFullscreen ? "Exit full screen" : "Watch full screen"}
+                >
+                  {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                  <span className="hidden sm:inline">{isFullscreen ? "Exit" : "Full screen"}</span>
+                </button>
+                <a
+                  href={downloadUrl}
+                  download
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 text-xs font-semibold text-slate-300 transition hover:border-cyan-300/40 hover:text-cyan-100"
+                  aria-label="Download recording"
+                  title="Download recording"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Download</span>
+                </a>
+              </div>
             </div>
           </div>
 
@@ -387,7 +462,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
               <p className="font-mono text-sm text-cyan-100">{formatTime(currentTimeMs)}</p>
             </div>
 
-            <div className="relative mt-6 h-16 rounded-xl border border-slate-800 bg-slate-950/55 px-3">
+            <div className="hv-surface-inset-soft relative mt-6 h-16 rounded-xl border border-slate-800 bg-slate-950/55 px-3">
               <div className="absolute left-3 right-3 top-1/2 h-px bg-slate-700" />
               <div
                 className="absolute top-4 h-8 w-px bg-cyan-200"
@@ -452,7 +527,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
           </div>
 
           {activeItem ? (
-            <article className="mt-5 rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+            <article className="hv-surface-inset-soft mt-5 rounded-xl border border-slate-800 bg-slate-950/35 p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${riskClass(activeItem.riskLevel)}`}>
                   Review Flag {scoreLabel(activeItem.scores.fraud)}
@@ -477,7 +552,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                   ["Depth", activeItem.scores.depth],
                   ["Confidence", activeItem.scores.confidence],
                 ].map(([label, value]) => (
-                  <div key={label as string} className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2">
+                  <div key={label as string} className="hv-surface-inset-soft rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2">
                     <p className="text-slate-500">{label}</p>
                     <p className="mt-1 font-semibold text-slate-100">{scoreLabel(value as number | null)}</p>
                   </div>
@@ -498,7 +573,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                 className={`w-full rounded-xl border px-3 py-3 text-left transition ${
                   activeItem?.id === item.id
                     ? "border-cyan-300/35 bg-cyan-300/10"
-                    : "border-slate-800 bg-slate-950/25 hover:border-slate-700"
+                    : "hv-surface-inset-soft border-slate-800 bg-slate-950/25 hover:border-slate-700"
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -514,8 +589,37 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
 
       <section className="mx-auto max-w-[1500px] px-4 pb-8 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-slate-800 hv-surface-raised p-5">
-          <h2 className="text-base font-semibold">Complete Transcript</h2>
-          <pre className="mt-4 max-h-[420px] whitespace-pre-wrap overflow-auto rounded-xl border border-slate-800 bg-slate-950/45 p-4 text-sm leading-7 text-slate-300">{mergedTranscript}</pre>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-base font-semibold">Complete Transcript</h2>
+            {data.timeline.length > 0 ? (
+              <p className="text-xs text-slate-500">Selecting a question above jumps to it here.</p>
+            ) : null}
+          </div>
+          {data.timeline.length > 0 ? (
+            <div
+              ref={transcriptScrollRef}
+              className="hv-surface-inset-soft relative mt-4 max-h-[420px] overflow-auto rounded-xl border border-slate-800 bg-slate-950/45 p-4"
+            >
+              {data.timeline.map((item) => (
+                <div
+                  key={item.id}
+                  data-transcript-id={item.id}
+                  className={`scroll-mt-4 rounded-lg px-3 py-2 ${
+                    activeItem?.id === item.id ? "hv-transcript-active" : ""
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap font-mono text-sm leading-7 text-slate-300">
+                    VERIS Q{item.index}: {item.question || "Question unavailable"}
+                  </p>
+                  <p className="whitespace-pre-wrap font-mono text-sm leading-7 text-slate-300">
+                    Candidate A{item.index}: {item.answer || "No candidate response recorded."}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <pre className="hv-surface-inset-soft mt-4 max-h-[420px] whitespace-pre-wrap overflow-auto rounded-xl border border-slate-800 bg-slate-950/45 p-4 text-sm leading-7 text-slate-300">{mergedTranscript}</pre>
+          )}
         </div>
       </section>
     </main>

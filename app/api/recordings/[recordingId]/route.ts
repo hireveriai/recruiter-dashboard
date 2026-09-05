@@ -198,10 +198,31 @@ async function createFirstAvailablePlaybackUrl(locations: Array<ReturnType<typeo
   return null
 }
 
+/**
+ * Turns a playback URL into one the browser will save rather than play.
+ *
+ * Supabase Storage answers `?download=<name>` with
+ * `Content-Disposition: attachment`, which is the only thing that survives the
+ * redirect below — an `<a download>` on our own origin is ignored once the
+ * response comes from another host.
+ */
+function asAttachmentUrl(playbackUrl: string, recordingId: string) {
+  try {
+    const url = new URL(playbackUrl)
+    const extension = /\.([a-z0-9]{2,5})$/i.exec(url.pathname)?.[1]?.toLowerCase() ?? "webm"
+    url.searchParams.set("download", `verisnova-interview-${recordingId}.${extension}`)
+    return url.toString()
+  } catch {
+    // A malformed or relative location is still worth redirecting to as-is.
+    return playbackUrl
+  }
+}
+
 export async function GET(_request: Request, context: { params: Promise<{ recordingId: string }> }) {
   try {
     const auth = await getRecruiterRequestContext(_request)
     const { recordingId } = await context.params
+    const wantsDownload = new URL(_request.url).searchParams.get("download") === "1"
     const columns = await getRecordingColumns()
     const idColumn = columns.has("recording_id") ? "recording_id" : columns.has("id") ? "id" : null
     const audioUrlExpression = columns.has("audio_url")
@@ -254,7 +275,7 @@ export async function GET(_request: Request, context: { params: Promise<{ record
       throw new ApiError(404, "RECORDING_URL_INVALID", "Recording URL is invalid")
     }
 
-    return NextResponse.redirect(playbackUrl)
+    return NextResponse.redirect(wantsDownload ? asAttachmentUrl(playbackUrl, recordingId) : playbackUrl)
   } catch (error) {
     return errorResponse(error)
   }
