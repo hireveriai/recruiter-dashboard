@@ -12,9 +12,9 @@ export const FREE_TRIAL_SCREENING_CREDITS = 25
 export const FREE_TRIAL_LIMIT_MESSAGE =
   "You’ve reached your free trial limit. Upgrade your workspace to continue conducting interviews and screenings."
 export const FREE_TRIAL_NOT_ACTIVE_MESSAGE =
-  "Your free trial is not active yet. Request your free trial to get 10 AI Interviews + 25 VERIS Screenings."
+  "Your free trial is not active yet. We’re raising your request for 10 AI Interviews + 25 VERIS Screenings — it needs VerisNova admin approval before credits are issued."
 export const FREE_TRIAL_PENDING_MESSAGE =
-  "Your free trial request is still under review. We’ll activate your workspace as soon as it is approved."
+  "Your free trial request is waiting for VerisNova admin approval. We’ll email you and activate your 10 AI Interviews + 25 VERIS Screenings as soon as it is approved."
 
 export type CreditBalanceSource = "trial" | "subscription"
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import UpgradeLimitDialog from "@/components/UpgradeLimitDialog"
 
@@ -45,9 +45,8 @@ export default function TrialStatusCard({ credits }) {
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [trialState, setTrialState] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [formOpen, setFormOpen] = useState(false)
-  const [website, setWebsite] = useState("")
   const [error, setError] = useState(null)
+  const autoRequestedRef = useRef(false)
 
   const isSubscription = credits?.source === "subscription"
   const hasCreditSource = credits?.source === "subscription" || credits?.source === "trial"
@@ -73,40 +72,55 @@ export default function TrialStatusCard({ credits }) {
     loadTrialState()
   }, [isSubscription, loadTrialState])
 
-  const submitRequest = useCallback(
-    async (event) => {
-      event?.preventDefault?.()
-      if (submitting) return
+  const submitRequest = useCallback(async () => {
+    if (submitting) return
 
-      setSubmitting(true)
-      setError(null)
+    setSubmitting(true)
+    setError(null)
 
-      try {
-        const response = await fetch("/api/trial-requests", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ companyWebsite: website.trim() || null }),
-        })
-        const payload = await response.json()
+    try {
+      // The recruiter is already signed in through an OTP-verified session, so
+      // the server takes the work email, name and workspace straight off the
+      // profile. There is nothing left to ask them for.
+      const response = await fetch("/api/trial-requests", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      const payload = await response.json()
 
-        if (!response.ok || !payload?.success) {
-          setError(payload?.error?.message || "We couldn’t submit your request. Please try again.")
-          return
-        }
-
-        setTrialState(payload.data)
-        setFormOpen(false)
-        window.dispatchEvent(new CustomEvent("verisnova:trial-credits-updated"))
-      } catch (submitError) {
-        console.warn("Trial request failed", submitError)
-        setError("We couldn’t submit your request. Please try again.")
-      } finally {
-        setSubmitting(false)
+      if (!response.ok || !payload?.success) {
+        setError(payload?.error?.message || "We couldn’t submit your request. Please try again.")
+        return
       }
-    },
-    [submitting, website]
-  )
+
+      setTrialState(payload.data)
+      window.dispatchEvent(new CustomEvent("verisnova:trial-credits-updated"))
+    } catch (submitError) {
+      console.warn("Trial request failed", submitError)
+      setError("We couldn’t submit your request. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }, [submitting])
+
+  // A signed-in recruiter never has to ask for the trial by hand: the request
+  // is raised for them the first time the workspace is seen without one, and
+  // then waits for a platform admin to approve it.
+  useEffect(() => {
+    if (isSubscription) return
+    if (trialState?.status !== "NOT_REQUESTED") return
+    if (autoRequestedRef.current) return
+
+    autoRequestedRef.current = true
+    void submitRequest()
+  }, [isSubscription, trialState?.status, submitRequest])
+
+  const retryRequest = useCallback(() => {
+    autoRequestedRef.current = true
+    void submitRequest()
+  }, [submitRequest])
 
   // ---- Paid workspace: unchanged behaviour ---------------------------------
   if (isSubscription) {
@@ -136,9 +150,20 @@ export default function TrialStatusCard({ credits }) {
 
   // ---- State 3: approved / active -----------------------------------------
   if (status === "APPROVED") {
-    const interviewCredits = Math.max(0, Number(credits?.interviewCreditsRemaining ?? trialState?.interviewCreditsRemaining ?? 0))
-    const screeningCredits = Math.max(0, Number(credits?.screeningCreditsRemaining ?? trialState?.screeningCreditsRemaining ?? 0))
-    const exhausted = interviewCredits === 0 && screeningCredits === 0
+    // The /api/trial-credits snapshot is refreshed separately and lags a beat
+    // behind an approval, reporting a hard 0 for a workspace it still believes
+    // is unapproved. Trusting that zero is what used to make a freshly granted
+    // trial announce "you have reached your free trial limit", so the snapshot
+    // only wins once it agrees the trial is approved.
+    const snapshotIsCurrent = credits?.trialStatus === "APPROVED"
+    const readCredits = (fromSnapshot, fromTrialState) =>
+      Math.max(0, Number((snapshotIsCurrent ? fromSnapshot : null) ?? fromTrialState ?? fromSnapshot ?? 0))
+
+    const interviewCredits = readCredits(credits?.interviewCreditsRemaining, trialState?.interviewCreditsRemaining)
+    const screeningCredits = readCredits(credits?.screeningCreditsRemaining, trialState?.screeningCreditsRemaining)
+    // Credits can only be "used up" once they were actually issued.
+    const granted = trialState ? Boolean(trialState.granted) : true
+    const exhausted = granted && interviewCredits === 0 && screeningCredits === 0
 
     return (
       <Shell eyebrow="Free Recruiter Trial" title="Free Recruiter Trial">
@@ -178,14 +203,20 @@ export default function TrialStatusCard({ credits }) {
   // ---- State 2: pending review --------------------------------------------
   if (status === "PENDING_REVIEW") {
     return (
-      <Shell eyebrow="Free Recruiter Trial" title="Free Trial Request Under Review">
+      <Shell eyebrow="Free Recruiter Trial" title="Free Trial Request Awaiting Admin Approval">
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-          We’re verifying your company details. Your free trial will be activated once your request is approved.
+          Your request for {OFFER_LINE} has been sent to the VerisNova admin team. Your credits are issued as soon as
+          an administrator approves it, and we’ll email you the moment that happens.
         </p>
         <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-blue-400/25 bg-blue-500/10 px-4 py-2 text-sm text-blue-100">
           <span className="h-2 w-2 rounded-full bg-blue-300" />
           Usually reviewed within 24 hours
         </div>
+        {trialState?.requestedAt ? (
+          <p className="mt-3 text-xs text-slate-400">
+            Requested on {new Date(trialState.requestedAt).toLocaleDateString()}.
+          </p>
+        ) : null}
       </Shell>
     )
   }
@@ -224,63 +255,31 @@ export default function TrialStatusCard({ credits }) {
     )
   }
 
-  // ---- State 1: not requested ---------------------------------------------
+  // ---- State 1: no request on file yet ------------------------------------
+  // Reached only while the automatic request is in flight, or if it failed.
   return (
-    <Shell eyebrow="Free Recruiter Trial" title="Start Your Free Trial">
+    <Shell eyebrow="Free Recruiter Trial" title="Setting Up Your Free Trial">
       <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-        Get {OFFER_LINE} to experience the complete VerisNova hiring workflow.
+        We’re raising your request for {OFFER_LINE} and sending it to the VerisNova admin team for approval. Nothing
+        else is needed from you — we use the work email and workspace name already on your profile.
       </p>
-      <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-400">
-        <li>No credit card required</li>
-        <li>We check your work email</li>
-        <li>Usually reviewed within 24 hours</li>
-      </ul>
 
-      {formOpen ? (
-        <form onSubmit={submitRequest} className="mt-5 max-w-xl">
-          <label htmlFor="trial-company-website" className="block text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-            Company website
-          </label>
-          <p className="mt-1 text-xs text-slate-500">
-            We use your work email and workspace name from your profile. Adding your website helps us verify faster.
-          </p>
-          <input
-            id="trial-company-website"
-            type="text"
-            inputMode="url"
-            value={website}
-            onChange={(event) => setWebsite(event.target.value)}
-            placeholder="acme.com"
-            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-blue-500"
-          />
-          {error ? <p className="mt-2 text-sm text-amber-300">{error}</p> : null}
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? "Submitting..." : "Submit Request"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-slate-500"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="mt-5">
+      {error ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-amber-300">{error}</p>
           <button
             type="button"
-            onClick={() => setFormOpen(true)}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
+            onClick={retryRequest}
+            disabled={submitting}
+            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Start Free Trial
+            {submitting ? "Retrying..." : "Try Again"}
           </button>
-          {error ? <p className="mt-2 text-sm text-amber-300">{error}</p> : null}
+        </div>
+      ) : (
+        <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-blue-400/25 bg-blue-500/10 px-4 py-2 text-sm text-blue-100">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-blue-300" />
+          Submitting your request...
         </div>
       )}
     </Shell>

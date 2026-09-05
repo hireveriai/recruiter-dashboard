@@ -680,6 +680,52 @@ body {
   color: #f1f5f9;
 }
 
+/*
+ * Interview replay surfaces (app/recordings/[recordingId]).
+ *
+ * The replay page used to be pinned to the dark palette with
+ * .hv-preserve-dark plus hard-coded hex backgrounds, so "View Recording"
+ * dropped a recruiter working in the light workspace into a dark page. Its
+ * surfaces are named here instead, which lets the slate/gray/text-white
+ * remapping above carry the rest of the page into whichever theme is active.
+ */
+.hv-replay-shell {
+  background: #08111f;
+}
+
+.hv-replay-header {
+  background: #0b1424;
+}
+
+.hv-replay-panel {
+  background: #0f172a;
+}
+
+.hv-replay-inset {
+  background: #08111f;
+}
+
+/* Letterboxing around the video frame stays black in both themes. */
+.hv-replay-stage {
+  background: #000000;
+}
+
+:root[data-theme="light"] .hv-replay-shell {
+  background: transparent;
+}
+
+:root[data-theme="light"] .hv-replay-header {
+  background: rgba(255, 255, 255, 0.94);
+}
+
+:root[data-theme="light"] .hv-replay-panel {
+  background: #ffffff;
+}
+
+:root[data-theme="light"] .hv-replay-inset {
+  background: #f4f7fb;
+}
+
 .hv-chart-donut {
   background: conic-gradient(
     var(--hv-chart-accent) 0deg var(--hv-chart-degrees),
