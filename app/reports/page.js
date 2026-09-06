@@ -415,7 +415,7 @@ export default function ReportsPage() {
                   </div>
 
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
-                    <p className="text-sm font-medium text-white">Suspicious Pattern Brief</p>
+                    <p className="text-sm font-medium text-white">Integrity Review Brief</p>
                     <div className="mt-4 space-y-3">
                       {report.fraudDetection.suspiciousPatterns.length > 0 ? report.fraudDetection.suspiciousPatterns.map((pattern) => (
                         <div key={pattern} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm leading-6 text-slate-300">
@@ -423,7 +423,7 @@ export default function ReportsPage() {
                         </div>
                       )) : (
                         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm leading-6 text-slate-400">
-                          No suspicious calm-room patterns detected in the current reporting window.
+                          No integrity concerns detected in the current reporting window.
                         </div>
                       )}
                     </div>

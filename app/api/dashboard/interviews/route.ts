@@ -257,7 +257,7 @@ function getAnswerMetricPercent(answer: ReturnType<typeof mapAnswerSummaryRow>, 
     },
     fraud: {
       direct: answer.fraudScore,
-      keys: ["fraud_score", "fraudScore", "suspicion_score", "suspicionScore"],
+      keys: ["integrity_risk", "integrityRisk", "fraud_score", "fraudScore", "suspicion_score", "suspicionScore"],
     },
   }[metric]
 

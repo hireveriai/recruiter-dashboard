@@ -1540,9 +1540,9 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
         helper: "Real browser/tab-switch counts from interview signal telemetry.",
       },
       {
-        label: "Suspicious Patterns",
+        label: "Needs Integrity Review",
         value: rows.filter((row) => row.suspicious_index >= 60).length,
-        helper: "Attempts whose suspicious index crosses the recruiter review threshold.",
+        helper: "Attempts whose integrity signals cross the recruiter review threshold.",
       },
     ],
     suspiciousPatterns: rows
@@ -1550,7 +1550,7 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
       .slice(0, 6)
       .map(
         (row) =>
-          `${row.candidateName} (${row.jobTitle}) flagged with suspicious index ${row.suspicious_index}. Evidence: review confidence ${toPercentUnit(row.avg_fraud_score) ?? 0}%, multi-face ${row.multi_face_count}, tab switches ${row.tab_switch_count}, focus ratio ${toPercentUnit(row.avg_focus_ratio) ?? "n/a"}%.`
+          `${row.candidateName} (${row.jobTitle}) — integrity review recommended (index ${row.suspicious_index}). Observed: integrity risk ${toPercentUnit(row.avg_fraud_score) ?? 0}%, multi-face ${row.multi_face_count}, tab switches ${row.tab_switch_count}, focus ratio ${toPercentUnit(row.avg_focus_ratio) ?? "n/a"}%.`
       ),
   }
 

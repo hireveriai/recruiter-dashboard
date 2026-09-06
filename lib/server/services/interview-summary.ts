@@ -170,7 +170,7 @@ function getAnswerMetricPercent(answer: InterviewAnswerSummary, metric: "skill" 
     },
     fraud: {
       direct: answer.fraudScore,
-      keys: ["fraud_score", "fraudScore", "suspicion_score", "suspicionScore"],
+      keys: ["integrity_risk", "integrityRisk", "fraud_score", "fraudScore", "suspicion_score", "suspicionScore"],
     },
   }[metric]
 
