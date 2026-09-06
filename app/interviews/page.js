@@ -681,7 +681,7 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                     ["Clarity", answer.clarityScore],
                     ["Depth", answer.depthScore],
                     ["Confidence", answer.confidenceScore],
-                    ["Review Flag", answer.fraudScore],
+                    ["Integrity Risk", answer.fraudScore],
                   ].filter(([, value]) => value !== null && value !== undefined)
                   const duration = answer.answerPayload?.duration
 

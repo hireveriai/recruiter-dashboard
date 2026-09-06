@@ -335,7 +335,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
             </div>
             <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
               <Gauge className="h-4 w-4 text-rose-200" />
-              <p className="mt-3 text-xs text-slate-500">Highest Review Confidence</p>
+              <p className="mt-3 text-xs text-slate-500">Highest Integrity Risk</p>
               <p className="mt-1 text-2xl font-semibold">{data.summary.maxFraudScore}%</p>
             </div>
           </div>
@@ -456,7 +456,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
           <div className="mt-4 rounded-2xl border border-slate-800 hv-surface-raised p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-semibold">Review Flag Timeline</h2>
+                <h2 className="text-base font-semibold">Integrity Risk Timeline</h2>
                 <p className="mt-1 text-sm text-slate-500">Click any marker to jump to the evidence moment.</p>
               </div>
               <p className="font-mono text-sm text-cyan-100">{formatTime(currentTimeMs)}</p>
@@ -475,7 +475,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                   onClick={() => seekTo(item.offsetMs, item.id)}
                   className={`absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-950 ${markerClass(item.riskLevel)}`}
                   style={{ left: `${Math.min(98, Math.max(2, (item.offsetMs / durationMs) * 100))}%` }}
-                  title={`Q${item.index} / ${formatTime(item.offsetMs)} / Review flag ${scoreLabel(item.scores.fraud)}`}
+                  title={`Q${item.index} / ${formatTime(item.offsetMs)} / Integrity risk ${scoreLabel(item.scores.fraud)}`}
                 />
               ))}
               {data.signals.map((signal) => (
@@ -510,7 +510,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                 ))
               ) : (
                 <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-3 text-sm text-emerald-100 md:col-span-2">
-                  No review flags were detected for this recording.
+                  No integrity risks were detected for this recording.
                 </div>
               )}
             </div>
@@ -530,7 +530,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
             <article className="hv-surface-inset-soft mt-5 rounded-xl border border-slate-800 bg-slate-950/35 p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${riskClass(activeItem.riskLevel)}`}>
-                  Review Flag {scoreLabel(activeItem.scores.fraud)}
+                  Integrity Risk {scoreLabel(activeItem.scores.fraud)}
                 </span>
                 <button
                   type="button"

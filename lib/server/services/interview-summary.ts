@@ -284,7 +284,7 @@ export function buildAnswerFallbackSummary(rows: InterviewAnswerSummary[]) {
     `AI assessment covered ${rows.length} question${rows.length === 1 ? "" : "s"}, with ${answeredCount} substantive answer${answeredCount === 1 ? "" : "s"}. Overall result: ${result.score ?? "not available"}${result.score !== null ? `% (${result.decision})` : ""}.`,
     strengths.length > 0 ? `Candidate strengths: ${strengths.map((item) => `${label(item.metric)} (${item.score}%)`).join(", ")}.` : "Candidate strengths: no consistently strong dimension was identified across the recorded answers.",
     gaps.length > 0 ? `Development gaps: ${gaps.map((item) => `${label(item.metric)} (${item.score}%)`).join(", ")}.` : "Development gaps: no material gap was identified from the available answer-level AI results.",
-    `Integrity signal: ${highestFraudScore >= 70 ? "high review flag" : highestFraudScore >= 45 ? "moderate review flag" : "low review flag"} (${highestFraudScore}%).`,
+    `Integrity signal: ${highestFraudScore >= 70 ? "high integrity risk" : highestFraudScore >= 45 ? "moderate integrity risk" : "low integrity risk"} (${highestFraudScore}%).`,
     `Recruiter suggestion: ${recruiterNextStep}`,
   ].join("\n\n")
 }
