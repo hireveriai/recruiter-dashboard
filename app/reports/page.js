@@ -342,7 +342,7 @@ export default function ReportsPage() {
                   {[
                     ["Confidence", report.cognitiveRisk.confidenceScore, "text-cyan-200", true, "Not available"],
                     ["Clarity", report.cognitiveRisk.clarityIndex, "text-emerald-200", true, "Not available"],
-                    ["Suspicion", report.cognitiveRisk.suspicionIndex, "text-rose-200", false, "Not available"],
+                    ["Review Priority", report.cognitiveRisk.reviewPriorityIndex, "text-rose-200", false, "Not available"],
                     ["Anomalies", report.cognitiveRisk.behavioralAnomalies, "text-violet-200", false, "0"],
                   ].map(([label, value, tone, percent, fallback]) => (
                     <div key={label} className="rounded-2xl border border-slate-800 bg-slate-950/35 p-5">

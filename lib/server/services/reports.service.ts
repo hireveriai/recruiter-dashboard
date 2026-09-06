@@ -89,7 +89,7 @@ export type ReportsPayload = {
   cognitiveRisk: {
     confidenceScore: number | null
     clarityIndex: number | null
-    suspicionIndex: number | null
+    reviewPriorityIndex: number | null
     behavioralAnomalies: number
     narrative: string
   }
@@ -146,7 +146,7 @@ export type NormalizedReportRow = {
   hire_recommendation: string | null
   result_status: string | null
   risk_level: string | null
-  suspicious_index: number
+  review_index: number
   is_flagged: boolean
 }
 
@@ -284,19 +284,19 @@ function averageNullable(values: number[]) {
 
 function buildNarrative(params: {
   confidenceScore: number | null
-  suspicionIndex: number | null
+  reviewPriorityIndex: number | null
   clarityIndex: number | null
   behavioralAnomalies: number
   flaggedCandidates: number
 }) {
   const confidenceScore = params.confidenceScore ?? 0
-  const suspicionIndex = params.suspicionIndex ?? 0
+  const reviewPriorityIndex = params.reviewPriorityIndex ?? 0
   const clarityIndex = params.clarityIndex ?? 0
 
   const confidenceLabel =
     confidenceScore >= 0.75 ? "high-confidence responses" : confidenceScore >= 0.55 ? "mixed confidence" : "fragile confidence"
   const suspicionLabel =
-    suspicionIndex >= 60 ? "elevated evidence review" : suspicionIndex >= 35 ? "moderate evidence review" : "low review priority"
+    reviewPriorityIndex >= 60 ? "elevated evidence review" : reviewPriorityIndex >= 35 ? "moderate evidence review" : "low review priority"
 
   return `Current interviews show ${confidenceLabel}, ${suspicionLabel}, and a clarity index of ${Math.round(clarityIndex * 100)}/100. ${params.behavioralAnomalies} anomaly signal${params.behavioralAnomalies === 1 ? "" : "s"} and ${params.flaggedCandidates} flagged candidate${params.flaggedCandidates === 1 ? "" : "s"} are currently visible from calm-room telemetry.`
 }
@@ -1208,7 +1208,7 @@ function deriveResultStatus(params: {
   return normalizeStatus(params.interviewStatus) || null
 }
 
-function deriveSuspiciousIndex(params: {
+function deriveReviewIndex(params: {
   avgFraudScore: number | null
   multiFaceCount: number
   tabSwitchCount: number
@@ -1363,7 +1363,7 @@ export async function getNormalizedReportRows(organizationId: string): Promise<N
       const normalizedScore = overallScore ?? (avgSkillScore !== null ? Number((avgSkillScore * 20).toFixed(1)) : null)
       const hireRecommendation = normalizeRecommendation(summary?.hire_recommendation ?? attempt?.evaluation?.decision ?? calculatedResult.decision)
       const avgFocusRatio = toNumber(signal?.avg_focus_ratio)
-      const suspiciousIndex = deriveSuspiciousIndex({
+      const reviewIndex = deriveReviewIndex({
         avgFraudScore: responseAverages.avg_fraud_score,
         multiFaceCount: signal?.multi_face_count ?? 0,
         tabSwitchCount: signal?.tab_switch_count ?? 0,
@@ -1422,13 +1422,13 @@ export async function getNormalizedReportRows(organizationId: string): Promise<N
           endedAt: attempt?.endedAt?.toISOString() ?? null,
         }),
         risk_level: normalizeRiskLevel(summary?.risk_level),
-        suspicious_index: suspiciousIndex,
+        review_index: reviewIndex,
         is_flagged: false,
       }
 
       row.is_flagged = deriveIsFlagged(row)
       if (!row.risk_level) {
-        row.risk_level = row.is_flagged ? "HIGH" : suspiciousIndex >= 40 ? "MEDIUM" : "LOW"
+        row.risk_level = row.is_flagged ? "HIGH" : reviewIndex >= 40 ? "MEDIUM" : "LOW"
       }
 
       rows.push(row)
@@ -1461,7 +1461,7 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
   const fraudValues = rows.map((row) => row.avg_fraud_score).filter((value): value is number => value !== null)
   const confidenceScore = averageNullable(confidenceValues)
   const clarityIndex = averageNullable(clarityValues)
-  const suspicionIndex = rows.length ? Number((rows.reduce((sum, row) => sum + row.suspicious_index, 0) / rows.length).toFixed(1)) : null
+  const reviewPriorityIndex = rows.length ? Number((rows.reduce((sum, row) => sum + row.review_index, 0) / rows.length).toFixed(1)) : null
   const behavioralAnomalies = rows.reduce(
     (sum, row) =>
       sum +
@@ -1541,7 +1541,7 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
       },
       {
         label: "Needs Integrity Review",
-        value: rows.filter((row) => row.suspicious_index >= 60).length,
+        value: rows.filter((row) => row.review_index >= 60).length,
         helper: "Attempts whose integrity signals cross the recruiter review threshold.",
       },
     ],
@@ -1550,7 +1550,7 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
       .slice(0, 6)
       .map(
         (row) =>
-          `${row.candidateName} (${row.jobTitle}) — integrity review recommended (index ${row.suspicious_index}). Observed: integrity risk ${toPercentUnit(row.avg_fraud_score) ?? 0}%, multi-face ${row.multi_face_count}, tab switches ${row.tab_switch_count}, focus ratio ${toPercentUnit(row.avg_focus_ratio) ?? "n/a"}%.`
+          `${row.candidateName} (${row.jobTitle}) — integrity review recommended (index ${row.review_index}). Observed: integrity risk ${toPercentUnit(row.avg_fraud_score) ?? 0}%, multi-face ${row.multi_face_count}, tab switches ${row.tab_switch_count}, focus ratio ${toPercentUnit(row.avg_focus_ratio) ?? "n/a"}%.`
       ),
   }
 
@@ -1665,8 +1665,8 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
         events.push({
           id: `flagged-${row.attemptId ?? row.interviewId}`,
           at: row.endedAt ?? row.startedAt ?? row.inviteCreatedAt ?? new Date().toISOString(),
-          title: "Attempt flagged by telemetry",
-          detail: `Suspicious index ${row.suspicious_index}; multi-face ${row.multi_face_count}, tab switches ${row.tab_switch_count}, attention loss ${row.attention_loss_count}.`,
+          title: "Attempt needs integrity review",
+          detail: `Review index ${row.review_index}; multi-face ${row.multi_face_count}, tab switches ${row.tab_switch_count}, attention loss ${row.attention_loss_count}.`,
           severity: "critical",
           recordingUrl: row.latestRecordingUrl,
         })
@@ -1740,11 +1740,11 @@ async function loadReportsData(organizationId: string): Promise<ReportsPayload> 
     cognitiveRisk: {
       confidenceScore,
       clarityIndex,
-      suspicionIndex,
+      reviewPriorityIndex,
       behavioralAnomalies,
       narrative: buildNarrative({
         confidenceScore,
-        suspicionIndex,
+        reviewPriorityIndex,
         clarityIndex,
         behavioralAnomalies,
         flaggedCandidates: executiveSummary.flaggedCandidates,
@@ -1918,7 +1918,7 @@ export async function getVerisSummaryCards(organizationId: string, limit: number
         hire_recommendation: hireRecommendation,
         result_status: normalizeStatus(attempt.attempt_status) === "COMPLETED" || attempt.ended_at ? "COMPLETED" : normalizeStatus(attempt.attempt_status),
         risk_level: riskLevel,
-        suspicious_index: deriveSuspiciousIndex({
+        review_index: deriveReviewIndex({
           avgFraudScore: responseAverages.avg_fraud_score,
           multiFaceCount: signal?.multi_face_count ?? 0,
           tabSwitchCount: signal?.tab_switch_count ?? 0,

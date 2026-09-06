@@ -286,7 +286,7 @@ const reports = {
   cognitiveRisk: {
     confidenceScore: 0.88,
     clarityIndex: 0.91,
-    suspicionIndex: 0.14,
+    reviewPriorityIndex: 0.14,
     behavioralAnomalies: 2,
     narrative: "Most interviews show consistent, explainable behavior. Two integrity signals are queued for contextual human review.",
   },
