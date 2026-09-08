@@ -1380,7 +1380,14 @@ export default function AiScreeningPage() {
   const interviewLimitReached = trialCredits ? trialCredits.interviewCreditsRemaining <= 0 : false
   const allTrialCreditsReached = screeningLimitReached && interviewLimitReached
   const canShowCleanupActions = matches.length > 0 || Boolean(currentBatchId) || uploadedCandidateIds.length > 0
-  const canAnalyzeJob = hasUploadedResumes && hasSelectedJob && flowStep !== "JD_PROCESSED" && flowStep !== "MATCHED" && !isBusy
+  /*
+   * Analyzing a job description needs the job and nothing else: /api/process-jd
+   * takes an existing job id or pasted text, never a batch or candidate id.
+   * Requiring an upload first only meant the Job Intelligence card sat there
+   * fully populated but disabled, waiting on the other card. Matching still
+   * needs both sides, which is the one dependency that is real.
+   */
+  const canAnalyzeJob = hasSelectedJob && flowStep !== "JD_PROCESSED" && flowStep !== "MATCHED" && !isBusy
   const canRunMatching = Boolean(
     resolvedActiveJob &&
       hasUploadedResumes &&
@@ -1391,10 +1398,17 @@ export default function AiScreeningPage() {
     ? ""
     : !hasSelectedJob
       ? "Select or create a job first"
+      : "Job is already analyzed. Run matching next."
+  // Matching is the step that genuinely needs both halves, so it has to name
+  // whichever one is still missing rather than always blaming the job.
+  const jobAnalyzed = flowStep === "JD_PROCESSED" || flowStep === "MATCHED"
+  const matchHelpText = canRunMatching
+    ? ""
+    : !jobAnalyzed
+      ? "Analyze job description to enable matching"
       : !hasUploadedResumes
-        ? "Upload resumes before analyzing the job"
-        : "Job is already analyzed. Run matching next."
-  const matchHelpText = canRunMatching ? "" : "Analyze job description to enable matching"
+        ? "Upload resumes to enable matching"
+        : ""
   const timelineSteps = useMemo<TimelineStep[]>(() => {
     const uploadComplete = Boolean(currentBatchId)
     const jobComplete = Boolean(activeJob && (flowStep === "JD_PROCESSED" || flowStep === "MATCHED"))
@@ -1582,12 +1596,22 @@ export default function AiScreeningPage() {
       setSelectedCandidateIds([])
       setCompareCandidateIds([])
       setSendResults([])
-      setFlowStep("JD_READY")
+      /*
+       * A job analyzed before the upload stays analyzed. The analysis belongs
+       * to the job, not to the resume batch, so resetting to JD_READY here
+       * would silently throw it away and force the recruiter to run it again
+       * before matching could unlock.
+       */
+      const jobAlreadyAnalyzed = Boolean(activeJob) && (flowStep === "JD_PROCESSED" || flowStep === "MATCHED")
+      setFlowStep(jobAlreadyAnalyzed ? "JD_PROCESSED" : "JD_READY")
       const failedCount = rows.length - uploadedCount
+      const nextStepHint = jobAlreadyAnalyzed
+        ? "Ready to match candidates."
+        : "Select a job and analyze it next."
       setNotice(
         failedCount > 0
-          ? `${uploadedCount} resumes parsed and saved; ${failedCount} failed. Select a job and analyze the successful resumes.`
-          : `${uploadedCount} resumes parsed and saved. Select a job and analyze it next.`
+          ? `${uploadedCount} resumes parsed and saved; ${failedCount} failed. ${nextStepHint}`
+          : `${uploadedCount} resumes parsed and saved. ${nextStepHint}`
       )
 
       if (AUTO_RUN && batchId && uploadedCount > 0 && selectedJobIdForUpload && !isProcessingJD && !isMatching) {
