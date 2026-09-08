@@ -827,14 +827,38 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
       order by pay."createdAt" desc
       limit 25
     `),
-    prisma.$queryRaw<Array<{ used_screening_credits: number }>>(Prisma.sql`
-      select coalesce(count(*), 0)::int as used_screening_credits
-      from public.screening_runs
-      where organization_id = ${auth.organizationId}::uuid
-    `).catch(() => [{ used_screening_credits: 0 }]),
+    /*
+     * Screening credits purchased over the workspace's lifetime.
+     *
+     * This used to count rows in screening_runs and present that as "used",
+     * which is a different quantity from the credit balance: a run can cost
+     * more than one credit, and runs performed on the free trial never
+     * touched the subscription at all. Subtracting it from the stored balance
+     * produced a "remaining" that matched nothing.
+     *
+     * The subscription row has no used-screening counter to read instead —
+     * unlike interviews, the screening deduction only decrements the balance.
+     * Summing what was actually paid for is therefore the only figure that
+     * reconciles: purchased minus the live balance is the amount consumed.
+     */
+    prisma.$queryRaw<Array<{ purchased_screening_credits: number }>>(Prisma.sql`
+      select coalesce(sum(
+        coalesce(p."screeningCredits", 0) + coalesce(ap."screeningCredits", 0)
+      ), 0)::int as purchased_screening_credits
+      from public.hireveri_payments pay
+      left join public.hireveri_plans p on p.id = pay."planId"
+      left join public.hireveri_plans ap on ap.id = pay."addonPlanId"
+      where pay."organizationId" = ${auth.organizationId}::uuid
+        -- status is a PaymentStatus enum: cast before comparing, or coalesce
+        -- fails on the empty-string default and the whole query throws.
+        and lower(coalesce(pay.status::text, '')) in ('success', 'paid', 'captured')
+    `).catch((error) => {
+      console.warn("Purchased screening credit lookup failed", error)
+      return [{ purchased_screening_credits: 0 }]
+    }),
   ])
   const organization = organizationRows[0] ?? null
-  const screeningUsed = Number(screeningUsageRows[0]?.used_screening_credits ?? 0)
+  const purchasedScreeningCredits = Number(screeningUsageRows[0]?.purchased_screening_credits ?? 0)
 
   return {
     organization: organization
@@ -849,20 +873,41 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
         }
       : null,
     invoices,
-    subscriptions: subscriptionRows.map((row) => ({
-      id: row.id,
-      planName: row.plan_name,
-      planId: row.plan_id,
-      status: row.status,
-      totalCredits: Number(row.total_credits ?? 0),
-      usedCredits: Number(row.used_credits ?? 0),
-      screeningCredits: Number(row.screening_credits ?? 0),
-      usedScreeningCredits: screeningUsed,
-      amountPaid: Number(row.amount_paid ?? 0),
-      currency: row.currency,
-      activatedAt: row.activated_at,
-      expiresAt: row.expires_at,
-    })),
+    /*
+     * "totalCredits" and "screeningCredits" are running balances, not
+     * lifetime totals: spending a credit decrements them (and, for
+     * interviews, bumps "usedCredits" in the same statement). Billing used to
+     * label those balances "Purchased" and then subtract usage from them
+     * again, so it showed a remaining figure that double-counted every credit
+     * already spent and contradicted the dashboard.
+     *
+     * Purchased is therefore derived rather than read, and remaining is left
+     * to fall out as purchased - used, which lands back on the stored balance
+     * the rest of the app actually spends against.
+     */
+    subscriptions: subscriptionRows.map((row) => {
+      const interviewRemaining = Number(row.total_credits ?? 0)
+      const interviewUsed = Number(row.used_credits ?? 0)
+      const screeningRemaining = Number(row.screening_credits ?? 0)
+      // A workspace can hold more screening credits than it ever paid for
+      // (a granted trial, a manual top-up), so never report negative usage.
+      const screeningUsed = Math.max(0, purchasedScreeningCredits - screeningRemaining)
+
+      return {
+        id: row.id,
+        planName: row.plan_name,
+        planId: row.plan_id,
+        status: row.status,
+        totalCredits: interviewRemaining + interviewUsed,
+        usedCredits: interviewUsed,
+        screeningCredits: screeningUsed + screeningRemaining,
+        usedScreeningCredits: screeningUsed,
+        amountPaid: Number(row.amount_paid ?? 0),
+        currency: row.currency,
+        activatedAt: row.activated_at,
+        expiresAt: row.expires_at,
+      }
+    }),
     payments: paymentRows.map((row) => ({
       id: row.id,
       planId: row.plan_id,
