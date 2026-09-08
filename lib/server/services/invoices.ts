@@ -359,7 +359,11 @@ async function getNextInvoiceNumber(client: typeof prisma | Prisma.TransactionCl
   `)
   const sequenceValue = Number(rows[0]?.sequence_value ?? 1)
   const year = new Date().getFullYear()
-  return `HV-${year}-${String(sequenceValue).padStart(6, "0")}`
+  // "HV" predates the HireVeri -> VerisNova rename. The sequence is not reset
+  // and already-issued numbers are not rewritten: an invoice number is the
+  // reference on a filed tax document and on the PDF already sent to the
+  // customer, so numbering continues unbroken under the new prefix.
+  return `VN-${year}-${String(sequenceValue).padStart(6, "0")}`
 }
 
 async function getInvoiceSource(paymentId: string) {

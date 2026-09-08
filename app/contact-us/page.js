@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Mail } from "lucide-react";
 import BackToDashboardLink from "@/components/BackToDashboardLink";
 
 const fallbackCategories = [
@@ -241,12 +242,36 @@ export default function ContactUsPage() {
             <div className="rounded-[28px] border border-slate-800 bg-slate-950/82 p-5 shadow-[0_24px_90px_rgba(2,6,23,0.45)] backdrop-blur">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Enterprise Support</p>
               <div className="mt-4 grid gap-3">
-                {(config.sidebar || fallbackConfig.sidebar).map((item) => (
-                  <a key={`${item.label}-${item.value}`} href={`mailto:${item.value}`} className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-4 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/40">
-                    <span className="block text-xs uppercase tracking-[0.18em] text-cyan-300/60">{item.label}</span>
-                    <span className="mt-1 block break-words">{item.value}</span>
-                  </a>
-                ))}
+                {/* The whole card used to be the mailto anchor, so dragging
+                    across the address started a link drag instead of selecting
+                    it — there was no way to copy the support address. The card
+                    is a plain container now, with the address selectable and a
+                    dedicated mail button that opens the mail client. */}
+                {(config.sidebar || fallbackConfig.sidebar).map((item) => {
+                  const isEmail = typeof item.value === "string" && item.value.includes("@");
+
+                  return (
+                    <div
+                      key={`${item.label}-${item.value}`}
+                      className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-4 text-sm font-semibold text-cyan-100"
+                    >
+                      <span className="block text-xs uppercase tracking-[0.18em] text-cyan-300/60">{item.label}</span>
+                      <div className="mt-1 flex items-start justify-between gap-3">
+                        <span className="block min-w-0 select-text break-words">{item.value}</span>
+                        {isEmail ? (
+                          <a
+                            href={`mailto:${item.value}`}
+                            aria-label={`Email ${item.value}`}
+                            title={`Email ${item.value}`}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/25 bg-cyan-300/10 text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/20"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

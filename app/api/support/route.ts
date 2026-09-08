@@ -42,7 +42,7 @@ function generateReferenceId() {
     String(date.getUTCMonth() + 1).padStart(2, "0"),
     String(date.getUTCDate()).padStart(2, "0"),
   ].join("")
-  return `HV-SUP-${stamp}-${randomBytes(3).toString("hex").toUpperCase()}`
+  return `VN-SUP-${stamp}-${randomBytes(3).toString("hex").toUpperCase()}`
 }
 
 function groupConfig(rows: SupportConfigRow[]) {

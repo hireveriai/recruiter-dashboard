@@ -521,35 +521,39 @@ export default function BillingPage() {
               <p className="px-5 py-8 text-sm text-slate-400">No invoices generated yet. Invoices appear after verified Razorpay payments.</p>
             ) : (
               <div className="hv-table-scroll">
-                <table className="min-w-[1080px] table-fixed text-left text-sm">
+                {/* Columns were wide enough (1140px of fixed widths) that the
+                    table scrolled sideways on a normal desktop and clipped the
+                    Download button off the right edge. Trimmed to the width the
+                    content actually needs so the whole row is reachable. */}
+                <table className="min-w-[860px] w-full table-fixed text-left text-sm">
                   <thead className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
                     <tr>
-                      <th className="w-[160px] px-4 py-3 font-medium">Invoice</th>
-                      <th className="w-[120px] px-4 py-3 font-medium">Date</th>
-                      <th className="w-[170px] px-4 py-3 font-medium">Plan</th>
-                      <th className="w-[130px] px-4 py-3 font-medium">Coupon</th>
-                      <th className="w-[135px] px-4 py-3 text-right font-medium">Amount</th>
-                      <th className="w-[95px] px-4 py-3 font-medium">Email</th>
-                      <th className="w-[220px] px-4 py-3 font-medium">Razorpay</th>
-                      <th className="w-[110px] px-4 py-3 text-right font-medium">PDF</th>
+                      <th className="w-[140px] px-3 py-2.5 font-medium">Invoice</th>
+                      <th className="w-[100px] px-3 py-2.5 font-medium">Date</th>
+                      <th className="w-[120px] px-3 py-2.5 font-medium">Plan</th>
+                      <th className="w-[90px] px-3 py-2.5 font-medium">Coupon</th>
+                      <th className="w-[110px] px-3 py-2.5 text-right font-medium">Amount</th>
+                      <th className="w-[80px] px-3 py-2.5 font-medium">Email</th>
+                      <th className="w-[125px] px-3 py-2.5 font-medium">Razorpay</th>
+                      <th className="w-[95px] px-3 py-2.5 text-right font-medium">PDF</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {data.invoices.map((invoice) => (
                       <tr key={invoice.id} className="text-slate-300">
-                        <td className="whitespace-nowrap px-4 py-4 font-semibold text-white">{invoice.invoiceNumber}</td>
-                        <td className="whitespace-nowrap px-4 py-4">{formatDate(invoice.invoiceDate)}</td>
-                        <td className="px-4 py-4"><span className="block truncate" title={invoice.planName}>{invoice.planName}</span></td>
-                        <td className="whitespace-nowrap px-4 py-4">{invoice.couponCode || "-"}</td>
-                        <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">{formatPaise(invoice.finalAmountPaise, invoice.currency)}</td>
-                        <td className="whitespace-nowrap px-4 py-4">{invoice.emailSentAt ? "Sent" : "Pending"}</td>
-                        <td className="px-4 py-4">
-                          <CompactReference value={invoice.razorpayPaymentId || invoice.razorpayOrderId} maxWidth="max-w-[190px]" />
+                        <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-white">{invoice.invoiceNumber}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5">{formatDate(invoice.invoiceDate)}</td>
+                        <td className="px-3 py-2.5"><span className="block truncate" title={invoice.planName}>{invoice.planName}</span></td>
+                        <td className="whitespace-nowrap px-3 py-2.5">{invoice.couponCode || "-"}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{formatPaise(invoice.finalAmountPaise, invoice.currency)}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5">{invoice.emailSentAt ? "Sent" : "Pending"}</td>
+                        <td className="px-3 py-2.5">
+                          <CompactReference value={invoice.razorpayPaymentId || invoice.razorpayOrderId} maxWidth="max-w-[105px]" />
                         </td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-3 py-2.5 text-right">
                           <a
                             href={`/api/billing/invoices/${invoice.id}/download`}
-                            className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:border-blue-400/60 hover:bg-slate-900"
+                            className="inline-block rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-blue-400/60 hover:bg-slate-900"
                           >
                             Download
                           </a>
