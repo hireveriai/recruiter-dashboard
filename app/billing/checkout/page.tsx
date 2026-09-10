@@ -43,6 +43,8 @@ type Organization = {
   organizationName: string
   userName: string
   userEmail: string
+  billingCountryCode: string
+  billingCountryConfirmed: boolean
 }
 
 type CheckoutSummary = {
@@ -55,6 +57,13 @@ type CheckoutSummary = {
   } | null
   quote: Quote
   organization: Organization
+  /* True until the organization has asserted where it is billed. Tax on the
+     quote is a provisional preview while this is set, and the server refuses
+     to create an order. */
+  billingCountryConfirmationRequired: boolean
+  /* Geo-derived hint used only to prefill the field. Never auto-submitted:
+     where a request comes from is not where a company is registered. */
+  suggestedBillingCountryCode: string | null
 }
 
 type ApiResponse<T> = {
@@ -177,6 +186,10 @@ export default function BillingCheckoutPage() {
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
   const [activeOrderId, setActiveOrderId] = useState("")
+  const [billingCountryInput, setBillingCountryInput] = useState("")
+  const [confirmingBillingCountry, setConfirmingBillingCountry] = useState(false)
+
+  const billingCountryRequired = Boolean(summary?.billingCountryConfirmationRequired)
 
   const isBusy = status === "loading" || status === "applying" || status === "paying" || status === "verifying"
   const appliedCoupon = useMemo(() => appliedCouponCode.trim().toUpperCase(), [appliedCouponCode])
@@ -287,6 +300,12 @@ export default function BillingCheckoutPage() {
         })
 
         setSummary(data)
+        /* Prefill only. The customer still has to press Confirm, because a geo
+           country is a guess at where they are, not a statement of where they
+           are registered for tax. */
+        setBillingCountryInput((current) =>
+          current || data.suggestedBillingCountryCode || data.organization.billingCountryCode || ""
+        )
         setAppliedCouponCode(data.coupon?.code ?? "")
         setNotice(data.coupon ? `${data.coupon.code} applied successfully.` : "")
         setStatus("idle")
@@ -420,6 +439,32 @@ export default function BillingCheckoutPage() {
     router.replace("/")
   }
 
+  async function handleConfirmBillingCountry() {
+    const countryCode = billingCountryInput.trim().toUpperCase()
+
+    if (!/^[A-Z]{2}$/.test(countryCode) || confirmingBillingCountry || isBusy) {
+      return
+    }
+
+    setConfirmingBillingCountry(true)
+    setError("")
+
+    try {
+      await requestJson<{ organization: { billingCountryCode: string } }>("/api/billing/country", {
+        billing_country_code: countryCode,
+      })
+      /* Reload the quote rather than patching it locally: tax treatment is
+         recalculated server-side and the total can legitimately change. */
+      await loadSummary(appliedCoupon || null)
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error ? requestError.message : "Unable to save billing country."
+      )
+    } finally {
+      setConfirmingBillingCountry(false)
+    }
+  }
+
   async function handleProceedToPayment() {
     if (!summary || isBusy) {
       return
@@ -455,6 +500,10 @@ export default function BillingCheckoutPage() {
         coupon: order.coupon,
         quote: order.quote,
         organization: order.organization,
+        /* An order only exists once the server accepted the billing country,
+           so by definition it is no longer outstanding here. */
+        billingCountryConfirmationRequired: false,
+        suggestedBillingCountryCode: null,
       })
       setActiveOrderId(order.order_id)
       setNotice("Opening Razorpay secure checkout.")
@@ -892,13 +941,49 @@ export default function BillingCheckoutPage() {
             </div>
           ) : null}
 
+          {billingCountryRequired ? (
+            <div className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-100">Confirm your billing country</p>
+              <p className="mt-1 text-xs leading-5 text-amber-100/80">
+                Tax on this order depends on where your organization is registered. The tax shown
+                above is an estimate until you confirm it.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={billingCountryInput}
+                  onChange={(event) =>
+                    setBillingCountryInput(event.target.value.toUpperCase().slice(0, 2))
+                  }
+                  placeholder="IN"
+                  maxLength={2}
+                  aria-label="Billing country ISO code"
+                  className="w-24 rounded-lg border border-amber-400/30 bg-slate-950 px-3 py-2 text-sm uppercase text-white outline-none transition placeholder:text-slate-600 focus:border-amber-300"
+                />
+                <button
+                  type="button"
+                  onClick={handleConfirmBillingCountry}
+                  disabled={
+                    confirmingBillingCountry ||
+                    isBusy ||
+                    !/^[A-Za-z]{2}$/.test(billingCountryInput.trim())
+                  }
+                  className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  {confirmingBillingCountry ? "Saving..." : "Confirm"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <button
             type="button"
             onClick={handleProceedToPayment}
-            disabled={!summary || isBusy || status === "success"}
+            disabled={!summary || isBusy || billingCountryRequired || status === "success"}
             className="hv-solid-action mt-6 w-full rounded-xl bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-55"
           >
-            {status === "paying"
+            {billingCountryRequired
+              ? "Confirm billing country to continue"
+              : status === "paying"
               ? "Opening Razorpay..."
               : status === "verifying"
                 ? "Verifying payment..."

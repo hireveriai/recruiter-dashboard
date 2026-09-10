@@ -1,13 +1,13 @@
 /**
  * Request-scoped currency resolution for the recruiter app.
  *
- * The pure helpers (country mapping, validation, formatting) live in
- * lib/pricing/currency.ts so client components can use them too; this module
- * adds the parts that need a Request. Re-exported here so existing server-side
- * imports keep working from one path.
+ * The pure helpers (country mapping, header selection, validation, formatting)
+ * live in lib/pricing/currency.ts so client components can use them too; this
+ * module adds the parts that need a Request. Re-exported here so existing
+ * server-side imports keep working from one path.
  */
 
-import { resolveCurrencyFromCountry, type CurrencyCode } from "@/lib/pricing/currency"
+import { pickGeoCountry, resolveCurrencyFromCountry, type CurrencyCode } from "@/lib/pricing/currency"
 
 export {
   SUPPORTED_CURRENCIES,
@@ -15,22 +15,34 @@ export {
   normalizeCurrency,
   resolveCurrencyFromCountry,
   formatMinorAmount,
+  pickGeoCountry,
   type CurrencyCode,
 } from "@/lib/pricing/currency"
 
 /**
+ * Header trust for this deployment. The rules themselves live in
+ * pickGeoCountry, shared with the landing app so the two cannot drift.
+ */
+export function geoHeaderTrust() {
+  return {
+    trustCloudflare: process.env.TRUST_CLOUDFLARE_GEO === "true",
+    allowHeaderOverride:
+      process.env.NODE_ENV !== "production" || process.env.ALLOW_HEADER_COUNTRY_OVERRIDE === "true",
+  }
+}
+
+/**
  * Reads the visitor's country from CDN-injected geo headers.
  *
- * These are set by the edge, not by the page, so they are the one location
- * signal a browser cannot forge by editing a cookie or a request body.
+ * Returns "" when nothing trustworthy is present, which callers treat as
+ * "unknown" rather than as any particular country. Before the trust gate,
+ * `x-country-code` — a header any client can set — was consulted in
+ * production. It was unreachable in practice because Vercel always sets its
+ * own header first, but "unreachable" is a deployment detail, not a guarantee,
+ * and a spoofable header must not sit in the trust chain of a price.
  */
 export function getRequestCountry(request: Request): string {
-  return (
-    request.headers.get("x-vercel-ip-country") ||
-    request.headers.get("cf-ipcountry") ||
-    request.headers.get("x-country-code") ||
-    ""
-  ).toUpperCase()
+  return pickGeoCountry((name) => request.headers.get(name), geoHeaderTrust())
 }
 
 /**
@@ -40,6 +52,9 @@ export function getRequestCountry(request: Request): string {
  * or request body. List prices are localized commercial prices rather than
  * conversions of one another, so letting the client choose would let anyone
  * pick whichever market is cheapest.
+ *
+ * An unknown country resolves to the global fallback (USD), which is the same
+ * answer the landing app gives for the same request.
  */
 export function resolveCheckoutCurrency(request: Request): CurrencyCode {
   return resolveCurrencyFromCountry(getRequestCountry(request))

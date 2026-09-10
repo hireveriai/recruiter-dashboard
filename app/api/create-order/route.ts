@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
-import { resolveCheckoutCurrency } from "@/lib/server/pricing/currency"
+import { getRequestCountry, resolveCheckoutCurrency } from "@/lib/server/pricing/currency"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { createRazorpayOrder } from "@/lib/server/services/billing"
 
@@ -28,6 +28,9 @@ export async function POST(request: Request) {
       addonPlanSlug: input.addon_plan,
       couponCode: input.coupon_code,
       currency: resolveCheckoutCurrency(request),
+      /* Only ever used to suggest a billing country the customer must still
+         confirm. It never becomes a tax country on its own. */
+      geoCountryCode: getRequestCountry(request),
     })
 
     return successResponse(order)

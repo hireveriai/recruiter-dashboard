@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
-import { resolveCheckoutCurrency } from "@/lib/server/pricing/currency"
+import { getRequestCountry, resolveCheckoutCurrency } from "@/lib/server/pricing/currency"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { getCheckoutQuote } from "@/lib/server/services/billing"
 
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       addonPlanSlug: input.addon_plan,
       couponCode: input.coupon_code,
       currency: resolveCheckoutCurrency(request),
+      geoCountryCode: getRequestCountry(request),
     })
 
     return successResponse(quote)

@@ -932,6 +932,50 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
   }
 }
 
+/**
+ * Records the organization's billing country on its own.
+ *
+ * The full Billing Settings form also asserts this, but requiring a GSTIN and
+ * a postal address before someone can buy would be a worse checkout than the
+ * silent-'IN' default it replaces. This is the narrow version: one field, the
+ * one that decides tax treatment.
+ *
+ * The country is taken from the request body ON PURPOSE — unlike currency,
+ * which is geo-derived precisely so it cannot be chosen. A customer's legal
+ * billing country is a declaration only they can make, it is recorded against
+ * the organization, and it appears on the invoice. It cannot be used to obtain
+ * a cheaper price: the amount comes from the plan row in the geo-resolved
+ * currency, and the only figure this moves is tax, within the existing rules.
+ */
+export async function confirmOrganizationBillingCountry(input: {
+  auth: RecruiterRequestContext
+  billingCountryCode: string
+}) {
+  const countryCode = input.billingCountryCode.trim().toUpperCase()
+
+  if (!/^[A-Z]{2}$/.test(countryCode)) {
+    throw new ApiError(400, "INVALID_BILLING_COUNTRY", "Billing country must be a two-letter ISO country code")
+  }
+
+  const rows = await prisma.$queryRaw<Array<{ billing_country_code: string }>>(Prisma.sql`
+    update public.organizations
+    set billing_country_code = ${countryCode},
+        billing_country_confirmed_at = now()
+    where organization_id = ${input.auth.organizationId}::uuid
+      and is_active = true
+    returning billing_country_code
+  `)
+
+  if (!rows[0]) {
+    throw new ApiError(404, "ORGANIZATION_NOT_FOUND", "Organization was not found")
+  }
+
+  return {
+    billingCountryCode: rows[0].billing_country_code,
+    billingCountryConfirmed: true,
+  }
+}
+
 export async function updateOrganizationBillingSettings(input: {
   auth: RecruiterRequestContext
   gstNumber?: string | null
@@ -964,7 +1008,10 @@ export async function updateOrganizationBillingSettings(input: {
         billing_address = ${normalizeNullable(input.billingAddress)},
         finance_email = ${normalizeNullable(input.financeEmail)},
         invoice_recipient_email = ${normalizeNullable(input.invoiceRecipientEmail)},
-        billing_country_code = ${input.billingCountryCode.trim().toUpperCase()}
+        billing_country_code = ${input.billingCountryCode.trim().toUpperCase()},
+        /* Saving this form IS the assertion. Stamping it here is what lets
+           checkout stop treating the 'IN' column default as a real answer. */
+        billing_country_confirmed_at = now()
     where organization_id = ${input.auth.organizationId}::uuid
       and is_active = true
     returning

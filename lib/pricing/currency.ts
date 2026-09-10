@@ -42,6 +42,55 @@ export function normalizeCurrency(value: unknown): CurrencyCode | null {
 }
 
 /**
+ * Which geo headers may be trusted on this deployment.
+ *
+ * `x-vercel-ip-country` is the only header Vercel injects at the edge AND
+ * strips from inbound requests, so it is the one location signal a browser
+ * cannot forge. The other two are ordinary headers:
+ *
+ *   * `cf-ipcountry` is authoritative only when Cloudflare actually fronts
+ *     the deployment. Opt-in rather than trusted speculatively.
+ *   * `x-country-code` is a local/testing override with no CDN behind it.
+ *     Any client can send it and it decides what a customer is charged, so it
+ *     is refused in production.
+ */
+export type GeoHeaderTrust = {
+  trustCloudflare: boolean
+  allowHeaderOverride: boolean
+}
+
+/**
+ * Picks the visitor's country from request headers, or "" when nothing
+ * trustworthy is present.
+ *
+ * MUST stay identical to the landing app's pickGeoCountry. The price shown on
+ * /pricing and the price charged here only agree if both read the same
+ * headers, in the same order, with the same trust rules.
+ */
+export function pickGeoCountry(
+  getHeader: (name: string) => string | null | undefined,
+  trust: GeoHeaderTrust
+): string {
+  const candidates = [
+    getHeader("x-vercel-ip-country"),
+    trust.trustCloudflare ? getHeader("cf-ipcountry") : null,
+    trust.allowHeaderOverride ? getHeader("x-country-code") : null,
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = (candidate ?? "").trim().toUpperCase()
+
+    /* Cloudflare sends "XX" when it could not determine the country, and "T1"
+       for Tor exit nodes. Neither is a country. */
+    if (normalized && normalized !== "XX" && normalized !== "T1") {
+      return normalized
+    }
+  }
+
+  return ""
+}
+
+/**
  * Locale per currency, matching the landing app so a price reads identically
  * on the pricing page and at checkout.
  *

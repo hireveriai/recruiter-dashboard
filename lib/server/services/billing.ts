@@ -6,7 +6,7 @@ import Razorpay from "razorpay"
 import type { RecruiterRequestContext } from "@/lib/server/auth-context"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
-import { FALLBACK_CURRENCY, type CurrencyCode } from "@/lib/server/pricing/currency"
+import { FALLBACK_CURRENCY, normalizeCurrency, type CurrencyCode } from "@/lib/server/pricing/currency"
 import { createAndSendInvoiceForPayment } from "@/lib/server/services/invoices"
 
 const PLAN_SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,80}$/
@@ -64,6 +64,7 @@ type BillingOrganizationRow = {
   last_name: string | null
   email: string | null
   billing_country_code: string
+  billing_country_confirmed_at: Date | null
 }
 
 type PaymentRow = {
@@ -206,7 +207,7 @@ function getPlanAmount(plan: PlanRow, currency: CurrencyCode): number {
   return Number(resolved ?? 0)
 }
 
-function mapPlan(plan: PlanRow, currency: CurrencyCode = "INR") {
+function mapPlan(plan: PlanRow, currency: CurrencyCode = FALLBACK_CURRENCY) {
   const features = Array.isArray(plan.features)
     ? plan.features.filter((feature): feature is string => typeof feature === "string")
     : []
@@ -284,11 +285,18 @@ function buildCheckoutPlan(
   }
 }
 
+/**
+ * `customerCountryCode` is required and has no default.
+ *
+ * It used to default to "IN", which meant any caller that forgot to pass one
+ * quietly produced an Indian-GST quote. Tax treatment is too consequential to
+ * be a parameter default — callers must say whose country they mean.
+ */
 function calculateQuote(
   plan: ReturnType<typeof mapPlan>,
   coupon: ReturnType<typeof mapCoupon> | null,
-  addonPlan: ReturnType<typeof mapPlan> | null = null,
-  customerCountryCode = "IN"
+  addonPlan: ReturnType<typeof mapPlan> | null,
+  customerCountryCode: string
 ): CheckoutQuote {
   const checkoutPlan = buildCheckoutPlan(plan, addonPlan)
   const originalAmountPaise = Number(checkoutPlan.amountPaise)
@@ -329,6 +337,8 @@ function buildPublicQuoteResponse(input: {
   coupon: ReturnType<typeof mapCoupon> | null
   quote: CheckoutQuote
   organization?: ReturnType<typeof mapBillingOrganization>
+  billingCountryConfirmationRequired?: boolean
+  suggestedBillingCountryCode?: string | null
 }) {
   return {
     plan: input.plan,
@@ -341,6 +351,8 @@ function buildPublicQuoteResponse(input: {
         }
       : null,
     quote: input.quote,
+    billingCountryConfirmationRequired: input.billingCountryConfirmationRequired ?? false,
+    suggestedBillingCountryCode: input.suggestedBillingCountryCode ?? null,
     ...(input.organization ? { organization: input.organization } : {}),
   }
 }
@@ -355,6 +367,9 @@ function mapBillingOrganization(row: BillingOrganizationRow) {
     userName: row.full_name || fallbackName || "Recruiter",
     userEmail: row.email ?? "",
     billingCountryCode: row.billing_country_code,
+    /* billing_country_code carries a 'IN' default from migration 010, so a
+       value in it is not evidence anyone chose it. Only the timestamp is. */
+    billingCountryConfirmed: row.billing_country_confirmed_at !== null,
   }
 }
 
@@ -383,7 +398,7 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
   `)
 }
 
-export async function getActiveBillingPlans(currency: CurrencyCode = "INR") {
+export async function getActiveBillingPlans(currency: CurrencyCode = FALLBACK_CURRENCY) {
   const rows = await getPlanRows(
     prisma,
     Prisma.sql`
@@ -396,7 +411,7 @@ export async function getActiveBillingPlans(currency: CurrencyCode = "INR") {
   return rows.map((row) => mapPlan(row, currency))
 }
 
-export async function getActiveBillingPlanBySlug(slug: string, client: QueryClient = prisma, currency: CurrencyCode = "INR") {
+export async function getActiveBillingPlanBySlug(slug: string, client: QueryClient = prisma, currency: CurrencyCode = FALLBACK_CURRENCY) {
   const normalizedSlug = validatePlanSlug(slug)
   const rows = await getPlanRows(
     client,
@@ -411,7 +426,7 @@ export async function getActiveBillingPlanBySlug(slug: string, client: QueryClie
   return rows[0] ? mapPlan(rows[0], currency) : null
 }
 
-async function getOptionalAddonPlanBySlug(slug: string | null | undefined, client: QueryClient = prisma, currency: CurrencyCode = "INR") {
+async function getOptionalAddonPlanBySlug(slug: string | null | undefined, client: QueryClient = prisma, currency: CurrencyCode = FALLBACK_CURRENCY) {
   const normalizedSlug = typeof slug === "string" && slug.trim() ? slug.trim().toLowerCase() : ""
 
   if (!normalizedSlug) {
@@ -448,7 +463,7 @@ function assertPlanBundleAllowed(
   }
 }
 
-async function getActiveBillingPlanById(planId: string, client: QueryClient = prisma, currency: CurrencyCode = "INR") {
+async function getActiveBillingPlanById(planId: string, client: QueryClient = prisma, currency: CurrencyCode = FALLBACK_CURRENCY) {
   const rows = await getPlanRows(
     client,
     Prisma.sql`
@@ -562,9 +577,17 @@ function assertCouponUsable(input: {
     throw new ApiError(409, "COUPON_ALREADY_USED", "This organization has already used this coupon")
   }
 
+  /* Only coupons that carry a minimum spend are currency-scoped, and they have
+     to be: a "minimum ₹10,000" threshold is meaningless against a USD total.
+     A coupon with no minimum — which is every coupon defined today — applies
+     in all four currencies. */
   if (coupon.minimumAmountPaise !== null) {
     if (coupon.minimumAmountCurrency !== plan.currency) {
-      throw new ApiError(400, "COUPON_CURRENCY_NOT_APPLICABLE", "Coupon is not available for this billing currency")
+      throw new ApiError(
+        400,
+        "COUPON_CURRENCY_NOT_APPLICABLE",
+        `${coupon.code} can only be used on ${coupon.minimumAmountCurrency} orders, and this order is in ${plan.currency}`
+      )
     }
 
     if (plan.amountPaise < coupon.minimumAmountPaise) {
@@ -608,6 +631,81 @@ async function resolveCouponForPlan(input: {
   return coupon
 }
 
+/**
+ * The country used to calculate tax, and whether it can be trusted.
+ *
+ * A confirmed billing country is the organization's own assertion of where it
+ * is established, and is the only thing tax is ever charged against. When it
+ * is unconfirmed we fall back to the request's geo country PURELY so the quote
+ * on screen is a plausible preview rather than a wrong Indian-GST one — and
+ * mark it provisional. `createRazorpayOrder` refuses to charge in that state.
+ *
+ * Geo is explicitly NOT treated as a legal or tax country. A VPN, a business
+ * trip or a foreign-hosted proxy all move it, and where a request comes from
+ * is not where a company is registered. It only ever seeds a suggestion the
+ * customer then confirms or corrects.
+ */
+function resolveTaxCountry(
+  organization: ReturnType<typeof mapBillingOrganization>,
+  geoCountryCode: string
+) {
+  if (organization.billingCountryConfirmed) {
+    return {
+      countryCode: organization.billingCountryCode.trim().toUpperCase(),
+      confirmed: true,
+      /* Nothing to suggest — they already told us. */
+      suggestedCountryCode: null as string | null,
+    }
+  }
+
+  const suggestion = geoCountryCode.trim().toUpperCase()
+
+  /* Deliberately does NOT fall back to organization.billingCountryCode when
+     there is no geo signal. That column still holds migration 010's 'IN'
+     default, and using it here would put an Indian-GST figure back on screen
+     for a customer we know nothing about — a quieter version of the bug this
+     whole path exists to remove. An empty country produces the neutral
+     non-domestic treatment instead, and the order is refused either way. */
+  return {
+    countryCode: suggestion,
+    confirmed: false,
+    suggestedCountryCode: suggestion || null,
+  }
+}
+
+/**
+ * Currencies this Razorpay account is configured to accept and settle.
+ *
+ * Razorpay international acceptance is a per-account setting that cannot be
+ * read from the SDK, so it is declared here instead of assumed. If the account
+ * is not enabled for a currency, an order in it is rejected by the gateway —
+ * this turns that into a clear, early refusal rather than a 502 mid-checkout.
+ *
+ * Defaults to all four so behaviour matches the current intent; narrow it with
+ * RAZORPAY_SUPPORTED_CURRENCIES=INR,USD if the account is domestic-only.
+ */
+function getGatewaySupportedCurrencies(): CurrencyCode[] {
+  const configured = (process.env.RAZORPAY_SUPPORTED_CURRENCIES || "INR,USD,GBP,EUR")
+    .split(",")
+    .map((value) => normalizeCurrency(value))
+    .filter((value): value is CurrencyCode => value !== null)
+
+  return configured.length > 0 ? configured : ["INR"]
+}
+
+function assertGatewayAcceptsCurrency(currency: CurrencyCode) {
+  if (!getGatewaySupportedCurrencies().includes(currency)) {
+    /* Deliberately a hard stop, not a silent switch to another currency. The
+       whole point of the localized ladder is that the price shown is the price
+       charged; quietly billing a UK buyer in USD would break exactly that. */
+    throw new ApiError(
+      503,
+      "CURRENCY_NOT_ACCEPTED",
+      `${currency} payments are not enabled on this account. Contact support to complete this purchase.`
+    )
+  }
+}
+
 export async function getBillingOrganization(auth: RecruiterRequestContext) {
   const rows = await prisma.$queryRaw<BillingOrganizationRow[]>(Prisma.sql`
     select
@@ -618,7 +716,8 @@ export async function getBillingOrganization(auth: RecruiterRequestContext) {
       u.first_name,
       u.last_name,
       u.email,
-      o.billing_country_code
+      o.billing_country_code,
+      o.billing_country_confirmed_at
     from public.organizations o
     inner join public.users u
       on u.organization_id = o.organization_id
@@ -645,13 +744,18 @@ export async function getCheckoutQuote(input: {
   /**
    * Transaction currency, resolved server-side from the request's edge geo
    * headers (see resolveCheckoutCurrency). Never taken from the request body,
-   * so the browser cannot pick a cheaper market. Defaults to the billing
-   * country's currency when a caller does not supply one.
+   * so the browser cannot pick a cheaper market.
+   *
+   * Required. It used to fall back to `billingCountryCode === "IN" ? "INR" :
+   * "USD"`, a path that could never produce GBP or EUR — a trap for the next
+   * caller that forgot to pass one.
    */
-  currency?: CurrencyCode
+  currency: CurrencyCode
+  /** Request geo country, used only to SUGGEST an unconfirmed billing country. */
+  geoCountryCode: string
 }) {
   const organization = await getBillingOrganization(input.auth)
-  const currency = input.currency ?? (organization.billingCountryCode === "IN" ? "INR" : "USD")
+  const currency = input.currency
   const plan = await getActiveBillingPlanBySlug(input.planSlug, prisma, currency)
 
   if (!plan) {
@@ -666,7 +770,8 @@ export async function getCheckoutQuote(input: {
     couponCode: input.couponCode,
     organizationId: organization.organizationId,
   })
-  const quote = calculateQuote(plan, coupon, addonPlan, organization.billingCountryCode)
+  const taxCountry = resolveTaxCountry(organization, input.geoCountryCode)
+  const quote = calculateQuote(plan, coupon, addonPlan, taxCountry.countryCode)
 
   return buildPublicQuoteResponse({
     plan,
@@ -674,6 +779,11 @@ export async function getCheckoutQuote(input: {
     coupon,
     quote,
     organization,
+    /* The quote is a preview until the organization confirms where it is
+       billed. The client shows the confirmation step off this flag; the server
+       enforces it independently in createRazorpayOrder. */
+    billingCountryConfirmationRequired: !taxCountry.confirmed,
+    suggestedBillingCountryCode: taxCountry.suggestedCountryCode,
   })
 }
 
@@ -693,10 +803,32 @@ export async function createRazorpayOrder(input: {
   addonPlanSlug?: string | null
   couponCode?: string | null
   /** See getCheckoutQuote: server-resolved from edge geo headers only. */
-  currency?: CurrencyCode
+  currency: CurrencyCode
+  /** Request geo country. Never used as a tax country — see resolveTaxCountry. */
+  geoCountryCode: string
 }) {
   const organization = await getBillingOrganization(input.auth)
-  const currency = input.currency ?? (organization.billingCountryCode === "IN" ? "INR" : "USD")
+  const currency = input.currency
+
+  /* Refuse before the gateway is touched if this account cannot settle the
+     currency the customer was quoted in. Failing here is recoverable; failing
+     after Razorpay has taken money is not. */
+  assertGatewayAcceptsCurrency(currency)
+
+  const taxCountry = resolveTaxCountry(organization, input.geoCountryCode)
+
+  /* No charge is ever calculated against an assumed tax country. An
+     organization that has not asserted where it is billed is asked once, at
+     checkout, before any money moves — rather than being silently treated as
+     Indian because migration 010 defaulted the column to 'IN'. */
+  if (!taxCountry.confirmed) {
+    throw new ApiError(
+      409,
+      "BILLING_COUNTRY_REQUIRED",
+      "Confirm your organization's billing country before paying"
+    )
+  }
+
   const plan = await getActiveBillingPlanBySlug(input.planSlug, prisma, currency)
 
   if (!plan) {
@@ -711,7 +843,7 @@ export async function createRazorpayOrder(input: {
     couponCode: input.couponCode,
     organizationId: organization.organizationId,
   })
-  const quote = calculateQuote(plan, coupon, addonPlan, organization.billingCountryCode)
+  const quote = calculateQuote(plan, coupon, addonPlan, taxCountry.countryCode)
 
   ensureRazorpayPayableAmount(quote.finalAmountPaise)
 
@@ -736,6 +868,21 @@ export async function createRazorpayOrder(input: {
     })) as { id?: string; amount?: number | string; currency?: string }
   } catch (error) {
     console.error("Razorpay order creation failed", error)
+
+    /* An account that is not enabled for international acceptance rejects the
+       order on currency. Surfacing that distinctly is the difference between
+       "our gateway is down" and "this account cannot take GBP yet", which are
+       very different things to see in logs on launch day. */
+    const message = error instanceof Error ? error.message : String(error)
+
+    if (/currency/i.test(message)) {
+      throw new ApiError(
+        503,
+        "CURRENCY_NOT_ACCEPTED",
+        `${quote.currency} payments were rejected by the payment gateway. Contact support to complete this purchase.`
+      )
+    }
+
     throw new ApiError(502, "RAZORPAY_ORDER_FAILED", "Unable to create Razorpay order")
   }
 
@@ -948,7 +1095,28 @@ async function validatePendingPaymentAgainstCurrentDb(
   client: QueryClient = prisma,
   lockCoupon = false
 ): Promise<PaymentValidation> {
-  const paymentCurrency = payment.currency === "USD" ? "USD" : "INR"
+  /* The currency the order was actually placed in, re-read from the stored
+     payment row rather than re-derived from anything request-scoped.
+
+     This used to read `payment.currency === "USD" ? "USD" : "INR"`, which
+     collapsed GBP and EUR to INR. A £279 order was then re-priced against
+     price_inr (₹24,999) and assertPaymentAmountsMatch rejected it on
+     `payment.currency !== quote.currency` — so every UK and eurozone payment
+     failed verification AFTER Razorpay had taken the money, leaving the
+     customer charged and the subscription unactivated. */
+  const paymentCurrency = normalizeCurrency(payment.currency)
+
+  if (!paymentCurrency) {
+    /* Refuse rather than guess. Re-pricing a payment in a currency we do not
+       recognise is exactly how the bug above silently charged the wrong
+       amount; an unknown code means the row is corrupt and needs a human. */
+    throw new ApiError(
+      500,
+      "PAYMENT_CURRENCY_UNSUPPORTED",
+      "Stored payment currency is not a supported billing currency"
+    )
+  }
+
   const plan = await getActiveBillingPlanById(payment.plan_id, client, paymentCurrency)
 
   if (!plan) {
@@ -1291,4 +1459,27 @@ export async function markPaymentTerminal(input: {
   `)
 
   return { status: input.status }
+}
+
+/**
+ * Pure decision logic, exposed for tests.
+ *
+ * Everything here is deterministic and takes plain data — no database, no
+ * gateway. It is grouped behind one export rather than making each function
+ * public so the module's real surface stays what it was.
+ *
+ * See lib/server/services/billing.test.ts, which drives the full
+ * quote -> order -> verification -> activation sequence through these.
+ */
+export const __billingInternals = {
+  getPlanAmount,
+  mapPlan,
+  calculateQuote,
+  resolveTaxCountry,
+  assertPaymentAmountsMatch,
+  assertCouponUsable,
+  buildCheckoutPlan,
+  getGatewaySupportedCurrencies,
+  assertGatewayAcceptsCurrency,
+  ensureRazorpayPayableAmount,
 }
