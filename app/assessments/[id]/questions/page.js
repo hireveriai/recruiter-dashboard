@@ -8,7 +8,7 @@ import BackToDashboardLink from "@/components/BackToDashboardLink"
 import Navbar from "@/components/Navbar"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { showActionFeedback } from "@/lib/client/action-feedback"
-import { AssessmentBuildSteps } from "@/components/AssessmentWorkflowGuide"
+import { AssessmentWorkflowPanel } from "@/components/AssessmentWorkflowGuide"
 
 const QUESTION_TYPE_LABELS = {
   SINGLE_CHOICE: "Single Choice",
@@ -31,6 +31,7 @@ export default function AssessmentQuestionsPage() {
   const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState(false)
   const [genCount, setGenCount] = useState(5)
+  const [inviteCount, setInviteCount] = useState(0)
 
   const apiBase = useMemo(() => buildAuthUrl(`/api/assessments/${id}`, searchParams), [id, searchParams])
 
@@ -52,6 +53,14 @@ export default function AssessmentQuestionsPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    fetch(buildAuthUrl(`/api/assessments/${id}/invites?pageSize=1`, searchParams), { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => setInviteCount(Number(data?.data?.meta?.total ?? 0)))
+      .catch(() => setInviteCount(0))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   const draftVersion = versions.find((v) => v.status === "DRAFT")
   const finalizedVersion = versions.find((v) => v.status === "FINALIZED")
@@ -297,9 +306,13 @@ export default function AssessmentQuestionsPage() {
           </div>
         </div>
 
-        <AssessmentBuildSteps
+        <AssessmentWorkflowPanel
           className="mt-5"
-          currentStep={assessment?.status === "PUBLISHED" && !editable ? "send" : "questions"}
+          assessmentId={id}
+          isPublished={assessment?.status === "PUBLISHED"}
+          hasQuestions={questions.length > 0}
+          hasInvites={inviteCount > 0}
+          hasResults={false}
         />
 
         {!editable ? (

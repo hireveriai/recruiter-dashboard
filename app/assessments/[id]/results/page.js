@@ -9,7 +9,7 @@ import BackToDashboardLink from "@/components/BackToDashboardLink"
 import Navbar from "@/components/Navbar"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatDate } from "@/lib/client/date-format"
-import { AssessmentBuildSteps } from "@/components/AssessmentWorkflowGuide"
+import { AssessmentWorkflowPanel } from "@/components/AssessmentWorkflowGuide"
 
 // Only these four labels are ever used for integrity risk - never language
 // implying proven cheating, since AssessmentSignal counts are heuristic.
@@ -32,12 +32,22 @@ export default function AssessmentResultsPage() {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
   const [assessmentTitle, setAssessmentTitle] = useState("")
+  const [assessment, setAssessment] = useState(null)
+  const [inviteCount, setInviteCount] = useState(0)
 
   useEffect(() => {
     fetch(buildAuthUrl(`/api/assessments/${id}`, searchParams), { credentials: "include" })
       .then((res) => res.json())
-      .then((data) => setAssessmentTitle(data?.data?.title ?? ""))
+      .then((data) => {
+        setAssessmentTitle(data?.data?.title ?? "")
+        setAssessment(data?.data ?? null)
+      })
       .catch(() => {})
+
+    fetch(buildAuthUrl(`/api/assessments/${id}/invites?pageSize=1`, searchParams), { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => setInviteCount(Number(data?.data?.meta?.total ?? 0)))
+      .catch(() => setInviteCount(0))
 
     fetch(buildAuthUrl(`/api/assessments/${id}/results`, searchParams), { credentials: "include" })
       .then((res) => res.json())
@@ -63,7 +73,14 @@ export default function AssessmentResultsPage() {
           <BackToDashboardLink className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
         </div>
 
-        <AssessmentBuildSteps className="mt-5" currentStep="results" />
+        <AssessmentWorkflowPanel
+          className="mt-5"
+          assessmentId={id}
+          isPublished={assessment?.status === "PUBLISHED"}
+          hasQuestions={(assessment?.versions ?? []).some((v) => (v.questions?.length ?? 0) > 0)}
+          hasInvites={inviteCount > 0}
+          hasResults={results.length > 0}
+        />
 
         <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-800 bg-slate-900/40">
           <div className="hv-table-scroll">
