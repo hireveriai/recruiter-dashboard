@@ -71,6 +71,18 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
 
   const handleChange = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
+  // Picking a job shouldn't force the recruiter to also type a title by hand -
+  // default it from the job, but never clobber something they already typed.
+  const handleJobChange = (jobId) => {
+    const job = jobs.find((j) => (j.jobId ?? j.job_id) === jobId);
+    const jobTitle = job?.jobTitle ?? job?.job_title ?? "";
+    setForm((current) => ({
+      ...current,
+      jobId,
+      title: current.title.trim() === "" ? (jobTitle ? `${jobTitle} Assessment` : "") : current.title,
+    }));
+  };
+
   const toggleQuestionType = (value) => {
     setForm((current) => {
       const has = current.questionTypes.includes(value);
@@ -178,7 +190,7 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
               <label className="mb-2 block text-sm text-slate-300">Job</label>
               <select
                 value={form.jobId}
-                onChange={(e) => handleChange("jobId", e.target.value)}
+                onChange={(e) => handleJobChange(e.target.value)}
                 className={SELECT_CLASS}
                 disabled={isEditMode}
               >
@@ -209,7 +221,7 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
               <input
                 value={form.title}
                 onChange={(e) => handleChange("title", e.target.value)}
-                placeholder="e.g. Backend Engineering Skills Test"
+                placeholder="Auto-filled from the selected job - edit if you'd like"
                 className={FIELD_CLASS}
               />
             </div>

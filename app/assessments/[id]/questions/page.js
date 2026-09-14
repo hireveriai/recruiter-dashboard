@@ -8,6 +8,7 @@ import BackToDashboardLink from "@/components/BackToDashboardLink"
 import Navbar from "@/components/Navbar"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { showActionFeedback } from "@/lib/client/action-feedback"
+import { AssessmentBuildSteps } from "@/components/AssessmentWorkflowGuide"
 
 const QUESTION_TYPE_LABELS = {
   SINGLE_CHOICE: "Single Choice",
@@ -57,6 +58,15 @@ export default function AssessmentQuestionsPage() {
   const displayVersion = draftVersion ?? finalizedVersion
   const questions = displayVersion?.questions ?? []
   const editable = Boolean(draftVersion)
+
+  // Default "Generate more with AI" to however many questions are still
+  // needed to reach the count the recruiter configured when creating the
+  // assessment, instead of an arbitrary hardcoded number.
+  useEffect(() => {
+    if (!assessment) return
+    const target = Number(assessment.questionCount) || 10
+    setGenCount(Math.max(1, target - questions.length))
+  }, [assessment, questions.length])
 
   const handleGenerate = async () => {
     try {
@@ -286,6 +296,11 @@ export default function AssessmentQuestionsPage() {
             </button>
           </div>
         </div>
+
+        <AssessmentBuildSteps
+          className="mt-5"
+          currentStep={assessment?.status === "PUBLISHED" && !editable ? "send" : "questions"}
+        />
 
         {!editable ? (
           <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">

@@ -9,6 +9,7 @@ import BackToDashboardLink from "@/components/BackToDashboardLink"
 import Navbar from "@/components/Navbar"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatDate } from "@/lib/client/date-format"
+import { AssessmentBuildSteps } from "@/components/AssessmentWorkflowGuide"
 
 // Only these four labels are ever used for integrity risk - never language
 // implying proven cheating, since AssessmentSignal counts are heuristic.
@@ -61,6 +62,8 @@ export default function AssessmentResultsPage() {
           </div>
           <BackToDashboardLink className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
         </div>
+
+        <AssessmentBuildSteps className="mt-5" currentStep="results" />
 
         <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-800 bg-slate-900/40">
           <div className="hv-table-scroll">
