@@ -108,6 +108,17 @@ const workflowSteps = [
     theme: "green",
     href: "/candidates",
   },
+  {
+    id: "veris-assessment",
+    number: 7,
+    title: "VERIS Assessment",
+    description: "Optional scored skills test you can send candidates independent of Screening or Interview.",
+    cta: "Open Assessments",
+    secondaryCta: "Skip",
+    theme: "violet",
+    optional: true,
+    href: "/assessments",
+  },
 ]
 
 function CheckIcon() {

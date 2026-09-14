@@ -1152,6 +1152,156 @@ export async function sendTrialRequestEmails(params: TrialRequestEmailParams) {
   });
 }
 
+type SendAssessmentInvitationEmailParams = {
+  to: string;
+  candidateName: string;
+  jobTitle: string;
+  assessmentTitle: string;
+  durationMinutes: number;
+  expiresAt: string | Date;
+  assessmentUrl: string;
+  companyName?: string | null;
+};
+
+function getAssessmentEmailFrom() {
+  const configured = process.env.ASSESSMENT_EMAIL_FROM?.trim();
+  if (configured) {
+    return configured;
+  }
+
+  return getEmailFrom();
+}
+
+/**
+ * VERIS Assessment invitation email. Deliberately never calls this an "AI
+ * Interview" - it is a separate product (a scored skills test), sent through
+ * a separate app (ASSESSMENT_APP_BASE_URL), so the copy must not blur the two
+ * in the candidate's mind.
+ */
+export async function sendAssessmentInvitationEmail({
+  to,
+  candidateName,
+  jobTitle,
+  assessmentTitle,
+  durationMinutes,
+  expiresAt,
+  assessmentUrl,
+  companyName,
+}: SendAssessmentInvitationEmailParams) {
+  const displayName = normalizeText(candidateName, "Candidate");
+  const displayCompany = normalizeText(companyName, "Hiring Team");
+  const displayRole = normalizeText(jobTitle, "the open role");
+  const displayAssessment = normalizeText(assessmentTitle, "VERIS Assessment");
+  const durationLabel = formatDurationLabel(durationMinutes);
+  const expiryLabel = formatOrgDateTime(expiresAt);
+
+  const safeName = escapeHtml(displayName);
+  const safeLink = escapeHtml(assessmentUrl);
+  const safeCompany = escapeHtml(displayCompany);
+  const safeRole = escapeHtml(displayRole);
+  const safeAssessment = escapeHtml(displayAssessment);
+  const safeDuration = escapeHtml(durationLabel);
+  const safeExpiry = escapeHtml(expiryLabel);
+
+  const subject = `Your VERIS Assessment for ${displayRole} at ${displayCompany}`;
+
+  return sendWithRetry({
+    from: getAssessmentEmailFrom(),
+    to,
+    subject,
+    text: [
+      `${displayCompany} Hiring Team`,
+      "powered by VerisNova",
+      "",
+      `Hi ${displayName},`,
+      "",
+      `As part of the hiring process for ${displayRole} at ${displayCompany}, you've been invited to complete the ${displayAssessment}.`,
+      "",
+      "Assessment Details:",
+      `- Estimated duration: ${durationLabel}`,
+      `- Link expires: ${expiryLabel}`,
+      "",
+      "Start your assessment:",
+      assessmentUrl,
+      "",
+      "Instructions:",
+      "- Use a laptop or desktop with a stable internet connection.",
+      "- Find a quiet space free of distractions before you begin.",
+      "- Once started, try to complete the assessment in one sitting.",
+      "",
+      "This VERIS Assessment is a scored skills test, separate from any interview you may also be asked to complete.",
+    ].join("\n"),
+    html: `
+      <div style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#eef2f7;">
+          <tr>
+            <td align="center" style="padding:28px 14px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;border-collapse:separate;">
+                <tr>
+                  <td style="padding:0;">
+                    <div style="border:1px solid #dbe3ee;border-radius:22px;background:#ffffff;box-shadow:0 18px 48px rgba(15,23,42,0.10);overflow:hidden;">
+                      <div style="padding:28px 30px 22px;background:#f8fafc;border-bottom:1px solid #e5e7eb;">
+                        <div style="font-size:20px;line-height:28px;font-weight:800;color:#0f172a;">${safeCompany} Hiring Team</div>
+                        <div style="margin-top:3px;font-size:12px;line-height:18px;color:#64748b;">powered by VerisNova</div>
+                      </div>
+
+                      <div style="padding:30px;">
+                        <p style="margin:0 0 18px;font-size:16px;line-height:26px;color:#334155;">Hi ${safeName},</p>
+                        <h1 style="margin:0 0 14px;font-size:24px;line-height:32px;color:#0f172a;font-weight:800;">You've been invited to a VERIS Assessment</h1>
+                        <p style="margin:0 0 22px;font-size:16px;line-height:26px;color:#334155;">
+                          As part of the hiring process for <strong style="color:#0f172a;">${safeRole}</strong> at <strong style="color:#0f172a;">${safeCompany}</strong>, please complete the <strong style="color:#0f172a;">${safeAssessment}</strong>.
+                        </p>
+
+                        <div style="border:1px solid #e2e8f0;border-radius:18px;background:#f8fafc;padding:4px 18px;margin:0 0 26px;">
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                              <td style="padding:14px 0;">
+                                <div style="font-size:12px;line-height:16px;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Estimated Duration</div>
+                                <div style="margin-top:4px;font-size:15px;line-height:22px;color:#0f172a;font-weight:700;">${safeDuration}</div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:12px 0;border-top:1px solid #e5e7eb;">
+                                <div style="font-size:12px;line-height:16px;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Link Expires</div>
+                                <div style="margin-top:4px;font-size:15px;line-height:22px;color:#0f172a;font-weight:700;">${safeExpiry}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </div>
+
+                        <div style="text-align:center;margin:0 0 22px;">
+                          <a href="${safeLink}"
+                             style="display:block;width:100%;box-sizing:border-box;padding:15px 20px;background:#0b1220;color:#ffffff;text-decoration:none;border-radius:14px;font-size:15px;line-height:20px;font-weight:800;text-align:center;">
+                            Start VERIS Assessment
+                          </a>
+                        </div>
+
+                        <p style="margin:0 0 22px;font-size:12px;line-height:19px;color:#64748b;word-break:break-all;">
+                          If the button does not work, paste this URL into your browser:<br />
+                          <a href="${safeLink}" style="color:#1d4ed8;text-decoration:underline;">${safeLink}</a>
+                        </p>
+
+                        <div style="border-radius:16px;background:#f1f5f9;padding:16px 18px;margin:0 0 22px;">
+                          <p style="margin:0 0 8px;font-size:13px;line-height:21px;color:#475569;">Use a laptop or desktop with a stable internet connection, in a quiet space free of distractions.</p>
+                          <p style="margin:0;font-size:13px;line-height:21px;color:#475569;">Once started, try to complete the assessment in one sitting.</p>
+                        </div>
+
+                        <p style="margin:0;font-size:13px;line-height:21px;color:#64748b;">
+                          This VERIS Assessment is a scored skills test, separate from any interview you may also be asked to complete.
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+  });
+}
+
 export async function sendTrialDecisionEmail(params: TrialDecisionEmailParams) {
   const isRecruiter = params.kind === "RECRUITER";
   const approved = params.decision === "APPROVE";

@@ -9,6 +9,7 @@ import {
   BrainCircuit,
   BriefcaseBusiness,
   CheckCircle2,
+  ClipboardCheck,
   ClipboardList,
   FileSearch,
   Link2,
@@ -236,6 +237,7 @@ export default function CognitiveDock({
   const canViewReports = canAccessFeature(permissionProfile, "reports");
   const canViewAlerts = canAccessFeature(permissionProfile, "alerts");
   const canUseCopilot = canAccessFeature(permissionProfile, "copilot");
+  const canViewAssessments = canAccessFeature(permissionProfile, "assessments");
 
   useEffect(() => {
     workspaceRef.current = workspace;
@@ -832,6 +834,7 @@ export default function CognitiveDock({
           active: panel === "alerts",
         } : null,
         canViewReports ? { label: "Reports Snapshot", icon: BarChart3, href: pageHref("/reports"), active: pathname.startsWith("/reports") } : null,
+        canViewAssessments ? { label: "VERIS Assessment", icon: ClipboardCheck, href: pageHref("/assessments"), active: pathname.startsWith("/assessments") } : null,
         { label: "Universal Search", icon: Search, onClick: () => setPanel("search"), active: panel === "search" },
       ].filter(present),
     },

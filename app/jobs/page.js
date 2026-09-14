@@ -11,6 +11,7 @@ import { isSessionJsonCacheFresh, readSessionJsonCache, writeSessionJsonCache } 
 import BackToDashboardLink from "../../components/BackToDashboardLink"
 import Navbar from "../../components/Navbar"
 import SendInterviewModal from "../../components/SendInterviewModal"
+import SendAssessmentModal from "../../components/SendAssessmentModal"
 import CreateJobModal from "../../components/CreateJobModal"
 
 function KebabIcon() {
@@ -190,6 +191,8 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState([])
   const [supportsJobActiveState, setSupportsJobActiveState] = useState(false)
   const [openSendInterview, setOpenSendInterview] = useState(false)
+  const [openSendAssessment, setOpenSendAssessment] = useState(false)
+  const [sendAssessmentJobId, setSendAssessmentJobId] = useState("")
   const [openEditJob, setOpenEditJob] = useState(false)
   const [openCreateJob, setOpenCreateJob] = useState(false)
   const [selectedJob, setSelectedJob] = useState(null)
@@ -722,6 +725,18 @@ export default function JobsPage() {
                                   >
                                     Send interview link
                                   </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuJobId("")
+                                      setSendAssessmentJobId(job.jobId)
+                                      setOpenSendAssessment(true)
+                                    }}
+                                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white"
+                                  >
+                                    Send assessment
+                                  </button>
                                 </div>
                               ) : null}
                             </div>
@@ -738,6 +753,11 @@ export default function JobsPage() {
       </main>
 
       <SendInterviewModal isOpen={openSendInterview} onClose={() => setOpenSendInterview(false)} />
+      <SendAssessmentModal
+        isOpen={openSendAssessment}
+        defaultJobId={sendAssessmentJobId}
+        onClose={() => setOpenSendAssessment(false)}
+      />
       {openCreateJob ? (
         <CreateJobModal
           open={openCreateJob}

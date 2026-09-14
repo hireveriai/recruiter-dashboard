@@ -26,6 +26,7 @@ const navItems = [
   { href: "/candidates", label: "Candidates", feature: "candidates" },
   { href: "/interviews", label: "Interviews", feature: "interviews" },
   { href: "/reports", label: "Reports", feature: "reports" },
+  { href: "/assessments", label: "Assessment", feature: "assessments" },
   { href: "/billing", label: "Billing", feature: "billing" },
 ];
 

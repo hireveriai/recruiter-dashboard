@@ -403,6 +403,7 @@ model Plan {
   priceEur         Int?     @map("price_eur")
   interviewLimit   Int
   screeningCredits Int      @default(0)
+  assessmentCredits Int     @default(0)
   planType         String   @default("INTERVIEW")
   description      String?
   features         Json     @default("[]")
@@ -492,6 +493,7 @@ model Subscription {
   totalCredits     Int
   usedCredits      Int       @default(0)
   screeningCredits Int       @default(0)
+  assessmentCredits Int      @default(0)
   status           String    @default("pending")
   amountPaid       Int       @default(0)
   currency         String    @default("INR")
@@ -521,6 +523,7 @@ model Invoice {
   planName            String   @map("plan_name")
   interviewCredits    Int      @default(0) @map("interview_credits")
   screeningCredits    Int      @default(0) @map("screening_credits")
+  assessmentCredits   Int      @default(0) @map("assessment_credits")
   originalAmountPaise Int      @map("original_amount_paise")
   discountAmountPaise Int      @default(0) @map("discount_amount_paise")
   taxableAmountPaise  Int      @map("taxable_amount_paise")
@@ -543,6 +546,242 @@ model Invoice {
   @@index([organizationId, invoiceDate], map: "invoices_organization_invoice_date_idx")
   @@index([subscriptionId], map: "invoices_subscription_id_idx")
   @@map("invoices")
+}
+
+/// VERIS Assessment. Independent of Screening/AI Interview; connects to the
+/// existing hiring context only via jobId/candidateId/organizationId (plain
+/// scalar FKs, not Prisma relations, so this never requires touching
+/// JobPosition/Candidate/Organization/Interview*). Owned by the recruiter-
+/// dashboard app for CRUD; the separate `assessment` app writes attempts/
+/// answers/results/signals during a live candidate session.
+model Assessment {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String              @db.Uuid @map("organization_id")
+  jobId              String              @db.Uuid @map("job_id")
+  title              String
+  description        String?
+  durationMinutes    Int                 @default(30) @map("duration_minutes")
+  passingPercentage  Decimal             @default(60) @db.Decimal(5, 2) @map("passing_percentage")
+  questionCount      Int?                @map("question_count")
+  difficulty         String?
+  questionTypes      String[]            @default([]) @map("question_types")
+  randomizeQuestions Boolean             @default(false) @map("randomize_questions")
+  randomizeOptions   Boolean             @default(false) @map("randomize_options")
+  linkExpiryDays     Int                 @default(7) @map("link_expiry_days")
+  status             String              @default("DRAFT")
+  settings           Json                @default("{}")
+  activeVersionId    String?             @db.Uuid @map("active_version_id")
+  createdBy          String?             @db.Uuid @map("created_by")
+  createdAt          DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt          DateTime            @default(now()) @db.Timestamptz(6) @map("updated_at")
+  versions           AssessmentVersion[] @relation("assessment_versions")
+  invites            AssessmentInvite[]
+  attempts           AssessmentAttempt[]
+  results            AssessmentResult[]
+
+  @@index([organizationId], map: "assessments_organization_id_idx")
+  @@index([jobId], map: "assessments_job_id_idx")
+  @@index([status], map: "assessments_status_idx")
+  @@map("assessments")
+}
+
+model AssessmentVersion {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessmentId      String               @db.Uuid @map("assessment_id")
+  versionNumber     Int                  @map("version_number")
+  status            String               @default("DRAFT")
+  generationModel   String?              @map("generation_model")
+  generationMeta    Json                 @default("{}") @map("generation_meta")
+  createdAt         DateTime             @default(now()) @db.Timestamptz(6) @map("created_at")
+  assessment        Assessment           @relation("assessment_versions", fields: [assessmentId], references: [id])
+  questions         AssessmentQuestion[]
+  invites           AssessmentInvite[]
+  attempts          AssessmentAttempt[]
+
+  @@unique([assessmentId, versionNumber])
+  @@index([assessmentId], map: "assessment_versions_assessment_id_idx")
+  @@map("assessment_versions")
+}
+
+model AssessmentQuestion {
+  id           String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  versionId    String                       @db.Uuid @map("version_id")
+  questionType String                       @map("question_type")
+  questionText String                       @map("question_text")
+  points       Decimal                      @default(1) @db.Decimal(6, 2)
+  orderIndex   Int                          @default(0) @map("order_index")
+  required     Boolean                      @default(true)
+  rubric       Json?
+  explanation  String?
+  origin       String                       @default("AI")
+  createdAt    DateTime                     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt    DateTime                     @default(now()) @db.Timestamptz(6) @map("updated_at")
+  version      AssessmentVersion            @relation(fields: [versionId], references: [id])
+  options      AssessmentQuestionOption[]
+  answers      AssessmentAnswer[]
+
+  @@index([versionId], map: "assessment_questions_version_id_idx")
+  @@map("assessment_questions")
+}
+
+model AssessmentQuestionOption {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId  String             @db.Uuid @map("question_id")
+  optionText  String             @map("option_text")
+  optionOrder Int                @default(0) @map("option_order")
+  isCorrect   Boolean            @default(false) @map("is_correct")
+  question    AssessmentQuestion @relation(fields: [questionId], references: [id])
+
+  @@index([questionId], map: "assessment_question_options_question_id_idx")
+  @@map("assessment_question_options")
+}
+
+model AssessmentInvite {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessmentId   String              @db.Uuid @map("assessment_id")
+  versionId      String              @db.Uuid @map("version_id")
+  jobId          String              @db.Uuid @map("job_id")
+  candidateId    String              @db.Uuid @map("candidate_id")
+  organizationId String              @db.Uuid @map("organization_id")
+  tokenHash      String              @unique @map("token_hash")
+  status         String              @default("INVITED")
+  expiresAt      DateTime            @db.Timestamptz(6) @map("expires_at")
+  sentAt         DateTime?           @db.Timestamptz(6) @map("sent_at")
+  openedAt       DateTime?           @db.Timestamptz(6) @map("opened_at")
+  completedAt    DateTime?           @db.Timestamptz(6) @map("completed_at")
+  createdBy      String?             @db.Uuid @map("created_by")
+  createdAt      DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
+  assessment     Assessment          @relation(fields: [assessmentId], references: [id])
+  version        AssessmentVersion   @relation(fields: [versionId], references: [id])
+  attempt        AssessmentAttempt?
+
+  @@index([organizationId], map: "assessment_invites_organization_id_idx")
+  @@index([jobId], map: "assessment_invites_job_id_idx")
+  @@index([candidateId], map: "assessment_invites_candidate_id_idx")
+  @@index([status], map: "assessment_invites_status_idx")
+  @@map("assessment_invites")
+}
+
+model AssessmentAttempt {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inviteId        String             @unique @db.Uuid @map("invite_id")
+  assessmentId    String             @db.Uuid @map("assessment_id")
+  versionId       String             @db.Uuid @map("version_id")
+  jobId           String             @db.Uuid @map("job_id")
+  candidateId     String             @db.Uuid @map("candidate_id")
+  organizationId  String             @db.Uuid @map("organization_id")
+  startedAt       DateTime?          @db.Timestamptz(6) @map("started_at")
+  endsAt          DateTime?          @db.Timestamptz(6) @map("ends_at")
+  submittedAt     DateTime?          @db.Timestamptz(6) @map("submitted_at")
+  timedOutAt      DateTime?          @db.Timestamptz(6) @map("timed_out_at")
+  status          String             @default("NOT_STARTED")
+  objectiveScore  Decimal?           @db.Decimal(8, 2) @map("objective_score")
+  subjectiveScore Decimal?           @db.Decimal(8, 2) @map("subjective_score")
+  score           Decimal?           @db.Decimal(8, 2)
+  maxScore        Decimal?           @db.Decimal(8, 2) @map("max_score")
+  percentage      Decimal?           @db.Decimal(5, 2)
+  passed          Boolean?
+  creditDeducted  Boolean            @default(false) @map("credit_deducted")
+  metadata        Json               @default("{}")
+  createdAt       DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt       DateTime           @default(now()) @db.Timestamptz(6) @map("updated_at")
+  assessment      Assessment         @relation(fields: [assessmentId], references: [id])
+  version         AssessmentVersion  @relation(fields: [versionId], references: [id])
+  invite          AssessmentInvite   @relation(fields: [inviteId], references: [id])
+  answers         AssessmentAnswer[]
+  signals         AssessmentSignal[]
+  result          AssessmentResult?
+
+  @@index([assessmentId], map: "assessment_attempts_assessment_id_idx")
+  @@index([candidateId], map: "assessment_attempts_candidate_id_idx")
+  @@index([organizationId], map: "assessment_attempts_organization_id_idx")
+  @@index([status], map: "assessment_attempts_status_idx")
+  @@map("assessment_attempts")
+}
+
+model AssessmentAnswer {
+  id                String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId         String                       @db.Uuid @map("attempt_id")
+  questionId        String                       @db.Uuid @map("question_id")
+  answer            Json                         @default("{}")
+  answeredAt        DateTime                     @default(now()) @db.Timestamptz(6) @map("answered_at")
+  timeSpentSeconds  Int?                         @map("time_spent_seconds")
+  attempt           AssessmentAttempt            @relation(fields: [attemptId], references: [id])
+  question          AssessmentQuestion           @relation(fields: [questionId], references: [id])
+  evaluation        AssessmentAnswerEvaluation?
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId], map: "assessment_answers_attempt_id_idx")
+  @@map("assessment_answers")
+}
+
+model AssessmentAnswerEvaluation {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  answerId     String           @unique @db.Uuid @map("answer_id")
+  score        Decimal?         @db.Decimal(6, 2)
+  maxScore     Decimal?         @db.Decimal(6, 2) @map("max_score")
+  feedback     String?
+  rubricResult Json?            @map("rubric_result")
+  provider     String?
+  model        String?
+  status       String           @default("PENDING")
+  evaluatedAt  DateTime?        @db.Timestamptz(6) @map("evaluated_at")
+  createdAt    DateTime         @default(now()) @db.Timestamptz(6) @map("created_at")
+  answer       AssessmentAnswer @relation(fields: [answerId], references: [id])
+
+  @@map("assessment_answer_evaluations")
+}
+
+model AssessmentResult {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId       String            @unique @db.Uuid @map("attempt_id")
+  assessmentId    String            @db.Uuid @map("assessment_id")
+  jobId           String            @db.Uuid @map("job_id")
+  candidateId     String            @db.Uuid @map("candidate_id")
+  organizationId  String            @db.Uuid @map("organization_id")
+  objectiveScore  Decimal?          @db.Decimal(8, 2) @map("objective_score")
+  subjectiveScore Decimal?          @db.Decimal(8, 2) @map("subjective_score")
+  totalScore      Decimal?          @db.Decimal(8, 2) @map("total_score")
+  maxScore        Decimal?          @db.Decimal(8, 2) @map("max_score")
+  percentage      Decimal?          @db.Decimal(5, 2)
+  passed          Boolean?
+  riskLevel       String?           @map("risk_level")
+  summary         Json              @default("{}")
+  completedAt     DateTime?         @db.Timestamptz(6) @map("completed_at")
+  createdAt       DateTime          @default(now()) @db.Timestamptz(6) @map("created_at")
+  assessment      Assessment        @relation(fields: [assessmentId], references: [id])
+  attempt         AssessmentAttempt @relation(fields: [attemptId], references: [id])
+
+  @@index([organizationId], map: "assessment_results_organization_id_idx")
+  @@index([jobId], map: "assessment_results_job_id_idx")
+  @@index([candidateId], map: "assessment_results_candidate_id_idx")
+  @@map("assessment_results")
+}
+
+model AssessmentSignal {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId String            @db.Uuid @map("attempt_id")
+  type      String
+  value     Json              @default("{}")
+  createdAt DateTime          @default(now()) @db.Timestamptz(6) @map("created_at")
+  attempt   AssessmentAttempt @relation(fields: [attemptId], references: [id])
+
+  @@index([attemptId], map: "assessment_signals_attempt_id_idx")
+  @@map("assessment_signals")
+}
+
+model AssessmentCreditEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid @map("organization_id")
+  kind           String   @default("ASSESSMENT")
+  amount         Int
+  source         String?
+  sourceId       String?  @map("source_id")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  @@index([organizationId], map: "assessment_credit_events_organization_id_idx")
+  @@map("assessment_credit_events")
 }
 
 

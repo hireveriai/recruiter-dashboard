@@ -204,7 +204,54 @@ function formatHiringActionText(value) {
   return formatStatusText(value)
 }
 
+// Independent of the Screening/Interview score above - reads from the
+// VERIS Assessment results API and is never combined into candidate.score.
+function VerisAssessmentSummaryCard({ candidateId, searchParams }) {
+  const [summary, setSummary] = useState(undefined)
+
+  useEffect(() => {
+    if (!candidateId) {
+      setSummary(null)
+      return
+    }
+
+    let active = true
+    fetch(buildAuthUrl(`/api/assessments/lookup/candidate-summary?candidateId=${candidateId}`, searchParams), {
+      credentials: "include",
+    })
+      .then((res) => (res.ok ? res.json() : { data: { result: null } }))
+      .then((data) => {
+        if (active) setSummary(data?.data?.result ?? null)
+      })
+      .catch(() => {
+        if (active) setSummary(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [candidateId, searchParams])
+
+  if (!summary) {
+    return null
+  }
+
+  return (
+    <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
+      <p className="text-xs uppercase tracking-[0.24em] text-violet-300">VERIS Assessment</p>
+      <p className="mt-3 text-2xl font-semibold text-white">
+        {summary.percentage != null ? `${Number(summary.percentage)}%` : "-"}
+      </p>
+      <p className="mt-1 text-sm text-slate-400">
+        {summary.assessmentTitle} &middot; {summary.passed === true ? "Passed" : summary.passed === false ? "Failed" : "Pending"}
+      </p>
+    </div>
+  )
+}
+
 function CompletedCandidateDetails({ candidate, onClose }) {
+  const searchParams = useAuthSearchParams()
+
   if (!candidate) {
     return null
   }
@@ -246,6 +293,10 @@ function CompletedCandidateDetails({ candidate, onClose }) {
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Completed</p>
               <p className="mt-3 text-lg font-semibold text-white">{formatDateTime(candidate.endedAt || candidate.createdAt)}</p>
             </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <VerisAssessmentSummaryCard candidateId={candidate.candidateId} searchParams={searchParams} />
           </div>
 
           <div className="mt-5">
