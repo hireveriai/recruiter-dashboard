@@ -29,6 +29,7 @@ export default function AssessmentQuestionsPage() {
   const [versions, setVersions] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [savedAt, setSavedAt] = useState("")
   const [preview, setPreview] = useState(false)
   const [genCount, setGenCount] = useState(5)
   const [inviteCount, setInviteCount] = useState(0)
@@ -90,8 +91,26 @@ export default function AssessmentQuestionsPage() {
       if (!res.ok) throw new Error(data?.error?.message || "Generation failed")
       showActionFeedback({ tone: "success", title: "Questions generated", message: `${data.data.questionsGenerated} question(s) added.` })
       await load()
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Generation failed", message: err.message })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const markSaved = () => setSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))
+
+  const handleSaveDraft = async () => {
+    setBusy(true)
+    try {
+      await load()
+      markSaved()
+      showActionFeedback({
+        tone: "success",
+        title: "Draft saved",
+        message: "Your questions are saved as a draft. Click Publish when you're ready to send this to candidates.",
+      })
     } finally {
       setBusy(false)
     }
@@ -114,6 +133,7 @@ export default function AssessmentQuestionsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || "Failed to add question")
       await load()
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Add failed", message: err.message })
     } finally {
@@ -131,6 +151,7 @@ export default function AssessmentQuestionsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || "Failed to delete question")
       await load()
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Delete failed", message: err.message })
     } finally {
@@ -161,6 +182,7 @@ export default function AssessmentQuestionsPage() {
       await patchQuestion(question.id, { orderIndex: target.orderIndex })
       await patchQuestion(target.id, { orderIndex: question.orderIndex })
       await load()
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Reorder failed", message: err.message })
     } finally {
@@ -172,6 +194,7 @@ export default function AssessmentQuestionsPage() {
     if (value === question.questionText) return
     try {
       await patchQuestion(question.id, { questionText: value })
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Save failed", message: err.message })
     }
@@ -182,6 +205,7 @@ export default function AssessmentQuestionsPage() {
     if (!Number.isFinite(points) || points === Number(question.points)) return
     try {
       await patchQuestion(question.id, { points })
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Save failed", message: err.message })
     }
@@ -201,6 +225,7 @@ export default function AssessmentQuestionsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || "Failed to update option")
       await load()
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Save failed", message: err.message })
     }
@@ -217,6 +242,7 @@ export default function AssessmentQuestionsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || "Failed to add option")
       await load()
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Add option failed", message: err.message })
     }
@@ -231,6 +257,7 @@ export default function AssessmentQuestionsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || "Failed to delete option")
       await load()
+      markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Delete option failed", message: err.message })
     }
@@ -286,6 +313,11 @@ export default function AssessmentQuestionsPage() {
               <span className={assessment?.status === "PUBLISHED" ? "text-emerald-300" : "text-amber-300"}>
                 {assessment?.status}
               </span>
+              {editable ? (
+                <span className="ml-2 text-xs text-slate-500">
+                  {savedAt ? `Draft autosaved ${savedAt}` : "Draft — edits save automatically"}
+                </span>
+              ) : null}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -297,11 +329,20 @@ export default function AssessmentQuestionsPage() {
               {preview ? "Exit Preview" : "Preview"}
             </button>
             <button
+              onClick={handleSaveDraft}
+              disabled={busy || !editable}
+              title="Every edit already saves automatically — this just confirms your draft is up to date."
+              className="rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Save Draft
+            </button>
+            <button
               onClick={handlePublish}
-              disabled={busy || questions.length === 0}
+              disabled={busy || questions.length === 0 || !editable}
+              title={!editable ? "This version is already published. Edit a question to start a new draft to publish." : ""}
               className="rounded-full bg-emerald-500/90 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Publish
+              {assessment?.status === "PUBLISHED" && !editable ? "Published" : "Publish"}
             </button>
           </div>
         </div>
