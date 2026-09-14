@@ -812,6 +812,7 @@ export default function CognitiveDock({
       items: [
         canCreateJob ? { label: "Create Job", icon: SquarePlus, onClick: openCreateJob, active: false } : null,
         canSendInterview ? { label: "Send Interview Link", icon: Link2, onClick: openSendInterview, active: false } : null,
+        canViewAssessments ? { label: "VERIS Assessment", icon: ClipboardCheck, href: pageHref("/assessments"), active: pathname.startsWith("/assessments") } : null,
       ].filter(present),
     },
     {
@@ -834,7 +835,6 @@ export default function CognitiveDock({
           active: panel === "alerts",
         } : null,
         canViewReports ? { label: "Reports Snapshot", icon: BarChart3, href: pageHref("/reports"), active: pathname.startsWith("/reports") } : null,
-        canViewAssessments ? { label: "VERIS Assessment", icon: ClipboardCheck, href: pageHref("/assessments"), active: pathname.startsWith("/assessments") } : null,
         { label: "Universal Search", icon: Search, onClick: () => setPanel("search"), active: panel === "search" },
       ].filter(present),
     },

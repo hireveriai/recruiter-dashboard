@@ -73,8 +73,19 @@ const workflowSteps = [
     href: "/ai-screening",
   },
   {
-    id: "send-link",
+    id: "veris-assessment",
     number: 3,
+    title: "VERIS Assessment",
+    description: "Optional scored skills test you can send candidates independent of Screening or Interview.",
+    cta: "Open Assessments",
+    secondaryCta: "Skip",
+    theme: "violet",
+    optional: true,
+    href: "/assessments",
+  },
+  {
+    id: "send-link",
+    number: 4,
     title: "Send Interview Link",
     description: "Invite shortlisted candidates securely for VERIS interviews.",
     cta: "Send Interview Link",
@@ -83,7 +94,7 @@ const workflowSteps = [
   },
   {
     id: "ai-interview",
-    number: 4,
+    number: 5,
     title: "VERIS Interview",
     description: "Track interview starts, completion, and review readiness.",
     cta: "View Interviews",
@@ -92,7 +103,7 @@ const workflowSteps = [
   },
   {
     id: "review-reports",
-    number: 5,
+    number: 6,
     title: "Review Reports",
     description: "Review competency evidence, integrity indicators, and recommendations.",
     cta: "Open Reports",
@@ -101,23 +112,12 @@ const workflowSteps = [
   },
   {
     id: "hiring-decision",
-    number: 6,
+    number: 7,
     title: "Hiring Decision",
     description: "Approve, reject, or escalate candidates with full audit trail visibility.",
     cta: "Review Candidates",
     theme: "green",
     href: "/candidates",
-  },
-  {
-    id: "veris-assessment",
-    number: 7,
-    title: "VERIS Assessment",
-    description: "Optional scored skills test you can send candidates independent of Screening or Interview.",
-    cta: "Open Assessments",
-    secondaryCta: "Skip",
-    theme: "violet",
-    optional: true,
-    href: "/assessments",
   },
 ]
 

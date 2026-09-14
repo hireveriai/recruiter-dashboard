@@ -12,6 +12,7 @@ import { isSessionJsonCacheFresh, readSessionJsonCache, writeSessionJsonCache } 
 
 import Navbar from "../../components/Navbar"
 import SendInterviewModal from "../../components/SendInterviewModal"
+import SendAssessmentModal from "../../components/SendAssessmentModal"
 import { formatLabel } from "@/lib/client/format-label"
 import { CandidateActionModal } from "../../components/dashboard/CandidateActionModal"
 import { DecisionPill } from "../../components/dashboard/DecisionPill"
@@ -404,6 +405,8 @@ export default function CandidatesPage() {
   const [expandedCandidateId, setExpandedCandidateId] = useState("")
   const [reviewCandidate, setReviewCandidate] = useState(null)
   const [openSendInterview, setOpenSendInterview] = useState(false)
+  const [assessmentTarget, setAssessmentTarget] = useState(null)
+  const [assessmentSummaries, setAssessmentSummaries] = useState({})
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [jobFilter, setJobFilter] = useState("ALL")
@@ -478,6 +481,37 @@ export default function CandidatesPage() {
       isMounted = false
     }
   }, [cacheKey, searchParams])
+
+  // Independent of the Screening/Interview data above - a single bulk lookup
+  // against VERIS Assessment results so the table can show a score column
+  // without one fetch per row.
+  useEffect(() => {
+    const candidateIds = Array.from(
+      new Set(candidates.map((candidate) => candidate.candidateId).filter(Boolean))
+    )
+
+    if (candidateIds.length === 0) {
+      setAssessmentSummaries({})
+      return
+    }
+
+    let active = true
+    fetch(buildAuthUrl(`/api/assessments/lookup/candidate-summary?candidateIds=${candidateIds.join(",")}`, searchParams), {
+      credentials: "include",
+    })
+      .then((res) => (res.ok ? res.json() : { data: { results: {} } }))
+      .then((data) => {
+        if (active) setAssessmentSummaries(data?.data?.results ?? {})
+      })
+      .catch(() => {
+        if (active) setAssessmentSummaries({})
+      })
+
+    return () => {
+      active = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates, searchParams])
 
   const stats = useMemo(() => {
     const total = candidates.length
@@ -672,11 +706,12 @@ export default function CandidatesPage() {
             <div className="overflow-hidden">
               <table className="w-full table-fixed text-sm">
                 <colgroup>
-                  <col className="w-[18%]" />
-                  <col className="w-[30%]" />
-                  <col className="w-[15%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[24%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[12%]" />
                   <col className="w-[14%]" />
-                  <col className="w-[23%]" />
+                  <col className="w-[21%]" />
                 </colgroup>
                 <thead className="bg-slate-950/20 text-slate-400">
                   <tr>
@@ -684,6 +719,7 @@ export default function CandidatesPage() {
                     <th className="p-5 text-left font-medium"><span className="block">Applied</span><span className="block">Role</span></th>
                     <th className="p-5 text-left font-medium"><span className="block">Interview</span><span className="block">Status</span></th>
                     <th className="p-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Score</span></th>
+                    <th className="p-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Assessment</span></th>
                     <th className="p-5 text-left font-medium"><span className="block">Hiring</span><span className="block">Action</span></th>
                   </tr>
                 </thead>
@@ -691,19 +727,19 @@ export default function CandidatesPage() {
                   <tbody>
                     {loadError ? (
                     <tr>
-                      <td colSpan={5} className="p-10 text-center text-amber-200">
+                      <td colSpan={6} className="p-10 text-center text-amber-200">
                         {loadError}
                       </td>
                     </tr>
                   ) : candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-10 text-center text-slate-400">
+                      <td colSpan={6} className="p-10 text-center text-slate-400">
                         No candidates available
                       </td>
                     </tr>
                   ) : filteredCandidates.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-10 text-center text-slate-400">
+                      <td colSpan={6} className="p-10 text-center text-slate-400">
                         No candidates match the current filters
                       </td>
                     </tr>
@@ -736,6 +772,45 @@ export default function CandidatesPage() {
                           </span>
                         </td>
                         <td className={`p-5 font-medium ${getScoreColor(candidate.verisScreeningScore)}`}>{formatScore(candidate.verisScreeningScore)}</td>
+                        <td className="p-5">
+                          {assessmentSummaries[candidate.candidateId] ? (
+                            <div>
+                              <span className="font-medium text-white">
+                                {formatScore(assessmentSummaries[candidate.candidateId].percentage)}
+                              </span>
+                              <span
+                                className={`ml-2 text-xs font-medium ${
+                                  assessmentSummaries[candidate.candidateId].passed === true
+                                    ? "text-emerald-300"
+                                    : assessmentSummaries[candidate.candidateId].passed === false
+                                      ? "text-rose-300"
+                                      : "text-slate-400"
+                                }`}
+                              >
+                                {assessmentSummaries[candidate.candidateId].passed === true
+                                  ? "Passed"
+                                  : assessmentSummaries[candidate.candidateId].passed === false
+                                    ? "Failed"
+                                    : "Pending"}
+                              </span>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAssessmentTarget({
+                                  candidateId: candidate.candidateId,
+                                  candidateName: candidate.candidateName,
+                                  candidateEmail: candidate.candidateEmail || "",
+                                })
+                              }
+                              className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-violet-400/25 bg-violet-400/10 px-3 text-xs font-semibold text-violet-100 transition hover:border-violet-300/45 hover:bg-violet-400/15 hover:text-white"
+                              aria-label={`Send VERIS Assessment to ${candidate.candidateName}`}
+                            >
+                              Send Assessment
+                            </button>
+                          )}
+                        </td>
                         <td className="p-5">
                           <div className="flex flex-wrap items-center gap-2">
                             {isDecisionReady(candidate) ? (
@@ -772,7 +847,7 @@ export default function CandidatesPage() {
                       </tr>
                       {expandedCandidateId === rowKey ? (
                         <tr className="border-t border-emerald-400/10">
-                          <td colSpan={5} className="bg-slate-950/30 p-5">
+                          <td colSpan={6} className="bg-slate-950/30 p-5">
                             <CompletedCandidateDetails candidate={candidate} onClose={() => setExpandedCandidateId("")} />
                           </td>
                         </tr>
@@ -799,6 +874,13 @@ export default function CandidatesPage() {
         }}
       />
       <SendInterviewModal isOpen={openSendInterview} onClose={() => setOpenSendInterview(false)} />
+      <SendAssessmentModal
+        isOpen={Boolean(assessmentTarget)}
+        onClose={() => setAssessmentTarget(null)}
+        defaultCandidateId={assessmentTarget?.candidateId}
+        defaultCandidateName={assessmentTarget?.candidateName}
+        defaultCandidateEmail={assessmentTarget?.candidateEmail}
+      />
     </>
   )
 }

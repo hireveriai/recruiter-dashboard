@@ -22,11 +22,11 @@ const CreateJobModal = dynamic(() => import("./CreateJobModal"), {
 const navItems = [
   { href: "/", label: "Dashboard", feature: "dashboard" },
   { href: "/ai-screening", label: "VERIS Screening", feature: "aiScreening" },
+  { href: "/assessments", label: "Assessment", feature: "assessments" },
   { href: "/jobs", label: "Jobs", feature: "jobs" },
   { href: "/candidates", label: "Candidates", feature: "candidates" },
   { href: "/interviews", label: "Interviews", feature: "interviews" },
   { href: "/reports", label: "Reports", feature: "reports" },
-  { href: "/assessments", label: "Assessment", feature: "assessments" },
   { href: "/billing", label: "Billing", feature: "billing" },
 ];
 

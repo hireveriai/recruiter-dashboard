@@ -11,7 +11,14 @@ import { formatDateTime } from "@/lib/client/date-format";
 const FIELD_CLASS =
   "w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]";
 
-export default function SendAssessmentModal({ isOpen, onClose, defaultJobId }) {
+export default function SendAssessmentModal({
+  isOpen,
+  onClose,
+  defaultJobId,
+  defaultCandidateId,
+  defaultCandidateName,
+  defaultCandidateEmail,
+}) {
   const searchParams = useAuthSearchParams();
   const [jobs, setJobs] = useState([]);
   const [assessments, setAssessments] = useState([]);
@@ -19,7 +26,7 @@ export default function SendAssessmentModal({ isOpen, onClose, defaultJobId }) {
   const [candidateSearch, setCandidateSearch] = useState("");
   const [jobId, setJobId] = useState(defaultJobId ?? "");
   const [assessmentId, setAssessmentId] = useState("");
-  const [candidateId, setCandidateId] = useState("");
+  const [candidateId, setCandidateId] = useState(defaultCandidateId ?? "");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -28,8 +35,19 @@ export default function SendAssessmentModal({ isOpen, onClose, defaultJobId }) {
 
     setJobId(defaultJobId ?? "");
     setAssessmentId("");
-    setCandidateId("");
+    setCandidateId(defaultCandidateId ?? "");
     setResult(null);
+
+    // A candidate arriving pre-selected (e.g. from the Candidates page "Send
+    // Assessment" action) needs to show up in the picker immediately, without
+    // waiting on/matching the search-driven lookup below.
+    if (defaultCandidateId) {
+      setCandidates((current) =>
+        current.some((c) => c.candidateId === defaultCandidateId)
+          ? current
+          : [{ candidateId: defaultCandidateId, fullName: defaultCandidateName || "Selected candidate", email: defaultCandidateEmail || "" }, ...current]
+      );
+    }
 
     fetch(buildAuthUrl("/api/jobs?view=selector", searchParams), { credentials: "include" })
       .then((res) => res.json())
@@ -41,7 +59,7 @@ export default function SendAssessmentModal({ isOpen, onClose, defaultJobId }) {
       .then((data) => setAssessments(Array.isArray(data?.data?.assessments) ? data.data.assessments : []))
       .catch(() => setAssessments([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, defaultJobId]);
+  }, [isOpen, defaultJobId, defaultCandidateId, defaultCandidateName, defaultCandidateEmail]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -197,9 +215,13 @@ export default function SendAssessmentModal({ isOpen, onClose, defaultJobId }) {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-slate-300">Assessment (published only)</label>
+                <label className="mb-2 block text-sm text-slate-300">Assessment</label>
+                <p className="mb-2 text-xs text-slate-400">
+                  Only assessments you&apos;ve published are shown here — drafts and AI-generated questions still
+                  awaiting your review can&apos;t be sent to a candidate yet.
+                </p>
                 <select value={assessmentId} onChange={(e) => setAssessmentId(e.target.value)} className={FIELD_CLASS}>
-                  <option value="">Select Assessment</option>
+                  <option value="">Select a published assessment</option>
                   {assessmentsForJob.map((assessment) => (
                     <option key={assessment.id} value={assessment.id}>
                       {assessment.title}
