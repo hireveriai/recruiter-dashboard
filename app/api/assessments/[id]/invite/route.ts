@@ -101,14 +101,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       },
     })
 
-    const baseUrl = (process.env.ASSESSMENT_APP_BASE_URL || "").trim().replace(/\/+$/, "")
-    if (!baseUrl) {
-      throw new ApiError(
-        500,
-        "ASSESSMENT_APP_BASE_URL_MISSING",
-        "ASSESSMENT_APP_BASE_URL is not configured for this environment"
-      )
-    }
+    // Matches the fallback pattern in lib/server/interview-url.ts: prefer the
+    // configured env var, but degrade to the intended production domain
+    // rather than hard-failing invite creation when it isn't set yet.
+    const baseUrl =
+      (process.env.ASSESSMENT_APP_BASE_URL || "").trim().replace(/\/+$/, "") ||
+      "https://assessment.verisnova.com"
     const assessmentUrl = `${baseUrl}/a/${token}`
 
     let emailSent = false
