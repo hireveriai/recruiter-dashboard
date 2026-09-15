@@ -36,8 +36,15 @@ export type ComparablePlan = {
   currency: string
   interviewSessions: number
   screeningReviews: number
+  assessmentCredits: number
   planType: string
   isPopular: boolean
+}
+
+const PLAN_TYPE_GROUP_LABEL: Record<string, string> = {
+  ASSESSMENT: "VERIS Assessment",
+  BUNDLE: "Complete Hiring Suite",
+  INTERVIEW: "AI Interview",
 }
 
 type PlanComparisonProps = {
@@ -79,6 +86,7 @@ function getUnitEconomics(
 
   const interviews = Math.max(plan.interviewSessions, 0)
   const screenings = Math.max(plan.screeningReviews, 0) + (addon?.screeningReviews ?? 0)
+  const assessments = Math.max(plan.assessmentCredits, 0)
 
   return {
     regularPaise,
@@ -87,6 +95,7 @@ function getUnitEconomics(
     discounted: regularPaise !== null && regularPaise > totalPaise,
     interviews,
     screenings,
+    assessments,
     regularPerInterviewPaise:
       regularPaise !== null && interviews > 0 ? Math.round(regularPaise / interviews) : null,
     perInterviewPaise: interviews > 0 ? Math.round(totalPaise / interviews) : null,
@@ -231,9 +240,28 @@ export default function PlanComparison({
       <div className="mt-4 -mx-1 overflow-x-auto px-1">
         <table className="w-full table-fixed border-collapse text-left">
           <caption className="sr-only">
-            Comparison of VerisNova interview plans by price, included credits, and cost per interview
+            Comparison of VerisNova plans by price and included interview, screening, and assessment credits
           </caption>
           <thead>
+            {rows.length > 0 && rows.some(({ plan }) => plan.planType !== rows[0].plan.planType) ? (
+              <tr aria-hidden="true">
+                <th scope="col" className="pb-1" />
+                {rows.map(({ plan }, index) => {
+                  const isNewGroup = index === 0 || rows[index - 1].plan.planType !== plan.planType
+                  const label = PLAN_TYPE_GROUP_LABEL[plan.planType] ?? plan.planType
+
+                  return (
+                    <th key={plan.id} scope="col" className="pb-1 pl-1.5 pr-1.5 text-center">
+                      {isNewGroup ? (
+                        <span className="block truncate text-[9px] font-bold uppercase tracking-[0.14em] text-violet-300/80">
+                          {label}
+                        </span>
+                      ) : null}
+                    </th>
+                  )
+                })}
+              </tr>
+            ) : null}
             <tr>
               <th scope="col" className="w-[96px] pb-3 pr-2 align-bottom text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:w-[116px]">
                 Plan
@@ -319,6 +347,12 @@ export default function PlanComparison({
             <ComparisonRow label="Screening reviews included">
               {rows.map(({ plan, economics }) => (
                 <Cell key={plan.id} selected={plan.slug === selectedPlanSlug}>{economics.screenings.toLocaleString()}</Cell>
+              ))}
+            </ComparisonRow>
+
+            <ComparisonRow label="Assessments included">
+              {rows.map(({ plan, economics }) => (
+                <Cell key={plan.id} selected={plan.slug === selectedPlanSlug}>{economics.assessments.toLocaleString()}</Cell>
               ))}
             </ComparisonRow>
 
