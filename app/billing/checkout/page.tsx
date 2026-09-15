@@ -717,7 +717,8 @@ export default function BillingCheckoutPage() {
     <main className="min-h-screen overflow-hidden bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.06),transparent_38%)]" />
 
-      <section className="relative mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)]">
+      <section className="relative mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.85fr)]">
+        <div className="flex flex-col gap-6">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-200">
@@ -985,6 +986,19 @@ export default function BillingCheckoutPage() {
           </div>
         </div>
 
+        {/* Capability comparison sits directly below the plan cards - still
+            part of the purchase decision, not a bottom-of-page afterthought -
+            while the payment summary stays sticky in the right column
+            regardless of how tall this section is. */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
+          <p className="text-lg font-semibold tracking-tight text-slate-100">Compare VerisNova capabilities</p>
+          <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
+            See what each VerisNova capability and the complete Hiring Suite provide for your recruiting workflow.
+          </p>
+          <ProductComparisonTable plans={plans} />
+        </div>
+        </div>
+
         <div className="flex flex-col gap-6">
         <aside className="h-fit rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-7 lg:sticky lg:top-6">
           <div className="flex items-start justify-between gap-4">
@@ -1201,14 +1215,6 @@ export default function BillingCheckoutPage() {
         </section>
         </div>
       </section>
-
-      <section className="relative mx-auto mt-8 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
-        <p className="text-lg font-semibold tracking-tight text-slate-100">Compare VerisNova options</p>
-        <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
-          See which VerisNova capability fits your hiring workflow.
-        </p>
-        <ProductComparisonTable plans={plans} />
-      </section>
     </main>
   )
 }
@@ -1220,11 +1226,25 @@ export default function BillingCheckoutPage() {
  * catalog (see getActiveBillingPlans in lib/server/services/billing.ts) -
  * never computed or hardcoded here.
  */
+type ComparisonCellValue = "yes" | "no" | "addon"
+type ComparisonRowDef = { label: string; values: Record<ProductKey, ComparisonCellValue> }
+
 /**
- * Secondary, product-vs-product feature matrix - "what's the difference",
+ * Secondary, product-vs-product capability matrix - "what's the difference",
  * not "how much does each tier cost" (pricing lives in the plan cards only).
- * Every cell is derived from the real `plans` data (does any plan of this
- * product type actually carry this quantity?), not asserted.
+ *
+ * Grouped into two sections:
+ *  - Candidate Evaluation: cells are derived from the real `plans` data (does
+ *    any plan of this product type actually carry this quantity/capability?)
+ *    plus code-verified capabilities (Interview Intelligence, Integrity Risk
+ *    Signals, Recordings/Replay - see app/recordings/[recordingId] and the
+ *    interview/assessment integrity-signal pipelines). VERIS Screening never
+ *    gets integrity signals or recordings - it is a resume-to-role match, not
+ *    a monitored candidate session.
+ *  - Recruiter Workspace: these are workspace-level dashboard capabilities
+ *    gated by user role (see lib/client/permissions.js), not by which product
+ *    a plan sells - any active paid organization gets them regardless of
+ *    which product tab it purchased, so every column is truthfully "yes".
  */
 function ProductComparisonTable({ plans }: { plans: Plan[] }) {
   const plansByType = useMemo(() => {
@@ -1237,10 +1257,9 @@ function ProductComparisonTable({ plans }: { plans: Plan[] }) {
 
   const hasAny = (key: ProductKey, pick: (plan: Plan) => number) =>
     (plansByType.get(key) ?? []).some((plan) => pick(plan) > 0)
+  const hasScreeningAddon = (plansByType.get("SCREENING") ?? []).length > 0
 
-  type Cell = "yes" | "no" | "addon"
-
-  const rows: Array<{ label: string; values: Record<ProductKey, Cell> }> = [
+  const candidateEvaluationRows: ComparisonRowDef[] = [
     {
       label: "AI Interview",
       values: {
@@ -1267,14 +1286,49 @@ function ProductComparisonTable({ plans }: { plans: Plan[] }) {
         // existing "With VERIS Screening" add-on (see PlanComparison) lets a
         // recruiter attach real screening capacity to an Interview plan -
         // a verified capability, not an invented one.
-        INTERVIEW: (plansByType.get("SCREENING") ?? []).length > 0 ? "addon" : "no",
+        INTERVIEW: hasScreeningAddon ? "addon" : "no",
         ASSESSMENT: "no",
         SCREENING: hasAny("SCREENING", (p) => p.screeningReviews) ? "yes" : "no",
       },
     },
+    {
+      label: "Interview Intelligence",
+      values: { BUNDLE: "yes", INTERVIEW: "yes", ASSESSMENT: "no", SCREENING: "no" },
+    },
+    {
+      label: "Integrity Risk Signals",
+      values: { BUNDLE: "yes", INTERVIEW: "yes", ASSESSMENT: "yes", SCREENING: "no" },
+    },
+    {
+      // Non-negotiable per product design: Assessment and Screening never
+      // include recordings/replay - only the AI Interview capability does.
+      label: "Recordings / Replay",
+      values: { BUNDLE: "yes", INTERVIEW: "yes", ASSESSMENT: "no", SCREENING: "no" },
+    },
   ]
 
-  const hasAddonRow = rows.some((row) => Object.values(row.values).includes("addon"))
+  // Workspace features are role-gated, not product-gated (see
+  // lib/client/permissions.js) - every paid organization gets the same
+  // dashboard regardless of which product it buys, so every column is "yes".
+  const workspaceIncluded: Record<ProductKey, ComparisonCellValue> = {
+    BUNDLE: "yes",
+    INTERVIEW: "yes",
+    ASSESSMENT: "yes",
+    SCREENING: "yes",
+  }
+  const recruiterWorkspaceRows: ComparisonRowDef[] = [
+    "Create & Manage Jobs",
+    "Candidate Management",
+    "Interview Queue",
+    "Review Flags",
+    "Reports & Insights",
+    "VERIS AI",
+    "Universal Search",
+    "Manage Teams",
+    "Alerts",
+  ].map((label) => ({ label, values: workspaceIncluded }))
+
+  const hasAddonRow = candidateEvaluationRows.some((row) => Object.values(row.values).includes("addon"))
 
   return (
     <div className="mt-5 -mx-1 overflow-x-auto px-1">
@@ -1301,20 +1355,8 @@ function ProductComparisonTable({ plans }: { plans: Plan[] }) {
             ))}
           </tr>
         </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.label} className="border-t border-slate-800">
-              <th scope="row" className="py-3 pr-2 text-xs font-medium text-slate-300">
-                {row.label}
-              </th>
-              {PRODUCT_DEFS.map((product) => (
-                <td key={product.key} className="py-3 px-1.5 text-center">
-                  <ComparisonCell value={row.values[product.key]} />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
+        <ComparisonGroup title="Candidate Evaluation" rows={candidateEvaluationRows} />
+        <ComparisonGroup title="Recruiter Workspace" rows={recruiterWorkspaceRows} />
       </table>
       {hasAddonRow ? (
         <p className="mt-3 text-[11px] leading-5 text-slate-500">
@@ -1322,6 +1364,34 @@ function ProductComparisonTable({ plans }: { plans: Plan[] }) {
         </p>
       ) : null}
     </div>
+  )
+}
+
+function ComparisonGroup({ title, rows }: { title: string; rows: ComparisonRowDef[] }) {
+  return (
+    <tbody>
+      <tr className="border-t border-slate-800">
+        <th
+          colSpan={PRODUCT_DEFS.length + 1}
+          scope="colgroup"
+          className="pb-1.5 pt-4 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-blue-300/80"
+        >
+          {title}
+        </th>
+      </tr>
+      {rows.map((row) => (
+        <tr key={row.label} className="border-t border-slate-800/70">
+          <th scope="row" className="py-3 pr-2 text-xs font-medium text-slate-300">
+            {row.label}
+          </th>
+          {PRODUCT_DEFS.map((product) => (
+            <td key={product.key} className="py-3 px-1.5 text-center">
+              <ComparisonCell value={row.values[product.key]} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
   )
 }
 
