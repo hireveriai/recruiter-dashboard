@@ -117,6 +117,21 @@ declare global {
 const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js"
 const TRUST_INDICATORS = ["Tax invoice", "Razorpay secured", "Organization billing", "Audit-ready records"]
 
+/** Only statements the existing implementation actually supports - no
+ * invented refund/rollover/cancellation/expiry policy. */
+const HOW_BILLING_WORKS_STEPS = [
+  { title: "Choose your plan", body: "Select the VerisNova capability and plan that fits your hiring needs." },
+  { title: "Complete secure payment", body: "Complete payment through the existing secure Razorpay checkout." },
+  { title: "Credits are added automatically", body: "Purchased credits are added to the workspace after confirmed payment." },
+]
+
+const GOOD_TO_KNOW_ITEMS = [
+  "Prices are shown in your current billing currency.",
+  "GST/taxes appear in the payment summary where applicable.",
+  "Coupons follow existing eligibility rules.",
+  "Purchased credits are added after confirmed payment.",
+]
+
 /**
  * Product-first grouping for the checkout page. Maps 1:1 onto the existing
  * `planType` values already returned by /api/plans (see SELLABLE_PLAN_TYPES
@@ -126,10 +141,10 @@ const TRUST_INDICATORS = ["Tax invoice", "Razorpay secured", "Organization billi
 type ProductKey = "INTERVIEW" | "ASSESSMENT" | "SCREENING" | "BUNDLE"
 
 const PRODUCT_DEFS: Array<{ key: ProductKey; label: string; tagline: string }> = [
+  { key: "BUNDLE", label: "Hiring Suite", tagline: "All three capabilities" },
   { key: "INTERVIEW", label: "VERIS AI Interview", tagline: "AI-powered structured interviews" },
   { key: "ASSESSMENT", label: "VERIS Assessment", tagline: "Scored candidate assessments" },
   { key: "SCREENING", label: "VERIS Screening", tagline: "Resume-to-role evaluation" },
-  { key: "BUNDLE", label: "Hiring Suite", tagline: "All three capabilities" },
 ]
 
 /** The DB has no "is the flagship tier" flag for every product family (only
@@ -298,11 +313,12 @@ export default function BillingCheckoutPage() {
     [plans, selectedPlanSlug]
   )
 
-  // Product-first tab state. Defaults to AI Interview; if the page opened via
-  // a pricing-page deep link (?plan=assessment-growth etc.), it switches once
-  // to whichever product that plan actually belongs to, so an existing CTA
-  // keeps landing on the right tab with that plan already selected.
-  const [activeProduct, setActiveProduct] = useState<ProductKey>("INTERVIEW")
+  // Product-first tab state. Defaults to the Hiring Suite (the flagship,
+  // all-in-one option); if the page opened via a pricing-page deep link
+  // (?plan=assessment-growth etc.), it switches once to whichever product
+  // that plan actually belongs to, so an existing CTA still lands on the
+  // right tab with that plan already selected.
+  const [activeProduct, setActiveProduct] = useState<ProductKey>("BUNDLE")
   const didInitProductFromPlan = useRef(false)
 
   useEffect(() => {
@@ -833,8 +849,8 @@ export default function BillingCheckoutPage() {
           <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
             <p className="text-lg font-semibold tracking-tight text-slate-100">Choose your VerisNova plan</p>
             <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
-              Choose the capability that fits your hiring workflow. Each product can be purchased independently, or
-              choose the Hiring Suite for all three.
+              Get the complete Hiring Suite or choose the capability you need. AI Interview, Assessment, and Screening
+              are available independently.
             </p>
 
             {/* Product selector - four premium tabs, not a form. Switching tabs
@@ -870,10 +886,13 @@ export default function BillingCheckoutPage() {
             </div>
 
             {activeProduct === "BUNDLE" ? (
-              <p className="mt-4 rounded-xl border border-blue-400/20 bg-blue-500/5 px-3.5 py-2.5 text-xs leading-5 text-blue-100">
-                All three capabilities in one plan. Each capability is also available independently - the Hiring
-                Suite is simply the combined option.
-              </p>
+              <div className="mt-5">
+                <p className="text-base font-semibold text-slate-100">Hiring Suite</p>
+                <p className="mt-0.5 text-sm text-blue-200">All three capabilities. One plan.</p>
+                <p className="mt-2 max-w-xl text-xs leading-5 text-slate-400">
+                  All three capabilities in one plan. Each capability is also available independently.
+                </p>
+              </div>
             ) : null}
 
             {/* Plan card grid - the primary interface. Every price/quantity
@@ -966,6 +985,7 @@ export default function BillingCheckoutPage() {
           </div>
         </div>
 
+        <div className="flex flex-col gap-6">
         <aside className="h-fit rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-7 lg:sticky lg:top-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -1150,6 +1170,44 @@ export default function BillingCheckoutPage() {
             </p>
           ) : null}
         </aside>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">How billing works</p>
+          <ol className="mt-4 space-y-4">
+            {HOW_BILLING_WORKS_STEPS.map((step, index) => (
+              <li key={step.title} className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-950 text-[11px] font-bold text-slate-300">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">{step.title}</p>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-400">{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-6 border-t border-slate-800 pt-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Good to know</p>
+            <ul className="mt-3 space-y-2">
+              {GOOD_TO_KNOW_ITEMS.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-600" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+        </div>
+      </section>
+
+      <section className="relative mx-auto mt-8 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
+        <p className="text-lg font-semibold tracking-tight text-slate-100">Compare VerisNova options</p>
+        <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
+          See which VerisNova capability fits your hiring workflow.
+        </p>
+        <ProductComparisonTable plans={plans} />
       </section>
     </main>
   )
@@ -1162,6 +1220,121 @@ export default function BillingCheckoutPage() {
  * catalog (see getActiveBillingPlans in lib/server/services/billing.ts) -
  * never computed or hardcoded here.
  */
+/**
+ * Secondary, product-vs-product feature matrix - "what's the difference",
+ * not "how much does each tier cost" (pricing lives in the plan cards only).
+ * Every cell is derived from the real `plans` data (does any plan of this
+ * product type actually carry this quantity?), not asserted.
+ */
+function ProductComparisonTable({ plans }: { plans: Plan[] }) {
+  const plansByType = useMemo(() => {
+    const map = new Map<ProductKey, Plan[]>()
+    for (const product of PRODUCT_DEFS) {
+      map.set(product.key, plans.filter((plan) => plan.planType === product.key))
+    }
+    return map
+  }, [plans])
+
+  const hasAny = (key: ProductKey, pick: (plan: Plan) => number) =>
+    (plansByType.get(key) ?? []).some((plan) => pick(plan) > 0)
+
+  type Cell = "yes" | "no" | "addon"
+
+  const rows: Array<{ label: string; values: Record<ProductKey, Cell> }> = [
+    {
+      label: "AI Interview",
+      values: {
+        BUNDLE: hasAny("BUNDLE", (p) => p.interviewSessions) ? "yes" : "no",
+        INTERVIEW: hasAny("INTERVIEW", (p) => p.interviewSessions) ? "yes" : "no",
+        ASSESSMENT: "no",
+        SCREENING: "no",
+      },
+    },
+    {
+      label: "VERIS Assessment",
+      values: {
+        BUNDLE: hasAny("BUNDLE", (p) => p.assessmentCredits) ? "yes" : "no",
+        INTERVIEW: "no",
+        ASSESSMENT: hasAny("ASSESSMENT", (p) => p.assessmentCredits) ? "yes" : "no",
+        SCREENING: "no",
+      },
+    },
+    {
+      label: "VERIS Screening",
+      values: {
+        BUNDLE: hasAny("BUNDLE", (p) => p.screeningReviews) ? "yes" : "no",
+        // Interview plans themselves carry 0 screening reviews, but the
+        // existing "With VERIS Screening" add-on (see PlanComparison) lets a
+        // recruiter attach real screening capacity to an Interview plan -
+        // a verified capability, not an invented one.
+        INTERVIEW: (plansByType.get("SCREENING") ?? []).length > 0 ? "addon" : "no",
+        ASSESSMENT: "no",
+        SCREENING: hasAny("SCREENING", (p) => p.screeningReviews) ? "yes" : "no",
+      },
+    },
+  ]
+
+  const hasAddonRow = rows.some((row) => Object.values(row.values).includes("addon"))
+
+  return (
+    <div className="mt-5 -mx-1 overflow-x-auto px-1">
+      <table className="min-w-[560px] w-full table-fixed border-collapse text-left text-sm">
+        <colgroup>
+          <col className="w-[34%]" />
+          {PRODUCT_DEFS.map((product) => (
+            <col key={product.key} className="w-[16.5%]" />
+          ))}
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col" className="pb-3 pr-2 align-bottom text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+              &nbsp;
+            </th>
+            {PRODUCT_DEFS.map((product) => (
+              <th
+                key={product.key}
+                scope="col"
+                className="pb-3 px-1.5 text-center text-[10px] font-bold uppercase leading-tight tracking-[0.06em] text-slate-300"
+              >
+                {product.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label} className="border-t border-slate-800">
+              <th scope="row" className="py-3 pr-2 text-xs font-medium text-slate-300">
+                {row.label}
+              </th>
+              {PRODUCT_DEFS.map((product) => (
+                <td key={product.key} className="py-3 px-1.5 text-center">
+                  <ComparisonCell value={row.values[product.key]} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {hasAddonRow ? (
+        <p className="mt-3 text-[11px] leading-5 text-slate-500">
+          * VERIS Screening can be added to an AI Interview plan as an optional add-on.
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+function ComparisonCell({ value }: { value: "yes" | "no" | "addon" }) {
+  if (value === "yes") {
+    return <CheckGlyph className="mx-auto h-4 w-4 text-emerald-400" />
+  }
+  if (value === "addon") {
+    return <span className="text-xs font-semibold text-blue-300">Add-on*</span>
+  }
+  return <span className="text-slate-700">&mdash;</span>
+}
+
 function PlanCard({
   plan,
   isSelected,
@@ -1211,34 +1384,31 @@ function PlanCard({
         <span className="text-2xl font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</span>
       </span>
 
-      <div className="mt-3 space-y-1">
+      {/* Primary purchased quantities - the thing being bought - get the
+          bigger check treatment. Secondary "included capabilities" below use
+          the same check icon at a visibly smaller weight so the hierarchy
+          (what you get vs. what's included) is unambiguous at a glance. */}
+      <ul className="mt-3 space-y-1.5">
         {planQuantityLines(plan).map((line) => (
-          <p key={line} className="text-xs font-semibold text-blue-200">
-            {line}
-          </p>
+          <li key={line} className="flex items-center gap-2 text-sm font-bold text-slate-100">
+            <CheckGlyph className="h-4 w-4 shrink-0 text-emerald-400" />
+            <span>{line}</span>
+          </li>
         ))}
-      </div>
+      </ul>
 
       {plan.features?.length ? (
-        <ul className="mt-4 space-y-1.5">
-          {plan.features.slice(0, 4).map((feature) => (
-            <li key={feature} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
-              <svg
-                viewBox="0 0 24 24"
-                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-              <span>{feature}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Includes</p>
+          <ul className="mt-2 space-y-1.5">
+            {plan.features.slice(0, 4).map((feature) => (
+              <li key={feature} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
+                <CheckGlyph className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400/80" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       <span
@@ -1246,8 +1416,29 @@ function PlanCard({
           isSelected ? "bg-blue-500 text-white" : "border border-slate-700 bg-slate-900 text-slate-200"
         }`}
       >
-        {isSelected ? "Selected" : "Select Plan"}
+        {isSelected
+          ? "Selected"
+          : plan.planType === "BUNDLE"
+            ? "Get the Hiring Suite"
+            : "Select Plan"}
       </span>
     </button>
+  )
+}
+
+function CheckGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
   )
 }
