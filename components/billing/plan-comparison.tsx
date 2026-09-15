@@ -234,11 +234,20 @@ export default function PlanComparison({
         </p>
       ) : null}
 
-      {/* table-fixed shares the width across the five columns so nothing is
-          pushed under a scrollbar. Scrolling stays as a fallback for very
-          narrow screens only. */}
+      {/* table-fixed divides whatever width the table actually has evenly
+          across columns - with a plain w-full that width is the (often
+          narrow, e.g. inside the two-column checkout layout) container, so
+          12 columns of Assessment/Bundle/Interview plans were being squeezed
+          into a few px each and visually overlapping. Give the table an
+          explicit min-width scaled to the column count instead, so columns
+          keep a readable minimum and the wrapper scrolls horizontally when
+          that's wider than the container - exactly the "fallback for narrow
+          screens" the overflow-x-auto below was already meant to provide. */}
       <div className="mt-4 -mx-1 overflow-x-auto px-1">
-        <table className="w-full table-fixed border-collapse text-left">
+        <table
+          className="table-fixed border-collapse text-left"
+          style={{ minWidth: `${116 + rows.length * 96}px`, width: "100%" }}
+        >
           <caption className="sr-only">
             Comparison of VerisNova plans by price and included interview, screening, and assessment credits
           </caption>
