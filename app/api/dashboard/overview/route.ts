@@ -20,7 +20,29 @@ import {
   getTrialCreditsDashboardSnapshot,
   type TrialCreditSnapshot,
 } from "@/lib/server/services/trial-credits"
+import { getAssessmentCreditSnapshot } from "@/lib/server/services/assessment-credits"
 import { prisma } from "@/lib/server/prisma"
+
+type TrialCreditSnapshotWithAssessment = TrialCreditSnapshot & { assessmentCreditsRemaining: number }
+
+// Assessment credits are a deliberately standalone module (see
+// lib/server/services/assessment-credits.ts), merged in here only for
+// display so the dashboard's periodic silent overview refresh doesn't wipe
+// out the value shown by the Subscription Credits card - trial-credits.ts
+// itself is never touched.
+async function attachAssessmentCredits(
+  trialCredits: TrialCreditSnapshot | null,
+  organizationId: string
+): Promise<TrialCreditSnapshotWithAssessment | null> {
+  if (!trialCredits) return null
+
+  const assessmentCredits = await getAssessmentCreditSnapshot(organizationId).catch((error) => {
+    console.warn("Assessment credit snapshot failed, defaulting to 0", error)
+    return { assessmentCreditsRemaining: 0 }
+  })
+
+  return { ...trialCredits, assessmentCreditsRemaining: assessmentCredits.assessmentCreditsRemaining }
+}
 
 type OverviewPayload = {
   partial?: boolean
@@ -54,7 +76,7 @@ type OverviewPayload = {
   candidates: Awaited<ReturnType<typeof getCandidatesDashboard>>
   veris?: Array<Record<string, unknown>>
   alerts: DashboardAlert[]
-  trialCredits: TrialCreditSnapshot | null
+  trialCredits: TrialCreditSnapshotWithAssessment | null
 }
 
 type CacheEntry = {
@@ -241,7 +263,7 @@ async function buildFastOverview(
   ])
   const profile = profileStep.result
   const alerts = alertsStep.result
-  const trialCredits = trialCreditsStep.result
+  const trialCredits = await attachAssessmentCredits(trialCreditsStep.result, auth.organizationId)
   const quickWorkflowMetrics = quickWorkflowStep.result
   const fastSnapshot = fastSnapshotStep.result
   const quickDashboardState = deriveDashboardState({
@@ -292,7 +314,7 @@ async function buildOverview(
   const candidates = candidatesStep.result
   const pipelineData = pipelineStep.result
   const alerts = alertsStep.result
-  const trialCredits = trialCreditsStep.result
+  const trialCredits = await attachAssessmentCredits(trialCreditsStep.result, auth.organizationId)
   const recordedInterviews = recordingsStep.result
   const veris = verisStep.result
   const workflowStep = await safeTimedStep(
