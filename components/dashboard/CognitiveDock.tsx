@@ -71,6 +71,7 @@ type WorkspaceData = {
   jobs: Array<Record<string, unknown>>;
   candidates: Array<Record<string, unknown>>;
   interviews: Array<Record<string, unknown>>;
+  assessments: Array<Record<string, unknown>>;
   reports: Record<string, unknown> | null;
 };
 
@@ -166,7 +167,10 @@ function getPanelLoadingLabel(panel: PanelMode) {
 }
 
 function hasWorkspaceData(workspace: WorkspaceData) {
-  return Boolean(workspace.jobs.length || workspace.candidates.length || workspace.interviews.length || workspace.reports);
+  return Boolean(
+    workspace.jobs.length || workspace.candidates.length || workspace.interviews.length ||
+    workspace.assessments.length || workspace.reports
+  );
 }
 
 function mergeWorkspaceData(current: WorkspaceData, next: WorkspacePayload): WorkspaceData {
@@ -174,6 +178,7 @@ function mergeWorkspaceData(current: WorkspaceData, next: WorkspacePayload): Wor
     jobs: next.jobs ?? current.jobs,
     candidates: next.candidates ?? current.candidates,
     interviews: next.interviews ?? current.interviews,
+    assessments: next.assessments ?? current.assessments,
     reports: next.reports ?? current.reports,
   };
 }
@@ -211,7 +216,7 @@ export default function CognitiveDock({
   const searchParams = useAuthSearchParams();
   const [panel, setPanel] = useState<PanelMode>(null);
   const [query, setQuery] = useState("");
-  const [workspace, setWorkspace] = useState<WorkspaceData>({ jobs: [], candidates: [], interviews: [], reports: null });
+  const [workspace, setWorkspace] = useState<WorkspaceData>({ jobs: [], candidates: [], interviews: [], assessments: [], reports: null });
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [workspaceError, setWorkspaceError] = useState("");
   const [aiInput, setAiInput] = useState("");
@@ -319,19 +324,22 @@ export default function CognitiveDock({
         fetchJsonWithTimeout(apiHref("/api/dashboard/candidates?limit=80"), 4500),
         fetchJsonWithTimeout(apiHref("/api/dashboard/interviews?limit=80&includeAnswers=0"), 4500),
         fetchJsonWithTimeout(apiHref("/api/reports/overview"), 5200),
+        fetchJsonWithTimeout(apiHref("/api/assessments?pageSize=50"), 4500),
       ])
         .then((results) => {
           if (!active) return;
 
-          const [jobsResult, candidatesResult, interviewsResult, reportsResult] = results;
+          const [jobsResult, candidatesResult, interviewsResult, reportsResult, assessmentsResult] = results;
           const jobsPayload = jobsResult.status === "fulfilled" ? jobsResult.value : null;
           const candidatesPayload = candidatesResult.status === "fulfilled" ? candidatesResult.value : null;
           const interviewsPayload = interviewsResult.status === "fulfilled" ? interviewsResult.value : null;
           const reportsPayload = reportsResult.status === "fulfilled" ? reportsResult.value : null;
+          const assessmentsPayload = assessmentsResult.status === "fulfilled" ? assessmentsResult.value : null;
           const nextWorkspace: WorkspacePayload = {
             jobs: jobsPayload?.jobs ?? jobsPayload?.data?.jobs,
             candidates: candidatesPayload?.data,
             interviews: interviewsPayload?.data,
+            assessments: assessmentsPayload?.data?.assessments,
             reports: reportsPayload?.data,
           };
           const failedCount = results.filter((result) => result.status === "rejected").length;
@@ -458,8 +466,12 @@ export default function CognitiveDock({
     const interviews = workspace.interviews;
     const candidates = workspace.candidates;
     const jobs = workspace.jobs;
+    const assessments = workspace.assessments;
     const reports = workspace.reports ?? {};
     const pipeline = (overview?.pipeline as Record<string, unknown> | undefined) ?? {};
+
+    const draftAssessments = assessments.filter((item) => normalizeSearch(item.status).includes("draft")).length;
+    const publishedAssessments = assessments.filter((item) => normalizeSearch(item.status).includes("published")).length;
 
     const completed = interviews.filter((item) => normalizeSearch(item.status).includes("completed") || item.endedAt).length;
     const flagged = candidates.filter((item) => normalizeSearch(`${item.status} ${item.decision} ${item.aiSummaryFull}`).includes("flag")).length + flaggedCount;
@@ -505,6 +517,23 @@ export default function CognitiveDock({
             body: "No 75+ candidate score is visible yet. Send interviews or run VERIS Screening to enrich the queue.",
             tone: "focus",
           },
+      draftAssessments > 0
+        ? {
+            title: "Publish drafted assessments",
+            body: `${draftAssessments} VERIS Assessment${draftAssessments === 1 ? "" : "s"} still in draft. Review and publish before sending to candidates.`,
+            tone: "focus",
+          }
+        : publishedAssessments > 0
+          ? {
+              title: "VERIS Assessment is active",
+              body: `${publishedAssessments} published assessment${publishedAssessments === 1 ? "" : "s"} ready to send - independent of Screening or the interview link.`,
+              tone: "opportunity",
+            }
+          : {
+              title: "Try VERIS Assessment",
+              body: "No assessments yet. Create a scored skills test for a job - optional, and independent of Screening or the AI Interview.",
+              tone: "stable",
+            },
     ];
 
     const metrics = [
@@ -512,6 +541,7 @@ export default function CognitiveDock({
       { label: "Candidates", value: candidates.length || candidateCount },
       { label: "Completed", value: completed },
       { label: "Avg score", value: avgScore === null ? "-" : `${Math.round(avgScore)}%` },
+      { label: "Assessments", value: assessments.length },
     ];
 
     return { priorities, metrics };
@@ -545,6 +575,13 @@ export default function CognitiveDock({
       prompt: "How do I add users and give them access?",
       icon: ShieldAlert,
       tone: "from-violet-400/20 to-fuchsia-500/5",
+    },
+    {
+      title: "Assessment status",
+      description: "Check published/draft VERIS Assessments across jobs.",
+      prompt: "What is my VERIS Assessment status?",
+      icon: ClipboardCheck,
+      tone: "from-blue-400/20 to-indigo-500/5",
     },
   ], []);
 
@@ -683,6 +720,27 @@ export default function CognitiveDock({
       };
     }
 
+    if (/(assessment)/.test(normalized)) {
+      const items = workspace.assessments.slice(0, 6);
+      const published = workspace.assessments.filter((item) => normalizeSearch(item.status).includes("published")).length;
+      const draft = workspace.assessments.filter((item) => normalizeSearch(item.status).includes("draft")).length;
+      return {
+        id: makeId(),
+        role: "assistant",
+        content: workspace.assessments.length
+          ? `There are **${workspace.assessments.length} VERIS Assessment${workspace.assessments.length === 1 ? "" : "s"}** in this workspace (${published} published, ${draft} draft). Assessment is optional and independent of Screening or the AI Interview - send it before an interview, skip it entirely, or use it on its own.`
+          : "No VERIS Assessments exist yet. Create one from the Assessment page for any job - it's an optional, scored skills test (AI-generated questions, objective auto-scoring, and AI evaluation of written answers) that's independent of Screening and the AI Interview.",
+        cards: items.map((item) => ({
+          title: readText(item.title, "Assessment"),
+          body: readText(item.jobTitle, "Unassigned role"),
+          meta: readText(item.status, "DRAFT"),
+          href: canViewAssessments ? pageHref("/assessments") : undefined,
+          tone: "cyan",
+        })),
+        sources: ["Assessments"],
+      };
+    }
+
     if (/(job|role|opening)/.test(normalized)) {
       const active = jobs.filter((item) => item.isActive !== false).slice(0, 6);
       return {
@@ -721,11 +779,11 @@ export default function CognitiveDock({
     return {
       id: makeId(),
       role: "assistant",
-      content: `Here is the live workspace snapshot: ${metricSummary}\n\nMy recommended first action: **${copilot.priorities[0]?.title ?? "review the interview queue"}**. You can also ask me for top candidates, interrupted interviews, review flags, or active jobs.`,
-      cards: copilot.priorities.slice(0, 3).map((item) => ({ title: item.title, body: item.body, tone: item.tone === "risk" ? "rose" : "cyan" })),
-      sources: ["Jobs", "Candidates", "Interviews", "Reports"],
+      content: `Here is the live workspace snapshot: ${metricSummary}\n\nMy recommended first action: **${copilot.priorities[0]?.title ?? "review the interview queue"}**. You can also ask me for top candidates, interrupted interviews, review flags, active jobs, or your VERIS Assessment status.`,
+      cards: copilot.priorities.slice(0, 4).map((item) => ({ title: item.title, body: item.body, tone: item.tone === "risk" ? "rose" : "cyan" })),
+      sources: ["Jobs", "Candidates", "Interviews", "Assessments", "Reports"],
     };
-  }, [workspace, copilot, canViewCandidates, canViewInterviews, canViewReports, pageHref]);
+  }, [workspace, copilot, canViewCandidates, canViewInterviews, canViewReports, canViewAssessments, pageHref]);
 
   const recentStorageKey = useMemo(() => recentStorageKeyFor(profile), [profile]);
 
