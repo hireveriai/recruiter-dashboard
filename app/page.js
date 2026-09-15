@@ -210,6 +210,32 @@ function DashboardContent({ profile, overview, isLoading }) {
     return () => window.removeEventListener("verisnova:trial-credits-updated", handleTrialCreditsUpdated);
   }, []);
 
+  // Assessment credits are a standalone module merged only into
+  // GET /api/trial-credits (not into the dashboard overview payload that
+  // seeds `trialCredits` above), so the fallback-skip logic a few effects up
+  // never reaches it. Always fetch that endpoint once just for this one
+  // field, and merge it in without touching mergeTrialCredits' interview/
+  // screening reconciliation logic.
+  useEffect(() => {
+    let active = true;
+
+    fetch(buildAuthUrl(`/api/trial-credits?refresh=${Date.now()}`, searchParams), {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then((response) => response.json())
+      .then((payload) => {
+        if (!active || !payload?.success) return;
+        const assessmentCreditsRemaining = Number(payload.data?.assessmentCreditsRemaining ?? 0);
+        setTrialCredits((current) => (current ? { ...current, assessmentCreditsRemaining } : current));
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [searchParams]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white">

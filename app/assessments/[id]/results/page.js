@@ -98,15 +98,15 @@ export default function AssessmentResultsPage() {
             <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Candidate</th>
-                  <th className="px-4 py-3 text-left font-medium">Job</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Score</th>
-                  <th className="px-4 py-3 text-left font-medium">Pass/Fail</th>
-                  <th className="px-4 py-3 text-left font-medium">Integrity Risk</th>
-                  <th className="px-4 py-3 text-left font-medium">Sent</th>
-                  <th className="px-4 py-3 text-left font-medium">Completed</th>
-                  <th className="px-4 py-3 text-right font-medium">Detail</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Candidate</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Job</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Status</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Score</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Pass/Fail</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Integrity Risk</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Sent</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Completed</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Detail</th>
                 </tr>
               </thead>
               <tbody>

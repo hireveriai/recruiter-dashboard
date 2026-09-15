@@ -117,13 +117,13 @@ export default function AssessmentsPage() {
             <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Title</th>
-                  <th className="px-4 py-3 text-left font-medium">Job</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Duration</th>
-                  <th className="px-4 py-3 text-left font-medium">Passing %</th>
-                  <th className="px-4 py-3 text-left font-medium">Created</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Title</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Job</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Status</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Duration</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Passing %</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Created</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
