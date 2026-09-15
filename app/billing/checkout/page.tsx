@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import PlanComparison from "@/components/billing/plan-comparison"
@@ -116,6 +116,48 @@ declare global {
 
 const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js"
 const TRUST_INDICATORS = ["Tax invoice", "Razorpay secured", "Organization billing", "Audit-ready records"]
+
+/**
+ * Product-first grouping for the checkout page. Maps 1:1 onto the existing
+ * `planType` values already returned by /api/plans (see SELLABLE_PLAN_TYPES
+ * in lib/server/services/billing.ts) - this is a presentation grouping only,
+ * never a second source of truth for pricing or product identity.
+ */
+type ProductKey = "INTERVIEW" | "ASSESSMENT" | "SCREENING" | "BUNDLE"
+
+const PRODUCT_DEFS: Array<{ key: ProductKey; label: string; tagline: string }> = [
+  { key: "INTERVIEW", label: "VERIS AI Interview", tagline: "AI-powered structured interviews" },
+  { key: "ASSESSMENT", label: "VERIS Assessment", tagline: "Scored candidate assessments" },
+  { key: "SCREENING", label: "VERIS Screening", tagline: "Resume-to-role evaluation" },
+  { key: "BUNDLE", label: "Hiring Suite", tagline: "All three capabilities" },
+]
+
+/** The DB has no "is the flagship tier" flag for every product family (only
+ * the original Interview `growth` plan sets isPopular) - this reproduces the
+ * same "second tier of four is the recommended one" convention by slug
+ * across the Assessment/Screening/Bundle families, which all followed the
+ * same starter/growth/scale/(expansion|enterprise) naming when seeded. Pure
+ * presentation; never used for price or eligibility. */
+function isFlagshipTierSlug(slug: string) {
+  return slug === "growth" || slug.endsWith("-growth")
+}
+
+function planQuantityLines(plan: Plan): string[] {
+  switch (plan.planType) {
+    case "ASSESSMENT":
+      return [`${plan.assessmentCredits.toLocaleString()} Assessment Credits`]
+    case "SCREENING":
+      return [`${plan.screeningReviews.toLocaleString()} Screening Reviews`]
+    case "BUNDLE":
+      return [
+        `${plan.interviewSessions.toLocaleString()} Interview Sessions`,
+        `${plan.screeningReviews.toLocaleString()} Screening Reviews`,
+        `${plan.assessmentCredits.toLocaleString()} Assessment Credits`,
+      ]
+    default:
+      return [`${plan.interviewSessions.toLocaleString()} Interview Sessions`]
+  }
+}
 
 /**
  * Delegates to the shared formatter so a price reads the same here as on the
@@ -247,10 +289,6 @@ export default function BillingCheckoutPage() {
 
     return summary.quote.discountAmountPaise
   }, [summary, regularOrderTotalPaise])
-  const interviewPlans = useMemo(
-    () => plans.filter((plan) => plan.planType !== "SCREENING"),
-    [plans]
-  )
   const screeningPlans = useMemo(
     () => plans.filter((plan) => plan.planType === "SCREENING"),
     [plans]
@@ -259,6 +297,33 @@ export default function BillingCheckoutPage() {
     () => plans.find((plan) => plan.slug === selectedPlanSlug) ?? null,
     [plans, selectedPlanSlug]
   )
+
+  // Product-first tab state. Defaults to AI Interview; if the page opened via
+  // a pricing-page deep link (?plan=assessment-growth etc.), it switches once
+  // to whichever product that plan actually belongs to, so an existing CTA
+  // keeps landing on the right tab with that plan already selected.
+  const [activeProduct, setActiveProduct] = useState<ProductKey>("INTERVIEW")
+  const didInitProductFromPlan = useRef(false)
+
+  useEffect(() => {
+    if (didInitProductFromPlan.current || !plans.length || !selectedPlanSlug) {
+      return
+    }
+
+    didInitProductFromPlan.current = true
+    const matchedPlan = plans.find((plan) => plan.slug === selectedPlanSlug)
+
+    if (matchedPlan && PRODUCT_DEFS.some((product) => product.key === matchedPlan.planType)) {
+      setActiveProduct(matchedPlan.planType as ProductKey)
+    }
+  }, [plans, selectedPlanSlug])
+
+  const activeProductPlans = useMemo(
+    () => plans.filter((plan) => plan.planType === activeProduct),
+    [plans, activeProduct]
+  )
+
+  const [showComparison, setShowComparison] = useState(false)
 
   const requestJson = useCallback(
     async <T,>(path: string, body: Record<string, unknown>) => {
@@ -738,7 +803,7 @@ export default function BillingCheckoutPage() {
                 ) : null}
 
                 <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
-                  {summary?.plan.description || selectedPlan?.description || "Select a database-priced VerisNova plan to generate a secure billing quote."}
+                  {summary?.plan.description || selectedPlan?.description || "Choose a plan that fits your hiring workflow."}
                 </p>
                 {summary?.addonPlan ? (
                   <p className="mt-3 inline-flex rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-100">
@@ -766,58 +831,132 @@ export default function BillingCheckoutPage() {
           </div>
 
           <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-slate-100">Available plans</p>
-                <p className="mt-1 text-xs text-slate-500">Plans are loaded from VerisNova billing records.</p>
-              </div>
+            <p className="text-lg font-semibold tracking-tight text-slate-100">Choose your VerisNova plan</p>
+            <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
+              Choose the capability that fits your hiring workflow. Each product can be purchased independently, or
+              choose the Hiring Suite for all three.
+            </p>
+
+            {/* Product selector - four premium tabs, not a form. Switching tabs
+                only changes which product's plans are shown; it never clears
+                a plan already selected on another tab. */}
+            <div
+              role="tablist"
+              aria-label="VerisNova products"
+              className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4"
+            >
+              {PRODUCT_DEFS.map((product) => {
+                const isActive = product.key === activeProduct
+                return (
+                  <button
+                    key={product.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setActiveProduct(product.key)}
+                    className={`rounded-xl border px-3 py-3 text-left transition ${
+                      isActive
+                        ? "border-blue-400/50 bg-blue-500/10 shadow-[0_0_0_1px_rgba(96,165,250,0.25)]"
+                        : "border-slate-800 bg-slate-950 hover:border-slate-600"
+                    }`}
+                  >
+                    <span className={`block text-[11px] font-bold uppercase tracking-[0.1em] ${isActive ? "text-blue-100" : "text-slate-200"}`}>
+                      {product.label}
+                    </span>
+                    <span className="mt-1 block text-[11px] leading-4 text-slate-500">{product.tagline}</span>
+                  </button>
+                )
+              })}
             </div>
 
-            <PlanComparison
-              interviewPlans={interviewPlans}
-              screeningPlans={screeningPlans}
-              selectedPlanSlug={selectedPlanSlug}
-              selectedAddonPlanSlug={selectedAddonPlanSlug}
-              onSelectPlan={updateCheckoutSelection}
-              disabled={isBusy}
-              // Server-verified discount only. The struck-through price is the
-              // plan's real list price, never a decorative anchor.
-              discountPercentage={summary?.quote.discountPercentage ?? 0}
-              offerLabel={summary?.coupon?.description || INTRODUCTORY_OFFER_LABEL}
-            />
-
-
-            {screeningPlans.length > 0 ? (
-              <div className="mt-5 border-t border-slate-800 pt-5">
-                <p className="text-sm font-semibold text-slate-100">Screening only</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Buy screening capacity on its own. To add screening to an interview plan, use the
-                  &ldquo;With VERIS Screening&rdquo; toggle above.
-                </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                  {screeningPlans.map((plan) => {
-                    const isSelected = selectedPlanSlug === plan.slug
-                    return (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => updateCheckoutSelection(plan.slug, "")}
-                        className={`rounded-xl border p-4 text-left transition ${
-                          isSelected
-                            ? "border-blue-400/45 bg-blue-500/10"
-                            : "border-slate-800 bg-slate-950 hover:border-slate-600"
-                        }`}
-                      >
-                        <p className="text-sm font-semibold text-slate-100">{plan.name}</p>
-                        <p className="mt-1 text-xs text-slate-400">{plan.screeningReviews} reviews</p>
-                        <p className="mt-2 text-base font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</p>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+            {activeProduct === "BUNDLE" ? (
+              <p className="mt-4 rounded-xl border border-blue-400/20 bg-blue-500/5 px-3.5 py-2.5 text-xs leading-5 text-blue-100">
+                All three capabilities in one plan. Each capability is also available independently - the Hiring
+                Suite is simply the combined option.
+              </p>
             ) : null}
 
+            {/* Plan card grid - the primary interface. Every price/quantity
+                below comes straight from the plan objects returned by
+                /api/plans, which are themselves backed by the authoritative
+                billing catalog; nothing here is computed or hardcoded. */}
+            {activeProductPlans.length > 0 ? (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {activeProductPlans.map((plan) => (
+                  <PlanCard
+                    key={plan.id}
+                    plan={plan}
+                    isSelected={selectedPlanSlug === plan.slug}
+                    isFlagship={isFlagshipTierSlug(plan.slug)}
+                    disabled={isBusy}
+                    onSelect={() => updateCheckoutSelection(plan.slug, "")}
+                  />
+                ))}
+              </div>
+            ) : !plansLoading ? (
+              <p className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                No active {PRODUCT_DEFS.find((product) => product.key === activeProduct)?.label} plans are available
+                right now. Please contact VerisNova support.
+              </p>
+            ) : null}
+
+            {activeProduct === "INTERVIEW" && screeningPlans.length > 0 ? (
+              <p className="mt-4 text-xs leading-5 text-slate-500">
+                Want to combine an interview plan with extra VERIS Screening capacity? Use{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowComparison(true)}
+                  className="font-semibold text-blue-300 underline-offset-2 hover:underline"
+                >
+                  Compare VERIS AI Interview plans
+                </button>{" "}
+                below - it includes a &ldquo;With VERIS Screening&rdquo; option.
+              </p>
+            ) : null}
+
+            {/* Optional, secondary, product-specific comparison - collapsed by
+                default so plan cards are the first thing a customer sees, per
+                the product-first redesign. Never mixes other product types
+                in: only the active tab's own plans are passed in. */}
+            {activeProductPlans.length > 1 ? (
+              <div className="mt-5 border-t border-slate-800 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowComparison((current) => !current)}
+                  aria-expanded={showComparison}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-slate-100"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className={`h-3.5 w-3.5 transition-transform ${showComparison ? "rotate-90" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                  Compare {PRODUCT_DEFS.find((product) => product.key === activeProduct)?.label} plans
+                </button>
+
+                {showComparison ? (
+                  <PlanComparison
+                    interviewPlans={activeProductPlans}
+                    screeningPlans={activeProduct === "INTERVIEW" ? screeningPlans : []}
+                    selectedPlanSlug={selectedPlanSlug}
+                    selectedAddonPlanSlug={selectedAddonPlanSlug}
+                    onSelectPlan={updateCheckoutSelection}
+                    disabled={isBusy}
+                    // Server-verified discount only. The struck-through price is
+                    // the plan's real list price, never a decorative anchor.
+                    discountPercentage={summary?.quote.discountPercentage ?? 0}
+                    offerLabel={summary?.coupon?.description || INTRODUCTORY_OFFER_LABEL}
+                  />
+                ) : null}
+              </div>
+            ) : null}
 
             {!plansLoading && plans.length === 0 ? (
               <p className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
@@ -1013,5 +1152,102 @@ export default function BillingCheckoutPage() {
         </aside>
       </section>
     </main>
+  )
+}
+
+/**
+ * One plan within the active product's card grid. Every figure it renders
+ * (name, price, quantity, features) is read directly off the `plan` object
+ * from /api/plans - which is itself backed by the authoritative billing
+ * catalog (see getActiveBillingPlans in lib/server/services/billing.ts) -
+ * never computed or hardcoded here.
+ */
+function PlanCard({
+  plan,
+  isSelected,
+  isFlagship,
+  disabled,
+  onSelect,
+}: {
+  plan: Plan
+  isSelected: boolean
+  isFlagship: boolean
+  disabled: boolean
+  onSelect: () => void
+}) {
+  const regularPaise = getRegularAmountPaise(plan.slug, plan.currency, plan.amountPaise)
+  const discounted = regularPaise !== null && regularPaise > plan.amountPaise
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      aria-pressed={isSelected}
+      className={`flex h-full flex-col rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        isSelected
+          ? "border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/40"
+          : isFlagship
+            ? "border-violet-400/40 bg-violet-500/[0.06] hover:border-violet-300/60"
+            : "border-slate-800 bg-slate-950 hover:border-slate-600"
+      }`}
+    >
+      <div className="flex h-[18px] items-center">
+        {isFlagship ? (
+          <span className="whitespace-nowrap rounded-full bg-[#7c3aed] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
+            Most popular
+          </span>
+        ) : null}
+      </div>
+
+      <span className="mt-1.5 block text-sm font-bold uppercase tracking-[0.04em] text-slate-100">{plan.name}</span>
+
+      <span className="mt-3 flex flex-wrap items-baseline gap-x-2">
+        {discounted ? (
+          <span className="text-sm font-medium text-slate-500 line-through">
+            {formatPaise(regularPaise, plan.currency)}
+          </span>
+        ) : null}
+        <span className="text-2xl font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</span>
+      </span>
+
+      <div className="mt-3 space-y-1">
+        {planQuantityLines(plan).map((line) => (
+          <p key={line} className="text-xs font-semibold text-blue-200">
+            {line}
+          </p>
+        ))}
+      </div>
+
+      {plan.features?.length ? (
+        <ul className="mt-4 space-y-1.5">
+          {plan.features.slice(0, 4).map((feature) => (
+            <li key={feature} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
+              <svg
+                viewBox="0 0 24 24"
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <span
+        className={`mt-4 block rounded-lg px-3 py-2 text-center text-xs font-semibold ${
+          isSelected ? "bg-blue-500 text-white" : "border border-slate-700 bg-slate-900 text-slate-200"
+        }`}
+      >
+        {isSelected ? "Selected" : "Select Plan"}
+      </span>
+    </button>
   )
 }
