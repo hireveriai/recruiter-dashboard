@@ -31,6 +31,7 @@ type PlanRow = {
   price_eur: number | null
   interviewLimit: number
   screeningCredits: number
+  assessmentCredits: number
   planType: string
   order: number
   isActive: boolean
@@ -228,6 +229,7 @@ function mapPlan(plan: PlanRow, currency: CurrencyCode = FALLBACK_CURRENCY) {
     currency,
     interviewSessions: Number(plan.interviewLimit ?? 0),
     screeningReviews: Number(plan.screeningCredits ?? 0),
+    assessmentCredits: Number(plan.assessmentCredits ?? 0),
     planType: plan.planType ?? "INTERVIEW",
     isActive: Boolean(plan.isActive),
     isPopular: plan.slug === "growth",
@@ -275,6 +277,7 @@ function buildCheckoutPlan(
     monthlyAmountPaise: plan.monthlyAmountPaise + addonPlan.monthlyAmountPaise,
     interviewSessions: plan.interviewSessions + addonPlan.interviewSessions,
     screeningReviews: plan.screeningReviews + addonPlan.screeningReviews,
+    assessmentCredits: plan.assessmentCredits + addonPlan.assessmentCredits,
     features: [...plan.features, ...addonPlan.features],
     metadata: {
       ...plan.metadata,
@@ -387,6 +390,7 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
       price_eur,
       "interviewLimit",
       "screeningCredits",
+      "assessmentCredits",
       "planType",
       "order",
       "isActive",
@@ -398,12 +402,18 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
   `)
 }
 
+/** Every self-serve-sellable plan type. Screening/Assessment addons are
+ * filtered separately by the caller; this allowlist just keeps
+ * PRACTICE_CANDIDATE rows (a different product, priced/sold on the landing
+ * app) out of the recruiter billing surface. */
+const SELLABLE_PLAN_TYPES = Prisma.sql`('INTERVIEW', 'SCREENING', 'ASSESSMENT', 'BUNDLE')`
+
 export async function getActiveBillingPlans(currency: CurrencyCode = FALLBACK_CURRENCY) {
   const rows = await getPlanRows(
     prisma,
     Prisma.sql`
       where "isActive" = true
-        and "planType" in ('INTERVIEW', 'SCREENING')
+        and "planType" in ${SELLABLE_PLAN_TYPES}
       order by "planType" asc, "order" asc
     `
   )
@@ -418,7 +428,7 @@ export async function getActiveBillingPlanBySlug(slug: string, client: QueryClie
     Prisma.sql`
       where slug = ${normalizedSlug}
         and "isActive" = true
-        and "planType" in ('INTERVIEW', 'SCREENING')
+        and "planType" in ${SELLABLE_PLAN_TYPES}
       limit 1
     `
   )
@@ -469,7 +479,7 @@ async function getActiveBillingPlanById(planId: string, client: QueryClient = pr
     Prisma.sql`
       where id = ${planId}
         and "isActive" = true
-        and "planType" in ('INTERVIEW', 'SCREENING')
+        and "planType" in ${SELLABLE_PLAN_TYPES}
       limit 1
     `
   )
@@ -903,6 +913,7 @@ export async function createRazorpayOrder(input: {
       "totalCredits",
       "usedCredits",
       "screeningCredits",
+      "assessmentCredits",
       status,
       "amountPaid",
       currency,
@@ -914,6 +925,7 @@ export async function createRazorpayOrder(input: {
       ${organization.userId},
       ${organization.organizationId}::uuid,
       ${plan.id},
+      0,
       0,
       0,
       0,
@@ -1354,6 +1366,7 @@ export async function verifyAndActivatePayment(input: {
         status: string
         interview_credits: number
         screening_credits: number
+        assessment_credits: number
         amount_paid: number
         currency: string
         activated_at: Date
@@ -1366,6 +1379,7 @@ export async function verifyAndActivatePayment(input: {
         status = 'active',
         "totalCredits" = "totalCredits" + ${activatedPlan.interviewSessions},
         "screeningCredits" = "screeningCredits" + ${activatedPlan.screeningReviews},
+        "assessmentCredits" = "assessmentCredits" + ${activatedPlan.assessmentCredits},
         "amountPaid" = "amountPaid" + ${lockedPayment.final_amount_paise},
         currency = ${lockedPayment.currency},
         "razorpayOrderId" = ${lockedPayment.razorpay_order_id},
@@ -1389,6 +1403,7 @@ export async function verifyAndActivatePayment(input: {
         status,
         "totalCredits" as interview_credits,
         "screeningCredits" as screening_credits,
+        "assessmentCredits" as assessment_credits,
         "amountPaid" as amount_paid,
         currency,
         "activatedAt" as activated_at,
@@ -1410,6 +1425,7 @@ export async function verifyAndActivatePayment(input: {
             status: subscription.status,
             interviewCredits: Number(subscription.interview_credits),
             screeningCredits: Number(subscription.screening_credits),
+            assessmentCredits: Number(subscription.assessment_credits),
             amountPaid: Number(subscription.amount_paid),
             currency: subscription.currency,
             activatedAt: subscription.activated_at,

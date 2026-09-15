@@ -19,6 +19,7 @@ type Plan = {
   currency: string
   interviewSessions: number
   screeningReviews: number
+  assessmentCredits: number
   planType: string
   isPopular: boolean
   displayOrder: number
@@ -411,6 +412,7 @@ export default function BillingCheckoutPage() {
         status: string
         interviewCredits: number
         screeningCredits: number
+        assessmentCredits: number
       } | null
       addonPlan: Plan | null
     }>("/api/verify-payment", {
@@ -659,7 +661,7 @@ export default function BillingCheckoutPage() {
             Server-verified billing with country-aware tax records and controlled subscription activation.
           </p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-950 p-3.5">
               <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Bill to</p>
               <p className="mt-2 truncate text-sm font-semibold text-slate-100">
@@ -676,6 +678,12 @@ export default function BillingCheckoutPage() {
               <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Screening reviews</p>
               <p className="mt-2 text-2xl font-semibold leading-none text-slate-100">
                 {summary ? summary.plan.screeningReviews + (summary.addonPlan?.screeningReviews ?? 0) : "--"}
+              </p>
+            </div>
+            <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-950 p-3.5">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Assessment credits</p>
+              <p className="mt-2 text-2xl font-semibold leading-none text-slate-100">
+                {summary ? summary.plan.assessmentCredits + (summary.addonPlan?.assessmentCredits ?? 0) : "--"}
               </p>
             </div>
           </div>
