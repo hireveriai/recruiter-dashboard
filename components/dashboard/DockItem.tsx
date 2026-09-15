@@ -42,7 +42,7 @@ function DockItem({
   const content = (
     <motion.span
       className={[
-        "group relative flex h-10 w-10 translate-z-0 items-center justify-center rounded-[18px] border transition-colors duration-200 will-change-transform xl:h-11 xl:w-11",
+        "group relative flex h-9 w-9 translate-z-0 items-center justify-center rounded-[16px] border transition-colors duration-200 will-change-transform xl:h-10 xl:w-10",
         active
           ? "border-cyan-300/25 bg-cyan-400/10 text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]"
           : "border-transparent bg-white/[0.015] text-slate-300/95",
@@ -74,7 +74,7 @@ function DockItem({
         aria-hidden="true"
         strokeWidth={featured ? 1.9 : 1.75}
         className={[
-          "relative h-[19px] w-[19px] transition duration-200 xl:h-5 xl:w-5",
+          "relative h-[16px] w-[16px] transition duration-200 xl:h-[18px] xl:w-[18px]",
           hovered || featured ? "drop-shadow-[0_0_10px_rgba(103,232,249,0.42)]" : "",
         ].join(" ")}
       />
@@ -93,7 +93,7 @@ function DockItem({
     onMouseLeave: () => setHovered(false),
     onFocus: () => setHovered(true),
     onBlur: () => setHovered(false),
-    className: "relative flex h-10 w-[52px] items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#071226] xl:h-11 xl:w-14",
+    className: "relative flex h-9 w-[46px] items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#071226] xl:h-10 xl:w-12",
   };
 
   return (

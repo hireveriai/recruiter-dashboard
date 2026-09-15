@@ -10,10 +10,21 @@ import Navbar from "@/components/Navbar"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatDateTime } from "@/lib/client/date-format"
 
+// The DB stores the raw enum (LOW | MODERATE | HIGH | REVIEW_RECOMMENDED,
+// no "RISK" suffix) - format it for display rather than rendering verbatim.
+function formatRiskLevel(riskLevel) {
+  if (!riskLevel) return "-"
+  if (riskLevel === "REVIEW_RECOMMENDED") return "REVIEW RECOMMENDED"
+  if (riskLevel === "LOW") return "LOW RISK"
+  if (riskLevel === "MODERATE") return "MODERATE RISK"
+  if (riskLevel === "HIGH") return "HIGH RISK"
+  return riskLevel.replace(/_/g, " ")
+}
+
 function riskTone(riskLevel) {
-  if (riskLevel === "REVIEW RECOMMENDED") return "border-rose-500/30 bg-rose-500/12 text-rose-200"
-  if (riskLevel === "HIGH RISK") return "border-amber-500/30 bg-amber-500/12 text-amber-200"
-  if (riskLevel === "MODERATE RISK") return "border-amber-400/20 bg-amber-400/8 text-amber-100"
+  if (riskLevel === "REVIEW_RECOMMENDED") return "border-rose-500/30 bg-rose-500/12 text-rose-200"
+  if (riskLevel === "HIGH") return "border-amber-500/30 bg-amber-500/12 text-amber-200"
+  if (riskLevel === "MODERATE") return "border-amber-400/20 bg-amber-400/8 text-amber-100"
   return "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
 }
 
@@ -85,7 +96,7 @@ export default function AssessmentAttemptDetailPage() {
           <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
             <p className="text-sm text-slate-500">Integrity Risk</p>
             <span className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${riskTone(detail.riskLevel)}`}>
-              {detail.riskLevel}
+              {formatRiskLevel(detail.riskLevel)}
             </span>
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-5">

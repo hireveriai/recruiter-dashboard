@@ -111,10 +111,17 @@ export const updateOptionSchema = z.object({
   optionOrder: z.number().int().min(0).optional(),
 })
 
-export const inviteAssessmentSchema = z.object({
-  candidateId: uuidField,
-  versionId: uuidField.optional(),
-})
+export const inviteAssessmentSchema = z
+  .object({
+    candidateId: uuidField.optional(),
+    candidateEmail: z.string().trim().email().optional(),
+    candidateName: z.string().trim().min(1).max(200).optional(),
+    versionId: uuidField.optional(),
+  })
+  .refine((value) => Boolean(value.candidateId) || Boolean(value.candidateEmail), {
+    message: "Either candidateId or candidateEmail is required",
+    path: ["candidateEmail"],
+  })
 
 export const listInvitesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

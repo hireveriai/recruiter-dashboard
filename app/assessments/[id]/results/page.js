@@ -13,10 +13,21 @@ import { AssessmentWorkflowPanel } from "@/components/AssessmentWorkflowGuide"
 
 // Only these four labels are ever used for integrity risk - never language
 // implying proven cheating, since AssessmentSignal counts are heuristic.
+// The DB stores the raw enum (LOW | MODERATE | HIGH | REVIEW_RECOMMENDED,
+// no "RISK" suffix) - format it for display rather than rendering verbatim.
+function formatRiskLevel(riskLevel) {
+  if (!riskLevel) return "-"
+  if (riskLevel === "REVIEW_RECOMMENDED") return "REVIEW RECOMMENDED"
+  if (riskLevel === "LOW") return "LOW RISK"
+  if (riskLevel === "MODERATE") return "MODERATE RISK"
+  if (riskLevel === "HIGH") return "HIGH RISK"
+  return riskLevel.replace(/_/g, " ")
+}
+
 function riskTone(riskLevel) {
-  if (riskLevel === "REVIEW RECOMMENDED") return "border-rose-500/30 bg-rose-500/12 text-rose-200"
-  if (riskLevel === "HIGH RISK") return "border-amber-500/30 bg-amber-500/12 text-amber-200"
-  if (riskLevel === "MODERATE RISK") return "border-amber-400/20 bg-amber-400/8 text-amber-100"
+  if (riskLevel === "REVIEW_RECOMMENDED") return "border-rose-500/30 bg-rose-500/12 text-rose-200"
+  if (riskLevel === "HIGH") return "border-amber-500/30 bg-amber-500/12 text-amber-200"
+  if (riskLevel === "MODERATE") return "border-amber-400/20 bg-amber-400/8 text-amber-100"
   return "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
 }
 
@@ -120,7 +131,7 @@ export default function AssessmentResultsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${riskTone(row.riskLevel)}`}>
-                          {row.riskLevel}
+                          {formatRiskLevel(row.riskLevel)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-400">{row.sentAt ? formatDate(row.sentAt) : "-"}</td>

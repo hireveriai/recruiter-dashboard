@@ -27,6 +27,9 @@ export default function SendAssessmentModal({
   const [jobId, setJobId] = useState(defaultJobId ?? "");
   const [assessmentId, setAssessmentId] = useState("");
   const [candidateId, setCandidateId] = useState(defaultCandidateId ?? "");
+  const [candidateMode, setCandidateMode] = useState("existing");
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualName, setManualName] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -36,6 +39,9 @@ export default function SendAssessmentModal({
     setJobId(defaultJobId ?? "");
     setAssessmentId("");
     setCandidateId(defaultCandidateId ?? "");
+    setCandidateMode("existing");
+    setManualEmail("");
+    setManualName("");
     setResult(null);
 
     // A candidate arriving pre-selected (e.g. from the Candidates page "Send
@@ -89,7 +95,17 @@ export default function SendAssessmentModal({
   };
 
   const handleSend = async () => {
-    if (!assessmentId || !candidateId) {
+    if (!assessmentId) {
+      showActionFeedback({ tone: "error", title: "Missing details", message: "Select an assessment." });
+      return;
+    }
+
+    const isManual = candidateMode === "manual";
+    if (isManual && !manualEmail.trim()) {
+      showActionFeedback({ tone: "error", title: "Missing details", message: "Enter the candidate's email address." });
+      return;
+    }
+    if (!isManual && !candidateId) {
       showActionFeedback({ tone: "error", title: "Missing details", message: "Select an assessment and a candidate." });
       return;
     }
@@ -102,7 +118,11 @@ export default function SendAssessmentModal({
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ candidateId }),
+          body: JSON.stringify(
+            isManual
+              ? { candidateEmail: manualEmail.trim(), candidateName: manualName.trim() || undefined }
+              : { candidateId }
+          ),
         }
       );
 
@@ -237,33 +257,83 @@ export default function SendAssessmentModal({
 
               <div>
                 <label className="mb-2 block text-sm text-slate-300">Candidate</label>
-                <input
-                  value={candidateSearch}
-                  onChange={(e) => setCandidateSearch(e.target.value)}
-                  placeholder="Search by name or email"
-                  className={FIELD_CLASS}
-                />
-                <div className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/40">
-                  {candidates.length === 0 ? (
-                    <div className="p-3 text-sm text-slate-500">No candidates found.</div>
-                  ) : (
-                    candidates.map((candidate) => (
-                      <button
-                        key={candidate.candidateId}
-                        type="button"
-                        onClick={() => setCandidateId(candidate.candidateId)}
-                        className={`flex w-full flex-col items-start px-3.5 py-2.5 text-left text-sm transition ${
-                          candidateId === candidate.candidateId
-                            ? "bg-cyan-500/15 text-white"
-                            : "text-slate-300 hover:bg-slate-900/80"
-                        }`}
-                      >
-                        <span className="font-medium">{candidate.fullName}</span>
-                        <span className="text-xs text-slate-500">{candidate.email}</span>
-                      </button>
-                    ))
-                  )}
+                <div className="mb-3 inline-flex rounded-xl border border-slate-800 bg-slate-950/40 p-1 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setCandidateMode("existing")}
+                    className={`rounded-lg px-3 py-1.5 transition ${
+                      candidateMode === "existing" ? "bg-cyan-500/20 text-white" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Existing candidate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCandidateMode("manual")}
+                    className={`rounded-lg px-3 py-1.5 transition ${
+                      candidateMode === "manual" ? "bg-cyan-500/20 text-white" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Enter email manually
+                  </button>
                 </div>
+
+                {candidateMode === "existing" ? (
+                  <>
+                    <input
+                      value={candidateSearch}
+                      onChange={(e) => setCandidateSearch(e.target.value)}
+                      placeholder="Search by name or email"
+                      className={FIELD_CLASS}
+                    />
+                    <div className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/40">
+                      {candidates.length === 0 ? (
+                        <div className="p-3 text-sm text-slate-500">No candidates found.</div>
+                      ) : (
+                        candidates.map((candidate) => (
+                          <button
+                            key={candidate.candidateId}
+                            type="button"
+                            onClick={() => setCandidateId(candidate.candidateId)}
+                            className={`flex w-full flex-col items-start px-3.5 py-2.5 text-left text-sm transition ${
+                              candidateId === candidate.candidateId
+                                ? "bg-cyan-500/15 text-white"
+                                : "text-slate-300 hover:bg-slate-900/80"
+                            }`}
+                          >
+                            <span className="font-medium">{candidate.fullName}</span>
+                            <span className="text-xs text-slate-500">{candidate.email}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-xs text-slate-400">Candidate email</label>
+                      <input
+                        type="email"
+                        value={manualEmail}
+                        onChange={(e) => setManualEmail(e.target.value)}
+                        placeholder="candidate@example.com"
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs text-slate-400">Candidate name (optional)</label>
+                      <input
+                        value={manualName}
+                        onChange={(e) => setManualName(e.target.value)}
+                        placeholder="Full name"
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                    <p className="sm:col-span-2 text-xs text-slate-500">
+                      If this email isn&apos;t already a candidate in your workspace, one will be created automatically.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 border-t border-slate-800/80 pt-5">
@@ -275,7 +345,7 @@ export default function SendAssessmentModal({
                 </button>
                 <button
                   onClick={handleSend}
-                  disabled={loading || !assessmentId || !candidateId}
+                  disabled={loading || !assessmentId || (candidateMode === "manual" ? !manualEmail.trim() : !candidateId)}
                   className="rounded-full bg-cyan-500/90 px-5 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? "Sending..." : "Send Assessment"}

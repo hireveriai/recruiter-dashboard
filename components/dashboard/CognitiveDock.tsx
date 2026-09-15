@@ -858,7 +858,7 @@ export default function CognitiveDock({
         <div className="hv-preserve-dark relative rounded-[32px] border border-white/5 bg-[#081120]/72 p-2.5 shadow-[0_18px_60px_rgba(2,6,23,0.36),0_0_34px_rgba(34,211,238,0.09)] backdrop-blur-2xl">
           <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.01)_38%,transparent),radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.105),transparent_46%)]" />
           <motion.nav
-            className="relative flex max-w-[calc(100vw-2rem)] items-center gap-1.5 overflow-x-auto md:max-h-[calc(100dvh-8rem)] md:w-[52px] md:max-w-none md:flex-col md:gap-2 md:overflow-visible md:py-1 xl:w-14"
+            className="relative flex max-w-[calc(100vw-2rem)] items-center gap-1.5 overflow-x-auto md:max-h-[calc(100dvh-6rem)] md:w-[46px] md:max-w-none md:flex-col md:gap-1.5 md:overflow-y-auto md:overflow-x-visible md:py-1 md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:hidden xl:w-12"
             initial="hidden"
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.045, delayChildren: 0.12 } } }}
@@ -866,7 +866,7 @@ export default function CognitiveDock({
             {dockSections.map((section, sectionIndex) => (
               <motion.div
                 key={section.label}
-                className="flex items-center gap-1.5 md:flex-col md:gap-2"
+                className="flex items-center gap-1.5 md:flex-col md:gap-1.5"
                 variants={{ hidden: { opacity: 0, y: 8, scale: 0.96 }, visible: { opacity: 1, y: 0, scale: 1 } }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
               >

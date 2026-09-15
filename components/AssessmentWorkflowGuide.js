@@ -193,10 +193,6 @@ export function HiringContextStrip({ className = "" }) {
     <div className={`rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 sm:p-5 ${className}`}>
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-300">Where this fits in hiring</p>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-        <span className="rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-slate-300">
-          VERIS Screening <span className="text-slate-500">(optional)</span>
-        </span>
-        <span className="text-slate-600" aria-hidden="true">→</span>
         <span className="rounded-full border border-violet-400/40 bg-violet-500/15 px-3 py-1 font-medium text-violet-100">
           VERIS Assessment <span className="text-violet-300/80">(optional)</span>
         </span>
@@ -206,8 +202,9 @@ export function HiringContextStrip({ className = "" }) {
         </span>
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-400">
-        Every stage is independent. Send an Assessment before an interview, skip it and go straight to the interview
-        link, or use Assessment on its own — nothing here is a required prerequisite for anything else.
+        Assessment is a separate, independent flow — not sequenced with VERIS Screening. Send it before an interview,
+        skip it and go straight to the interview link, or use it on its own — nothing here is a required prerequisite
+        for anything else.
       </p>
     </div>
   );

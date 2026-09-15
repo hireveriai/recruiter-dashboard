@@ -51,12 +51,40 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
     }
 
-    const candidate = await prisma.candidate.findFirst({
-      where: { candidateId: payload.candidateId, organizationId: auth.organizationId },
-    })
+    let candidate = payload.candidateId
+      ? await prisma.candidate.findFirst({
+          where: { candidateId: payload.candidateId, organizationId: auth.organizationId },
+        })
+      : null
+
+    if (!candidate && payload.candidateId) {
+      throw new ApiError(404, "CANDIDATE_NOT_FOUND", "Candidate not found for this organization")
+    }
+
+    // Manual-email path: a recruiter can invite someone who isn't already a
+    // candidate in this workspace. Find-or-create scoped to this org, rather
+    // than requiring them to exist beforehand.
+    if (!candidate && payload.candidateEmail) {
+      candidate = await prisma.candidate.findFirst({
+        where: {
+          organizationId: auth.organizationId,
+          email: { equals: payload.candidateEmail, mode: "insensitive" },
+        },
+      })
+
+      if (!candidate) {
+        candidate = await prisma.candidate.create({
+          data: {
+            organizationId: auth.organizationId,
+            email: payload.candidateEmail,
+            fullName: payload.candidateName?.trim() || payload.candidateEmail,
+          },
+        })
+      }
+    }
 
     if (!candidate) {
-      throw new ApiError(404, "CANDIDATE_NOT_FOUND", "Candidate not found for this organization")
+      throw new ApiError(400, "CANDIDATE_REQUIRED", "candidateId or candidateEmail is required")
     }
 
     const job = await prisma.jobPosition.findUnique({

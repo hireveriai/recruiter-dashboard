@@ -126,12 +126,14 @@ export default function TrialStatusCard({ credits }) {
   if (isSubscription) {
     const interviewCredits = Math.max(0, Number(credits?.interviewCreditsRemaining ?? 0))
     const screeningCredits = Math.max(0, Number(credits?.screeningCreditsRemaining ?? 0))
+    const assessmentCredits = Math.max(0, Number(credits?.assessmentCreditsRemaining ?? 0))
 
     return (
       <Shell eyebrow="Subscription Credits" title="Subscription Credits">
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <Stat label="AI Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} />
           <Stat label="VERIS Screening Credits" value={screeningCredits} depleted={screeningCredits === 0} />
+          <Stat label="VERIS Assessment Credits" value={assessmentCredits} depleted={assessmentCredits === 0} />
         </div>
       </Shell>
     )
@@ -161,9 +163,10 @@ export default function TrialStatusCard({ credits }) {
 
     const interviewCredits = readCredits(credits?.interviewCreditsRemaining, trialState?.interviewCreditsRemaining)
     const screeningCredits = readCredits(credits?.screeningCreditsRemaining, trialState?.screeningCreditsRemaining)
+    const assessmentCredits = readCredits(credits?.assessmentCreditsRemaining, trialState?.assessmentCreditsRemaining)
     // Credits can only be "used up" once they were actually issued.
     const granted = trialState ? Boolean(trialState.granted) : true
-    const exhausted = granted && interviewCredits === 0 && screeningCredits === 0
+    const exhausted = granted && interviewCredits === 0 && screeningCredits === 0 && assessmentCredits === 0
 
     return (
       <Shell eyebrow="Free Recruiter Trial" title="Free Recruiter Trial">
@@ -179,9 +182,10 @@ export default function TrialStatusCard({ credits }) {
             </button>
           </div>
         ) : null}
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <Stat label="AI Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} />
           <Stat label="VERIS Screenings Remaining" value={screeningCredits} depleted={screeningCredits === 0} />
+          <Stat label="VERIS Assessments Remaining" value={assessmentCredits} depleted={assessmentCredits === 0} />
         </div>
         {trialState?.expiresAt ? (
           <p className="mt-3 text-xs text-slate-400">
