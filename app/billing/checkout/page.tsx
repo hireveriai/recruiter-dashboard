@@ -119,12 +119,6 @@ const TRUST_INDICATORS = ["Tax invoice", "Razorpay secured", "Organization billi
 
 /** Only statements the existing implementation actually supports - no
  * invented refund/rollover/cancellation/expiry policy. */
-const HOW_BILLING_WORKS_STEPS = [
-  { title: "Choose your plan", body: "Select the VerisNova capability and plan that fits your hiring needs." },
-  { title: "Complete secure payment", body: "Complete payment through the existing secure Razorpay checkout." },
-  { title: "Credits are added automatically", body: "Purchased credits are added to the workspace after confirmed payment." },
-]
-
 const GOOD_TO_KNOW_ITEMS = [
   "Prices are shown in your current billing currency.",
   "GST/taxes appear in the payment summary where applicable.",
@@ -718,7 +712,6 @@ export default function BillingCheckoutPage() {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.06),transparent_38%)]" />
 
       <section className="relative mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.85fr)]">
-        <div className="flex flex-col gap-6">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-200">
@@ -846,157 +839,6 @@ export default function BillingCheckoutPage() {
               </div>
             ) : null}
           </div>
-
-          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
-            <p className="text-lg font-semibold tracking-tight text-slate-100">Choose your VerisNova plan</p>
-            <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
-              Get the complete Hiring Suite or choose the capability you need. AI Interview, Assessment, and Screening
-              are available independently.
-            </p>
-
-            {/* Product selector - four premium tabs, not a form. Switching tabs
-                only changes which product's plans are shown; it never clears
-                a plan already selected on another tab. */}
-            <div
-              role="tablist"
-              aria-label="VerisNova products"
-              className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4"
-            >
-              {PRODUCT_DEFS.map((product) => {
-                const isActive = product.key === activeProduct
-                return (
-                  <button
-                    key={product.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    onClick={() => setActiveProduct(product.key)}
-                    className={`rounded-xl border px-3 py-3 text-left transition ${
-                      isActive
-                        ? "border-blue-400/50 bg-blue-500/10 shadow-[0_0_0_1px_rgba(96,165,250,0.25)]"
-                        : "border-slate-800 bg-slate-950 hover:border-slate-600"
-                    }`}
-                  >
-                    <span className={`block text-[11px] font-bold uppercase tracking-[0.1em] ${isActive ? "text-blue-100" : "text-slate-200"}`}>
-                      {product.label}
-                    </span>
-                    <span className="mt-1 block text-[11px] leading-4 text-slate-500">{product.tagline}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {activeProduct === "BUNDLE" ? (
-              <div className="mt-5">
-                <p className="text-base font-semibold text-slate-100">Hiring Suite</p>
-                <p className="mt-0.5 text-sm text-blue-200">All three capabilities. One plan.</p>
-                <p className="mt-2 max-w-xl text-xs leading-5 text-slate-400">
-                  All three capabilities in one plan. Each capability is also available independently.
-                </p>
-              </div>
-            ) : null}
-
-            {/* Plan card grid - the primary interface. Every price/quantity
-                below comes straight from the plan objects returned by
-                /api/plans, which are themselves backed by the authoritative
-                billing catalog; nothing here is computed or hardcoded. */}
-            {activeProductPlans.length > 0 ? (
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {activeProductPlans.map((plan) => (
-                  <PlanCard
-                    key={plan.id}
-                    plan={plan}
-                    isSelected={selectedPlanSlug === plan.slug}
-                    isFlagship={isFlagshipTierSlug(plan.slug)}
-                    disabled={isBusy}
-                    onSelect={() => updateCheckoutSelection(plan.slug, "")}
-                  />
-                ))}
-              </div>
-            ) : !plansLoading ? (
-              <p className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                No active {PRODUCT_DEFS.find((product) => product.key === activeProduct)?.label} plans are available
-                right now. Please contact VerisNova support.
-              </p>
-            ) : null}
-
-            {activeProduct === "INTERVIEW" && screeningPlans.length > 0 ? (
-              <p className="mt-4 text-xs leading-5 text-slate-500">
-                Want to combine an interview plan with extra VERIS Screening capacity? Use{" "}
-                <button
-                  type="button"
-                  onClick={() => setShowComparison(true)}
-                  className="font-semibold text-blue-300 underline-offset-2 hover:underline"
-                >
-                  Compare VERIS AI Interview plans
-                </button>{" "}
-                below - it includes a &ldquo;With VERIS Screening&rdquo; option.
-              </p>
-            ) : null}
-
-            {/* Optional, secondary, product-specific comparison - collapsed by
-                default so plan cards are the first thing a customer sees, per
-                the product-first redesign. Never mixes other product types
-                in: only the active tab's own plans are passed in. */}
-            {activeProductPlans.length > 1 ? (
-              <div className="mt-5 border-t border-slate-800 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowComparison((current) => !current)}
-                  aria-expanded={showComparison}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-slate-100"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className={`h-3.5 w-3.5 transition-transform ${showComparison ? "rotate-90" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="m9 18 6-6-6-6" />
-                  </svg>
-                  Compare {PRODUCT_DEFS.find((product) => product.key === activeProduct)?.label} plans
-                </button>
-
-                {showComparison ? (
-                  <PlanComparison
-                    interviewPlans={activeProductPlans}
-                    screeningPlans={activeProduct === "INTERVIEW" ? screeningPlans : []}
-                    selectedPlanSlug={selectedPlanSlug}
-                    selectedAddonPlanSlug={selectedAddonPlanSlug}
-                    onSelectPlan={updateCheckoutSelection}
-                    disabled={isBusy}
-                    // Server-verified discount only. The struck-through price is
-                    // the plan's real list price, never a decorative anchor.
-                    discountPercentage={summary?.quote.discountPercentage ?? 0}
-                    offerLabel={summary?.coupon?.description || INTRODUCTORY_OFFER_LABEL}
-                  />
-                ) : null}
-              </div>
-            ) : null}
-
-            {!plansLoading && plans.length === 0 ? (
-              <p className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                No active billing plans are available. Please contact VerisNova support.
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Capability comparison sits directly below the plan cards - still
-            part of the purchase decision, not a bottom-of-page afterthought -
-            while the payment summary stays sticky in the right column
-            regardless of how tall this section is. */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
-          <p className="text-lg font-semibold tracking-tight text-slate-100">Compare VerisNova capabilities</p>
-          <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
-            See what each VerisNova capability and the complete Hiring Suite provide for your recruiting workflow.
-          </p>
-          <ProductComparisonTable plans={plans} />
-        </div>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -1186,34 +1028,172 @@ export default function BillingCheckoutPage() {
         </aside>
 
         <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">How billing works</p>
-          <ol className="mt-4 space-y-4">
-            {HOW_BILLING_WORKS_STEPS.map((step, index) => (
-              <li key={step.title} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-950 text-[11px] font-bold text-slate-300">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-100">{step.title}</p>
-                  <p className="mt-0.5 text-xs leading-5 text-slate-400">{step.body}</p>
-                </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Good to know</p>
+          <ul className="mt-3 space-y-2">
+            {GOOD_TO_KNOW_ITEMS.map((item) => (
+              <li key={item} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-600" />
+                <span>{item}</span>
               </li>
             ))}
-          </ol>
-
-          <div className="mt-6 border-t border-slate-800 pt-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Good to know</p>
-            <ul className="mt-3 space-y-2">
-              {GOOD_TO_KNOW_ITEMS.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-600" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          </ul>
         </section>
         </div>
+      </section>
+
+      {/* Full page width, not confined to the header's ~66% left column - the
+          four plan cards and the capability comparison are the primary
+          purchase decision, so they get the whole page's width to breathe in
+          instead of being squeezed beside the payment summary. */}
+      <section className="relative mx-auto mt-6 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
+        <p className="text-lg font-semibold tracking-tight text-slate-100">Choose your VerisNova plan</p>
+        <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
+          Get the complete Hiring Suite or choose the capability you need. AI Interview, Assessment, and Screening
+          are available independently.
+        </p>
+
+        {/* Product selector - four premium tabs, not a form. Switching tabs
+            only changes which product's plans are shown; it never clears
+            a plan already selected on another tab. */}
+        <div
+          role="tablist"
+          aria-label="VerisNova products"
+          className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4"
+        >
+          {PRODUCT_DEFS.map((product) => {
+            const isActive = product.key === activeProduct
+            return (
+              <button
+                key={product.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveProduct(product.key)}
+                className={`rounded-xl border px-3 py-3 text-left transition ${
+                  isActive
+                    ? "border-blue-400/50 bg-blue-500/10 shadow-[0_0_0_1px_rgba(96,165,250,0.25)]"
+                    : "border-slate-800 bg-slate-950 hover:border-slate-600"
+                }`}
+              >
+                <span className={`block text-[11px] font-bold uppercase tracking-[0.1em] ${isActive ? "text-blue-100" : "text-slate-200"}`}>
+                  {product.label}
+                </span>
+                <span className="mt-1 block text-[11px] leading-4 text-slate-500">{product.tagline}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {activeProduct === "BUNDLE" ? (
+          <div className="mt-5">
+            <p className="text-base font-semibold text-slate-100">Hiring Suite</p>
+            <p className="mt-0.5 text-sm text-blue-200">All three capabilities. One plan.</p>
+            <p className="mt-2 max-w-xl text-xs leading-5 text-slate-400">
+              All three capabilities in one plan. Each capability is also available independently.
+            </p>
+          </div>
+        ) : null}
+
+        {/* Plan card grid - the primary interface. Every price/quantity
+            below comes straight from the plan objects returned by
+            /api/plans, which are themselves backed by the authoritative
+            billing catalog; nothing here is computed or hardcoded. Each card
+            carries a radio input so the selected plan is unambiguous at a
+            glance, alongside the existing whole-card click-to-select. */}
+        {activeProductPlans.length > 0 ? (
+          <div role="radiogroup" aria-label={`${PRODUCT_DEFS.find((product) => product.key === activeProduct)?.label} plans`} className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {activeProductPlans.map((plan) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                isSelected={selectedPlanSlug === plan.slug}
+                isFlagship={isFlagshipTierSlug(plan.slug)}
+                disabled={isBusy}
+                onSelect={() => updateCheckoutSelection(plan.slug, "")}
+              />
+            ))}
+          </div>
+        ) : !plansLoading ? (
+          <p className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            No active {PRODUCT_DEFS.find((product) => product.key === activeProduct)?.label} plans are available
+            right now. Please contact VerisNova support.
+          </p>
+        ) : null}
+
+        {activeProduct === "INTERVIEW" && screeningPlans.length > 0 ? (
+          <p className="mt-4 text-xs leading-5 text-slate-500">
+            Want to combine an interview plan with extra VERIS Screening capacity? Use{" "}
+            <button
+              type="button"
+              onClick={() => setShowComparison(true)}
+              className="font-semibold text-blue-300 underline-offset-2 hover:underline"
+            >
+              Compare VERIS AI Interview plans
+            </button>{" "}
+            below - it includes a &ldquo;With VERIS Screening&rdquo; option.
+          </p>
+        ) : null}
+
+        {/* Optional, secondary, product-specific comparison - collapsed by
+            default so plan cards are the first thing a customer sees, per
+            the product-first redesign. Never mixes other product types
+            in: only the active tab's own plans are passed in. */}
+        {activeProductPlans.length > 1 ? (
+          <div className="mt-5 border-t border-slate-800 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowComparison((current) => !current)}
+              aria-expanded={showComparison}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-slate-100"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className={`h-3.5 w-3.5 transition-transform ${showComparison ? "rotate-90" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+              Compare {PRODUCT_DEFS.find((product) => product.key === activeProduct)?.label} plans
+            </button>
+
+            {showComparison ? (
+              <PlanComparison
+                interviewPlans={activeProductPlans}
+                screeningPlans={activeProduct === "INTERVIEW" ? screeningPlans : []}
+                selectedPlanSlug={selectedPlanSlug}
+                selectedAddonPlanSlug={selectedAddonPlanSlug}
+                onSelectPlan={updateCheckoutSelection}
+                disabled={isBusy}
+                // Server-verified discount only. The struck-through price is
+                // the plan's real list price, never a decorative anchor.
+                discountPercentage={summary?.quote.discountPercentage ?? 0}
+                offerLabel={summary?.coupon?.description || INTRODUCTORY_OFFER_LABEL}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        {!plansLoading && plans.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            No active billing plans are available. Please contact VerisNova support.
+          </p>
+        ) : null}
+      </section>
+
+      {/* Capability comparison sits directly below the plan cards - still
+          part of the purchase decision, not a bottom-of-page afterthought -
+          and now spans the full page width like the plan grid above it. */}
+      <section className="relative mx-auto mt-6 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
+        <p className="text-lg font-semibold tracking-tight text-slate-100">Compare VerisNova capabilities</p>
+        <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
+          See what each VerisNova capability and the complete Hiring Suite provide for your recruiting workflow.
+        </p>
+        <ProductComparisonTable plans={plans} />
       </section>
     </main>
   )
@@ -1426,8 +1406,14 @@ function PlanCard({
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      aria-pressed={isSelected}
-      className={`flex h-full flex-col rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      role="radio"
+      aria-checked={isSelected}
+      // flex-col + justify-between pins the CTA to the card's bottom edge
+      // regardless of how tall the content above it is (a plan's quantity
+      // lines and feature list can wrap to different line counts), so every
+      // card in the row bottoms out flush instead of the CTA floating at
+      // different heights.
+      className={`flex h-full flex-col justify-between rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
         isSelected
           ? "border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/40"
           : isFlagship
@@ -1435,51 +1421,63 @@ function PlanCard({
             : "border-slate-800 bg-slate-950 hover:border-slate-600"
       }`}
     >
-      <div className="flex h-[18px] items-center">
-        {isFlagship ? (
-          <span className="whitespace-nowrap rounded-full bg-[#7c3aed] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
-            Most popular
+      <div>
+        <div className="flex h-[18px] items-center justify-between">
+          {isFlagship ? (
+            <span className="whitespace-nowrap rounded-full bg-[#7c3aed] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
+              Most popular
+            </span>
+          ) : (
+            <span />
+          )}
+          <span
+            aria-hidden="true"
+            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+              isSelected ? "border-blue-400" : "border-slate-600"
+            }`}
+          >
+            {isSelected ? <span className="h-2 w-2 rounded-full bg-blue-400" /> : null}
           </span>
+        </div>
+
+        <span className="mt-1.5 block text-sm font-bold uppercase tracking-[0.04em] text-slate-100">{plan.name}</span>
+
+        <span className="mt-3 flex flex-wrap items-baseline gap-x-2">
+          {discounted ? (
+            <span className="text-sm font-medium text-slate-500 line-through">
+              {formatPaise(regularPaise, plan.currency)}
+            </span>
+          ) : null}
+          <span className="text-2xl font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</span>
+        </span>
+
+        {/* Primary purchased quantities - the thing being bought - get the
+            bigger check treatment. Secondary "included capabilities" below use
+            the same check icon at a visibly smaller weight so the hierarchy
+            (what you get vs. what's included) is unambiguous at a glance. */}
+        <ul className="mt-3 space-y-1.5">
+          {planQuantityLines(plan).map((line) => (
+            <li key={line} className="flex items-center gap-2 text-sm font-bold text-slate-100">
+              <CheckGlyph className="h-4 w-4 shrink-0 text-emerald-400" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+
+        {plan.features?.length ? (
+          <div className="mt-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Includes</p>
+            <ul className="mt-2 space-y-1.5">
+              {plan.features.slice(0, 4).map((feature) => (
+                <li key={feature} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
+                  <CheckGlyph className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400/80" />
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
       </div>
-
-      <span className="mt-1.5 block text-sm font-bold uppercase tracking-[0.04em] text-slate-100">{plan.name}</span>
-
-      <span className="mt-3 flex flex-wrap items-baseline gap-x-2">
-        {discounted ? (
-          <span className="text-sm font-medium text-slate-500 line-through">
-            {formatPaise(regularPaise, plan.currency)}
-          </span>
-        ) : null}
-        <span className="text-2xl font-semibold text-slate-100">{formatPaise(plan.amountPaise, plan.currency)}</span>
-      </span>
-
-      {/* Primary purchased quantities - the thing being bought - get the
-          bigger check treatment. Secondary "included capabilities" below use
-          the same check icon at a visibly smaller weight so the hierarchy
-          (what you get vs. what's included) is unambiguous at a glance. */}
-      <ul className="mt-3 space-y-1.5">
-        {planQuantityLines(plan).map((line) => (
-          <li key={line} className="flex items-center gap-2 text-sm font-bold text-slate-100">
-            <CheckGlyph className="h-4 w-4 shrink-0 text-emerald-400" />
-            <span>{line}</span>
-          </li>
-        ))}
-      </ul>
-
-      {plan.features?.length ? (
-        <div className="mt-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Includes</p>
-          <ul className="mt-2 space-y-1.5">
-            {plan.features.slice(0, 4).map((feature) => (
-              <li key={feature} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
-                <CheckGlyph className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400/80" />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
 
       <span
         className={`mt-4 block rounded-lg px-3 py-2 text-center text-xs font-semibold ${
