@@ -2,11 +2,19 @@ import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { assertCanAssessment } from "@/lib/server/assessment/auth"
 import { generateAssessmentQuestions } from "@/lib/server/assessment/question-generator"
 import { generateQuestionsSchema } from "@/lib/server/assessment/validators"
-import { getOrCreateDraftVersion } from "@/lib/server/assessment/versions"
+import {
+  getOrCreateDraftVersion,
+  releaseAssessmentGenerationAttempt,
+  reserveAssessmentGenerationAttempt,
+} from "@/lib/server/assessment/versions"
 import { jobPositionsSupportCodingConfig } from "@/lib/server/services/jobs"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse, successResponse } from "@/lib/server/response"
+import {
+  findIdempotentGenerationResult,
+  storeIdempotentGenerationResult,
+} from "@/lib/server/ai-generation-limit"
 
 type JobCodingConfigRow = {
   coding_required: string | null
@@ -53,87 +61,106 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     const payload = generateQuestionsSchema.parse(await request.json().catch(() => ({})))
 
-    const job = await prisma.jobPosition.findUnique({
-      where: { jobId: assessment.jobId },
-      select: { jobTitle: true, jobDescription: true, coreSkills: true, difficultyProfile: true },
-    })
+    const replay = await findIdempotentGenerationResult("assessment", assessment.id, payload.idempotencyKey)
+    if (replay) {
+      return successResponse(replay, 201)
+    }
 
-    const questionCount = payload.questionCount ?? assessment.questionCount ?? 10
-    const requestedQuestionTypes = payload.questionTypes ?? assessment.questionTypes ?? []
-    const difficulty = payload.difficulty ?? (assessment.difficulty as "JUNIOR" | "MID" | "SENIOR" | null) ?? undefined
+    const reservation = await reserveAssessmentGenerationAttempt(assessment.id)
 
-    const jobCoding = await loadJobCodingConfig(assessment.jobId)
-    // Silently drop CODING from the request rather than erroring — a
-    // recruiter's saved question-type mix may include CODING from before
-    // coding was disabled on the job, and this keeps generation working.
-    const questionTypes = jobCoding.enabled
-      ? requestedQuestionTypes
-      : requestedQuestionTypes.filter((type) => type !== "CODING")
-
-    const { questions, model } = await generateAssessmentQuestions({
-      jobTitle: job?.jobTitle,
-      jobDescription: job?.jobDescription,
-      coreSkills: job?.coreSkills,
-      difficultyProfile: difficulty ?? job?.difficultyProfile,
-      questionCount,
-      questionTypes,
-      entityId: assessment.id,
-      codingLanguages: jobCoding.languages,
-    })
-
-    // generating questions never touches assessments.status - it only ever
-    // writes into a DRAFT version.
-    const created = await prisma.$transaction(async (tx) => {
-      const draft = await getOrCreateDraftVersion(id, tx)
-
-      const existingCount = await tx.assessmentQuestion.count({ where: { versionId: draft.id } })
-
-      await tx.assessmentVersion.update({
-        where: { id: draft.id },
-        data: { generationModel: model, generationMeta: { lastGeneratedAt: new Date().toISOString() } },
+    let created
+    try {
+      const job = await prisma.jobPosition.findUnique({
+        where: { jobId: assessment.jobId },
+        select: { jobTitle: true, jobDescription: true, coreSkills: true, difficultyProfile: true },
       })
 
-      const insertedQuestions = []
-      for (let i = 0; i < questions.length; i += 1) {
-        const q = questions[i]
-        const question = await tx.assessmentQuestion.create({
-          data: {
-            versionId: draft.id,
-            questionType: q.questionType,
-            questionText: q.questionText,
-            orderIndex: existingCount + i,
-            explanation: q.explanation,
-            rubric: q.codingSpec
-              ? { codingSpec: q.codingSpec }
-              : q.rubric
-                ? { criteria: q.rubric.criteria, modelAnswerNotes: q.rubric.modelAnswerNotes }
-                : undefined,
-            origin: "AI",
-          },
+      const questionCount = payload.questionCount ?? assessment.questionCount ?? 10
+      const requestedQuestionTypes = payload.questionTypes ?? assessment.questionTypes ?? []
+      const difficulty = payload.difficulty ?? (assessment.difficulty as "JUNIOR" | "MID" | "SENIOR" | null) ?? undefined
+
+      const jobCoding = await loadJobCodingConfig(assessment.jobId)
+      // Silently drop CODING from the request rather than erroring — a
+      // recruiter's saved question-type mix may include CODING from before
+      // coding was disabled on the job, and this keeps generation working.
+      const questionTypes = jobCoding.enabled
+        ? requestedQuestionTypes
+        : requestedQuestionTypes.filter((type) => type !== "CODING")
+
+      const { questions, model } = await generateAssessmentQuestions({
+        jobTitle: job?.jobTitle,
+        jobDescription: job?.jobDescription,
+        coreSkills: job?.coreSkills,
+        difficultyProfile: difficulty ?? job?.difficultyProfile,
+        questionCount,
+        questionTypes,
+        entityId: assessment.id,
+        codingLanguages: jobCoding.languages,
+      })
+
+      // generating questions never touches assessments.status - it only ever
+      // writes into a DRAFT version.
+      created = await prisma.$transaction(async (tx) => {
+        const draft = await getOrCreateDraftVersion(id, tx)
+
+        const existingCount = await tx.assessmentQuestion.count({ where: { versionId: draft.id } })
+
+        await tx.assessmentVersion.update({
+          where: { id: draft.id },
+          data: { generationModel: model, generationMeta: { lastGeneratedAt: new Date().toISOString() } },
         })
 
-        if (q.options.length > 0) {
-          await tx.assessmentQuestionOption.createMany({
-            data: q.options.map((option, idx) => ({
-              questionId: question.id,
-              optionText: option.text,
-              optionOrder: idx,
-              isCorrect: option.isCorrect,
-            })),
+        const insertedQuestions = []
+        for (let i = 0; i < questions.length; i += 1) {
+          const q = questions[i]
+          const question = await tx.assessmentQuestion.create({
+            data: {
+              versionId: draft.id,
+              questionType: q.questionType,
+              questionText: q.questionText,
+              orderIndex: existingCount + i,
+              explanation: q.explanation,
+              rubric: q.codingSpec
+                ? { codingSpec: q.codingSpec }
+                : q.rubric
+                  ? { criteria: q.rubric.criteria, modelAnswerNotes: q.rubric.modelAnswerNotes }
+                  : undefined,
+              origin: "AI",
+            },
           })
+
+          if (q.options.length > 0) {
+            await tx.assessmentQuestionOption.createMany({
+              data: q.options.map((option, idx) => ({
+                questionId: question.id,
+                optionText: option.text,
+                optionOrder: idx,
+                isCorrect: option.isCorrect,
+              })),
+            })
+          }
+
+          insertedQuestions.push(question)
         }
 
-        insertedQuestions.push(question)
-      }
+        return { draft, insertedQuestions }
+      })
+    } catch (error) {
+      // The reserved slot must not be spent for a failure that happened
+      // before questions were actually produced and saved.
+      await releaseAssessmentGenerationAttempt(reservation.versionId)
+      throw error
+    }
 
-      return { draft, insertedQuestions }
-    })
-
-    return successResponse({
+    const result = {
       versionId: created.draft.id,
       versionNumber: created.draft.versionNumber,
       questionsGenerated: created.insertedQuestions.length,
-    }, 201)
+      ...reservation.info,
+    }
+    await storeIdempotentGenerationResult("assessment", assessment.id, payload.idempotencyKey, result)
+
+    return successResponse(result, 201)
   } catch (error) {
     return errorResponse(error)
   }

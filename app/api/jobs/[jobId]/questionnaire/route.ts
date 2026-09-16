@@ -1,6 +1,7 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { ApiError } from "@/lib/server/errors"
 import { errorResponse, successResponse } from "@/lib/server/response"
+import { generationLimitInfo } from "@/lib/server/ai-generation-limit"
 import {
   discardQuestionnaireDraft,
   finalizeQuestionnaireDraft,
@@ -33,6 +34,7 @@ export async function GET(request: Request, context: Params) {
         status: result.version.status,
         generatedBy: result.version.generated_by,
         interviewMode: result.version.interview_mode,
+        ...generationLimitInfo(result.version.generation_attempts),
       },
       questions: result.questions.map((q) => ({
         questionnaireQuestionId: q.questionnaire_question_id,

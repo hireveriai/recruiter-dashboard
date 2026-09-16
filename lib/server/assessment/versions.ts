@@ -2,6 +2,12 @@ import { Prisma } from "@prisma/client"
 
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
+import {
+  DEFAULT_AI_GENERATION_LIMIT,
+  generationLimitInfo,
+  generationLimitReachedError,
+  type GenerationLimitInfo,
+} from "@/lib/server/ai-generation-limit"
 
 type QueryClient = typeof prisma | Prisma.TransactionClient
 
@@ -78,6 +84,48 @@ export async function getOrCreateDraftVersion(
   }
 
   return newDraft
+}
+
+/**
+ * Reserves one AI generation attempt against the assessment's current DRAFT
+ * (max 3, see lib/server/ai-generation-limit.ts). Forks a fresh DRAFT first
+ * if none exists - that new draft/version starts its own allowance, since it
+ * is not a continuation of a previously finalized version's count.
+ *
+ * The conditional `updateMany` (WHERE generationAttempts < limit) is the
+ * atomic, race-safe gate: two concurrent requests can each only succeed here
+ * if a slot is actually available, so at most 3 successful attempts are ever
+ * authorized for one draft. Must be called BEFORE the OpenAI round trip;
+ * callers must invoke releaseAssessmentGenerationAttempt if generation then
+ * fails, so a provider outage does not cost the recruiter a real attempt.
+ */
+export async function reserveAssessmentGenerationAttempt(
+  assessmentId: string
+): Promise<{ versionId: string; info: GenerationLimitInfo }> {
+  return prisma.$transaction(async (tx) => {
+    const draft = await getOrCreateDraftVersion(assessmentId, tx)
+
+    const updated = await tx.assessmentVersion.updateMany({
+      where: { id: draft.id, generationAttempts: { lt: DEFAULT_AI_GENERATION_LIMIT } },
+      data: { generationAttempts: { increment: 1 } },
+    })
+
+    if (updated.count === 0) {
+      const latest = await tx.assessmentVersion.findUnique({ where: { id: draft.id } })
+      throw generationLimitReachedError(latest?.generationAttempts ?? DEFAULT_AI_GENERATION_LIMIT)
+    }
+
+    const refreshed = await tx.assessmentVersion.findUniqueOrThrow({ where: { id: draft.id } })
+    return { versionId: draft.id, info: generationLimitInfo(refreshed.generationAttempts) }
+  })
+}
+
+/** Compensating decrement for a reserved attempt whose generation call failed before producing questions. */
+export async function releaseAssessmentGenerationAttempt(versionId: string) {
+  await prisma.assessmentVersion.updateMany({
+    where: { id: versionId, generationAttempts: { gt: 0 } },
+    data: { generationAttempts: { decrement: 1 } },
+  })
 }
 
 /**

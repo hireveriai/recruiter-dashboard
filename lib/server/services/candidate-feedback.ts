@@ -2,6 +2,14 @@ import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { prisma } from "@/lib/server/prisma"
 import { ApiError } from "@/lib/server/errors"
 import { fetchAnswerSummaries, type InterviewAnswerSummary } from "@/lib/server/services/interview-summary"
+import {
+  DEFAULT_AI_FEEDBACK_GENERATION_LIMIT,
+  feedbackGenerationLimitInfo,
+  feedbackGenerationLimitReachedError,
+  findIdempotentGenerationResult,
+  storeIdempotentGenerationResult,
+  type FeedbackGenerationLimitInfo,
+} from "@/lib/server/ai-generation-limit"
 
 type InterviewContextRow = {
   interview_id: string
@@ -12,6 +20,7 @@ type InterviewContextRow = {
   attempt_id: string | null
   candidate_feedback_text: string | null
   candidate_feedback_status: string | null
+  candidate_feedback_generation_attempts: number
   organization_name: string
 }
 
@@ -32,6 +41,7 @@ async function loadInterviewContext(organizationId: string, interviewId: string)
       ) as attempt_id,
       i.candidate_feedback_text,
       i.candidate_feedback_status,
+      i.candidate_feedback_generation_attempts,
       o.organization_name
     from public.interviews i
     join public.candidates c on c.candidate_id = i.candidate_id
@@ -140,7 +150,62 @@ async function generateFeedbackText(input: {
   }
 }
 
-export async function generateCandidateFeedback(organizationId: string, interviewId: string) {
+/**
+ * Reserves one AI candidate-feedback generation attempt (max 3, see
+ * lib/server/ai-generation-limit.ts). There is no draft/version row for
+ * candidate feedback to fork - `interviews` is a singleton row, overwritten
+ * in place on regenerate - so the limit is per interview, for its whole
+ * lifetime, not reset by anything.
+ *
+ * The conditional UPDATE (WHERE attempts < limit) is the atomic, race-safe
+ * gate: two concurrent regenerate requests can each only succeed here if a
+ * slot is actually available, so at most 3 successful attempts are ever
+ * authorized for one interview. Must be called BEFORE the OpenAI round trip;
+ * callers must invoke releaseCandidateFeedbackGenerationAttempt if generation
+ * then fails, so a provider outage does not cost the recruiter a real attempt.
+ */
+async function reserveCandidateFeedbackGenerationAttempt(
+  organizationId: string,
+  interviewId: string
+): Promise<FeedbackGenerationLimitInfo> {
+  const rows = await prisma.$queryRaw<{ candidate_feedback_generation_attempts: number }[]>`
+    update public.interviews
+    set candidate_feedback_generation_attempts = candidate_feedback_generation_attempts + 1
+    where interview_id = ${interviewId}::uuid
+      and organization_id = ${organizationId}::uuid
+      and candidate_feedback_generation_attempts < ${DEFAULT_AI_FEEDBACK_GENERATION_LIMIT}
+    returning candidate_feedback_generation_attempts
+  `
+
+  const row = rows[0]
+  if (!row) {
+    const latest = await prisma.$queryRaw<{ candidate_feedback_generation_attempts: number }[]>`
+      select candidate_feedback_generation_attempts
+      from public.interviews
+      where interview_id = ${interviewId}::uuid and organization_id = ${organizationId}::uuid
+    `
+    throw feedbackGenerationLimitReachedError(
+      latest[0]?.candidate_feedback_generation_attempts ?? DEFAULT_AI_FEEDBACK_GENERATION_LIMIT
+    )
+  }
+
+  return feedbackGenerationLimitInfo(row.candidate_feedback_generation_attempts)
+}
+
+/** Compensating decrement for a reserved attempt whose generation call failed before producing feedback. */
+async function releaseCandidateFeedbackGenerationAttempt(interviewId: string) {
+  await prisma.$executeRaw`
+    update public.interviews
+    set candidate_feedback_generation_attempts = greatest(0, candidate_feedback_generation_attempts - 1)
+    where interview_id = ${interviewId}::uuid
+  `
+}
+
+export async function generateCandidateFeedback(
+  organizationId: string,
+  interviewId: string,
+  idempotencyKey?: string | null
+) {
   const context = await loadInterviewContext(organizationId, interviewId)
   if (!context) {
     throw new ApiError(404, "INTERVIEW_NOT_FOUND", "Interview not found for this organization.")
@@ -149,25 +214,42 @@ export async function generateCandidateFeedback(organizationId: string, intervie
     throw new ApiError(409, "INTERVIEW_NOT_COMPLETED", "This interview has no completed attempt to generate feedback from.")
   }
 
-  const answerMap = await fetchAnswerSummaries([context.attempt_id])
-  const answers = answerMap.get(context.attempt_id) ?? []
-  const transcriptExcerpt = buildTranscriptExcerpt(answers)
+  const replay = await findIdempotentGenerationResult("candidate_feedback", interviewId, idempotencyKey)
+  if (replay) {
+    return replay
+  }
 
-  const text = await generateFeedbackText({
-    candidateName: context.candidate_name,
-    jobTitle: context.job_title,
-    transcriptExcerpt,
-  })
+  const reservation = await reserveCandidateFeedbackGenerationAttempt(organizationId, interviewId)
 
-  await prisma.$executeRaw`
-    update public.interviews
-    set candidate_feedback_text = ${text},
-        candidate_feedback_status = 'draft',
-        candidate_feedback_generated_at = now()
-    where interview_id = ${interviewId}::uuid
-  `
+  let text: string
+  try {
+    const answerMap = await fetchAnswerSummaries([context.attempt_id])
+    const answers = answerMap.get(context.attempt_id) ?? []
+    const transcriptExcerpt = buildTranscriptExcerpt(answers)
 
-  return { text, status: "draft" as const }
+    text = await generateFeedbackText({
+      candidateName: context.candidate_name,
+      jobTitle: context.job_title,
+      transcriptExcerpt,
+    })
+
+    await prisma.$executeRaw`
+      update public.interviews
+      set candidate_feedback_text = ${text},
+          candidate_feedback_status = 'draft',
+          candidate_feedback_generated_at = now()
+      where interview_id = ${interviewId}::uuid
+    `
+  } catch (error) {
+    // The reserved slot must not be spent for a provider/infra failure that
+    // happened before feedback was actually produced and saved.
+    await releaseCandidateFeedbackGenerationAttempt(interviewId)
+    throw error
+  }
+
+  const result = { text, status: "draft" as const, ...reservation }
+  await storeIdempotentGenerationResult("candidate_feedback", interviewId, idempotencyKey, result)
+  return result
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

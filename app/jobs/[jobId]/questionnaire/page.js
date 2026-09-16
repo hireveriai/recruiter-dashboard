@@ -186,6 +186,18 @@ export default function QuestionnaireReviewPage() {
   };
 
   const regenerate = async (scope, questionnaireQuestionId) => {
+    if (version?.canGenerate === false) {
+      notify("error", "AI generation limit reached for this draft. Edit questions manually instead.");
+      return;
+    }
+
+    const remaining = version?.remainingGenerations;
+    const confirmMessage =
+      typeof remaining === "number"
+        ? `Regenerate ${scope === "all" ? "all questions" : "this question"}? This will use 1 of your remaining AI generation attempts. ${remaining} generation${remaining === 1 ? "" : "s"} remaining.`
+        : `Regenerate ${scope === "all" ? "all questions" : "this question"}?`;
+    if (!window.confirm(confirmMessage)) return;
+
     setBusy(questionnaireQuestionId ?? "regenerate-all");
     try {
       const res = await fetch(
@@ -272,6 +284,13 @@ export default function QuestionnaireReviewPage() {
               Unsaved changes
             </span>
           ) : null}
+          {typeof version?.remainingGenerations === "number" ? (
+            <span className="rounded-full bg-slate-800/70 px-3 py-1 text-xs text-slate-400">
+              {version.canGenerate
+                ? `${version.remainingGenerations} AI generation${version.remainingGenerations === 1 ? "" : "s"} remaining`
+                : "AI generation limit reached"}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -282,10 +301,18 @@ export default function QuestionnaireReviewPage() {
         </p>
       ) : null}
 
+      {version?.canGenerate === false ? (
+        <p className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3 text-xs text-slate-400">
+          You&apos;ve used all {version.generationLimit} AI generation attempts for this draft. You can
+          continue editing the questions manually or add your own questions.
+        </p>
+      ) : null}
+
       <div className="mt-6 flex flex-wrap gap-3">
         <button
           onClick={() => regenerate("all")}
-          disabled={busy !== null}
+          disabled={busy !== null || version?.canGenerate === false}
+          title={version?.canGenerate === false ? "AI generation limit reached for this draft" : undefined}
           className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500 disabled:opacity-50"
         >
           {busy === "regenerate-all" ? (
@@ -431,8 +458,14 @@ export default function QuestionnaireReviewPage() {
                     {q.questionnaireQuestionId ? (
                       <button
                         onClick={() => regenerate("question", q.questionnaireQuestionId)}
-                        disabled={busy !== null || dirty}
-                        title={dirty ? "Save your changes first" : "Regenerate this question"}
+                        disabled={busy !== null || dirty || version?.canGenerate === false}
+                        title={
+                          version?.canGenerate === false
+                            ? "AI generation limit reached for this draft"
+                            : dirty
+                              ? "Save your changes first"
+                              : "Regenerate this question"
+                        }
                         className="rounded-lg px-2 py-1 text-slate-400 transition hover:text-white disabled:opacity-30"
                       >
                         {busy === q.questionnaireQuestionId ? (

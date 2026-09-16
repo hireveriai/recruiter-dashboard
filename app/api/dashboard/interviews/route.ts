@@ -11,6 +11,7 @@ import { deriveInterviewStatus } from "@/lib/server/services/interview-status"
 import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
 import { getRecruiterDecisionsForInterviews } from "@/lib/server/services/recruiter-decisions"
 import { getPlatformFailureRefundedInterviewIds } from "@/lib/server/services/trial-credits"
+import { feedbackGenerationLimitInfo } from "@/lib/server/ai-generation-limit"
 import {
   cleanRecoveredCandidateAnswer,
   extractCandidateAnswersFromTranscript,
@@ -1001,6 +1002,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
       candidateFeedbackStatus: interview.candidateFeedbackStatus ?? null,
       candidateFeedbackSentAt: interview.candidateFeedbackSentAt ?? null,
       candidateFeedbackHiringDecision: interview.candidateFeedbackHiringDecision ?? null,
+      ...feedbackGenerationLimitInfo(interview.candidateFeedbackGenerationAttempts ?? 0),
       candidateEmail: interview.candidate?.email ?? null,
     }
   })

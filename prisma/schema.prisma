@@ -88,6 +88,7 @@ model JobQuestionnaireVersion {
   interviewDurationMinutes Int?                        @map("interview_duration_minutes")
   generationModel          String?                     @map("generation_model")
   generationMeta           Json                        @default("{}") @map("generation_meta")
+  generationAttempts       Int                         @default(0) @map("generation_attempts")
   createdBy                String?                     @db.Uuid @map("created_by")
   createdAt                DateTime                    @default(now()) @db.Timestamptz(6) @map("created_at")
   finalizedBy              String?                     @db.Uuid @map("finalized_by")
@@ -324,6 +325,7 @@ model Interview {
   candidateFeedbackSentAt     DateTime? @db.Timestamptz(6) @map("candidate_feedback_sent_at")
   candidateFeedbackSentTo     String?   @map("candidate_feedback_sent_to")
   candidateFeedbackHiringDecision String? @map("candidate_feedback_hiring_decision")
+  candidateFeedbackGenerationAttempts Int @default(0) @map("candidate_feedback_generation_attempts")
   job               JobPosition       @relation(fields: [jobId], references: [jobId])
   candidate         Candidate         @relation(fields: [candidateId], references: [candidateId])
   attempts          InterviewAttempt[]
@@ -635,6 +637,7 @@ model AssessmentVersion {
   status            String               @default("DRAFT")
   generationModel   String?              @map("generation_model")
   generationMeta    Json                 @default("{}") @map("generation_meta")
+  generationAttempts Int                 @default(0) @map("generation_attempts")
   createdAt         DateTime             @default(now()) @db.Timestamptz(6) @map("created_at")
   assessment        Assessment           @relation("assessment_versions", fields: [assessmentId], references: [id])
   questions         AssessmentQuestion[]
@@ -846,6 +849,21 @@ model AssessmentCreditEvent {
 
   @@index([organizationId], map: "assessment_credit_events_organization_id_idx")
   @@map("assessment_credit_events")
+}
+
+/// Idempotency cache for AI question-generation requests (interview
+/// questionnaire + assessment). entityId is the stable questionnaire_id /
+/// assessment_id, not the version, so a retry resolves to the same result
+/// even if the first attempt forked a new draft version.
+model AiGenerationIdempotency {
+  entityType      String   @map("entity_type")
+  entityId        String   @db.Uuid @map("entity_id")
+  idempotencyKey  String   @map("idempotency_key")
+  result          Json
+  createdAt       DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  @@id([entityType, entityId, idempotencyKey])
+  @@map("ai_generation_idempotency")
 }
 
 

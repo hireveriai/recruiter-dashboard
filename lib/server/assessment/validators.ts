@@ -80,6 +80,7 @@ export const generateQuestionsSchema = z.object({
   questionCount: z.number().int().min(1).max(50).optional(),
   questionTypes: z.array(z.enum(ASSESSMENT_QUESTION_TYPES)).optional(),
   difficulty: z.enum(ASSESSMENT_DIFFICULTIES).optional(),
+  idempotencyKey: z.string().trim().min(1).max(200).optional(),
 })
 
 // A CODING question's language/starter code/test cases, stored inside the

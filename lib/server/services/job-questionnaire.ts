@@ -21,6 +21,12 @@ import {
   generateStructuredQuestionnaire,
   type GeneratedQuestion,
 } from "@/lib/server/interview/questionnaire-generator"
+import {
+  DEFAULT_AI_GENERATION_LIMIT,
+  generationLimitInfo,
+  generationLimitReachedError,
+  type GenerationLimitInfo,
+} from "@/lib/server/ai-generation-limit"
 
 export type InterviewMode = "STANDARD" | "INDIVIDUALIZED"
 
@@ -47,6 +53,7 @@ export type QuestionnaireVersionRow = {
   interview_mode: string
   target_question_count: number | null
   interview_duration_minutes: number | null
+  generation_attempts: number
 }
 
 type JobContextRow = {
@@ -211,6 +218,7 @@ export async function ensureFinalizedQuestionnaireVersion(params: {
         interview_duration_minutes,
         generation_model,
         generation_meta,
+        generation_attempts,
         created_by,
         finalized_by,
         finalized_at
@@ -230,6 +238,7 @@ export async function ensureFinalizedQuestionnaireVersion(params: {
           usedFallback: generation.usedFallback,
           autoFinalized: true,
         })}::jsonb,
+        1,
         ${params.createdBy ?? null}::uuid,
         ${params.createdBy ?? null}::uuid,
         now()
@@ -243,7 +252,8 @@ export async function ensureFinalizedQuestionnaireVersion(params: {
         generated_by,
         interview_mode,
         target_question_count,
-        interview_duration_minutes
+        interview_duration_minutes,
+        generation_attempts
     `)
 
     const version = versionRows[0]
@@ -353,7 +363,8 @@ async function selectFinalizedVersion(
       v.generated_by,
       v.interview_mode,
       v.target_question_count,
-      v.interview_duration_minutes
+      v.interview_duration_minutes,
+      v.generation_attempts
     from public.job_questionnaire_versions v
     join public.job_questionnaires q
       on q.questionnaire_id = v.questionnaire_id
@@ -433,7 +444,8 @@ async function selectDraftVersion(
       v.generated_by,
       v.interview_mode,
       v.target_question_count,
-      v.interview_duration_minutes
+      v.interview_duration_minutes,
+      v.generation_attempts
     from public.job_questionnaire_versions v
     join public.job_questionnaires q on q.questionnaire_id = v.questionnaire_id
     where q.job_id = ${jobId}::uuid
@@ -515,6 +527,93 @@ export async function getQuestionnaireForEditing(params: {
 }
 
 /**
+ * Reserves one AI generation attempt against the version a recruiter is
+ * currently regenerating (max 3, see lib/server/ai-generation-limit.ts).
+ *
+ * Must be called BEFORE the OpenAI round trip: the conditional UPDATE below
+ * (or, when forking a new draft, the fresh row's own generation_attempts = 1)
+ * is the atomic, race-safe gate - two concurrent regenerate requests can each
+ * only succeed here if a slot is actually available, so at most 3 successful
+ * attempts are ever authorized for one version. Callers must invoke
+ * releaseInterviewGenerationAttempt if the generation call itself then fails,
+ * so a provider outage does not cost the recruiter a real attempt.
+ */
+export async function reserveInterviewGenerationAttempt(params: {
+  organizationId: string
+  jobId: string
+  current: QuestionnaireVersionRow
+  createdBy?: string | null
+}): Promise<{ versionId: string; info: GenerationLimitInfo }> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(
+      Prisma.sql`select pg_advisory_xact_lock(hashtext(${`job_questionnaire:${params.jobId}`}))`
+    )
+
+    if (params.current.status === "DRAFT") {
+      const rows = await tx.$queryRaw<{ generation_attempts: number }[]>(Prisma.sql`
+        update public.job_questionnaire_versions
+        set generation_attempts = generation_attempts + 1
+        where questionnaire_version_id = ${params.current.questionnaire_version_id}::uuid
+          and generation_attempts < ${DEFAULT_AI_GENERATION_LIMIT}
+        returning generation_attempts
+      `)
+
+      const row = rows[0]
+      if (!row) {
+        const latest = await tx.$queryRaw<{ generation_attempts: number }[]>(Prisma.sql`
+          select generation_attempts from public.job_questionnaire_versions
+          where questionnaire_version_id = ${params.current.questionnaire_version_id}::uuid
+        `)
+        throw generationLimitReachedError(latest[0]?.generation_attempts ?? DEFAULT_AI_GENERATION_LIMIT)
+      }
+
+      return {
+        versionId: params.current.questionnaire_version_id,
+        info: generationLimitInfo(row.generation_attempts),
+      }
+    }
+
+    // No open draft yet: regenerating from a FINALIZED version forks a new
+    // draft, mirroring saveQuestionnaireDraft's own fork-on-first-edit rule.
+    // A newly forked draft is a new version and gets its own fresh
+    // allowance - it is not a continuation of the finalized version's count.
+    const questionnaireId = await ensureQuestionnaireRow(tx, params.organizationId, params.jobId)
+    const rows = await tx.$queryRaw<QuestionnaireVersionRow[]>(Prisma.sql`
+      insert into public.job_questionnaire_versions (
+        questionnaire_id, organization_id, version_number, status, generated_by,
+        interview_mode, generation_attempts, created_by
+      )
+      select
+        ${questionnaireId}::uuid,
+        ${params.organizationId}::uuid,
+        coalesce(max(version_number), 0) + 1,
+        'DRAFT',
+        'AI',
+        1,
+        ${params.createdBy ?? null}::uuid
+      from public.job_questionnaire_versions
+      where questionnaire_id = ${questionnaireId}::uuid
+      returning
+        questionnaire_version_id::text, questionnaire_id::text, version_number,
+        status, generated_by, interview_mode, target_question_count,
+        interview_duration_minutes, generation_attempts
+    `)
+
+    const draft = rows[0]
+    return { versionId: draft.questionnaire_version_id, info: generationLimitInfo(draft.generation_attempts) }
+  })
+}
+
+/** Compensating decrement for a reserved attempt whose generation call failed before producing questions. */
+export async function releaseInterviewGenerationAttempt(versionId: string) {
+  await prisma.$executeRaw(Prisma.sql`
+    update public.job_questionnaire_versions
+    set generation_attempts = greatest(0, generation_attempts - 1)
+    where questionnaire_version_id = ${versionId}::uuid
+  `)
+}
+
+/**
  * Persists a recruiter's edits.
  *
  * Always writes into a DRAFT. If the recruiter was viewing a FINALIZED version,
@@ -566,7 +665,7 @@ export async function saveQuestionnaireDraft(params: {
         returning
           questionnaire_version_id::text, questionnaire_id::text, version_number,
           status, generated_by, interview_mode, target_question_count,
-          interview_duration_minutes
+          interview_duration_minutes, generation_attempts
       `)
       draft = rows[0]
     }

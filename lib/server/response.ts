@@ -21,6 +21,7 @@ export function errorResponse(error: unknown) {
         error: {
           code: error.code,
           message: error.message,
+          ...error.details,
         },
       },
       { status: error.statusCode }

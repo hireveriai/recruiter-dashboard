@@ -41,6 +41,7 @@ export default function AssessmentQuestionsPage() {
   const [savedAt, setSavedAt] = useState("")
   const [preview, setPreview] = useState(false)
   const [genCount, setGenCount] = useState(5)
+  const [genType, setGenType] = useState("ALL")
   const [inviteCount, setInviteCount] = useState(0)
   const [manualType, setManualType] = useState("SHORT_ANSWER")
 
@@ -89,13 +90,38 @@ export default function AssessmentQuestionsPage() {
   }, [assessment, questions.length])
 
   const handleGenerate = async () => {
+    if (displayVersion?.canGenerate === false) {
+      showActionFeedback({
+        tone: "error",
+        title: "Generation limit reached",
+        message: "You've used all AI generation attempts for this draft. Edit questions manually instead.",
+      })
+      return
+    }
+
+    const remaining = displayVersion?.remainingGenerations
+    const isFirstGeneration = questions.length === 0 && (displayVersion?.generationAttempts ?? 0) === 0
+    if (!isFirstGeneration) {
+      const confirmMessage =
+        typeof remaining === "number"
+          ? `Generate more questions with AI? This will use 1 of your remaining AI generation attempts. ${remaining} generation${remaining === 1 ? "" : "s"} remaining.`
+          : "Generate more questions with AI?"
+      if (!window.confirm(confirmMessage)) return
+    }
+
     try {
       setBusy(true)
       const res = await fetch(buildAuthUrl(`/api/assessments/${id}/generate-questions`, searchParams), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionCount: Number(genCount) || 5 }),
+        body: JSON.stringify({
+          questionCount: Number(genCount) || 5,
+          // Omitted (=> "ALL") falls back to the assessment's configured
+          // question-type mix on the server, exactly as before this control
+          // existed. Picking one type restricts generation to only that type.
+          ...(genType !== "ALL" ? { questionTypes: [genType] } : {}),
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || "Generation failed")
@@ -394,6 +420,13 @@ export default function AssessmentQuestionsPage() {
           </div>
         ) : null}
 
+        {displayVersion?.canGenerate === false ? (
+          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/40 p-4 text-xs text-slate-400">
+            You&apos;ve used all {displayVersion.generationLimit} AI generation attempts for this draft. You can
+            continue editing the questions manually or add your own questions.
+          </div>
+        ) : null}
+
         <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
           <span className="text-sm text-slate-300">Generate more with AI</span>
           <input
@@ -404,13 +437,34 @@ export default function AssessmentQuestionsPage() {
             onChange={(e) => setGenCount(e.target.value)}
             className="w-20 rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-sm text-white outline-none"
           />
+          <select
+            value={genType}
+            onChange={(e) => setGenType(e.target.value)}
+            title="Question type to generate"
+            className="rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-sm text-slate-200 outline-none"
+          >
+            <option value="ALL">All Types</option>
+            {MANUAL_ADD_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {QUESTION_TYPE_LABELS[type]}
+              </option>
+            ))}
+          </select>
           <button
             onClick={handleGenerate}
-            disabled={busy}
+            disabled={busy || displayVersion?.canGenerate === false}
+            title={displayVersion?.canGenerate === false ? "AI generation limit reached for this draft" : undefined}
             className="rounded-full border border-violet-400/40 bg-violet-500/10 px-4 py-1.5 text-sm font-medium text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy ? "Working..." : "Generate"}
           </button>
+          {typeof displayVersion?.remainingGenerations === "number" ? (
+            <span className="rounded-full bg-slate-800/70 px-3 py-1 text-xs text-slate-400">
+              {displayVersion.canGenerate
+                ? `${displayVersion.remainingGenerations} AI generation${displayVersion.remainingGenerations === 1 ? "" : "s"} remaining`
+                : "AI generation limit reached"}
+            </span>
+          ) : null}
           <div className="ml-auto flex items-center gap-2">
             <select
               value={manualType}

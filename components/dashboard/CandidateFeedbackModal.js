@@ -30,6 +30,7 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState("")
   const [sentAt, setSentAt] = useState(null)
+  const [feedbackLimit, setFeedbackLimit] = useState(null)
 
   const isOpen = Boolean(interview)
 
@@ -42,6 +43,7 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
       setIncludeSignature(false)
       setError("")
       setSentAt(null)
+      setFeedbackLimit(null)
       return
     }
 
@@ -49,32 +51,70 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
     setToEmail(interview.candidateEmail || "")
     setCcInput("")
     setHiringDecision(interview.candidateFeedbackHiringDecision || "UNDISCLOSED")
+    setFeedbackLimit({
+      feedbackGenerationLimit: interview.feedbackGenerationLimit,
+      feedbackGenerationAttempts: interview.feedbackGenerationAttempts,
+      remainingFeedbackGenerations: interview.remainingFeedbackGenerations,
+      canRegenerateFeedback: interview.canRegenerateFeedback,
+    })
 
     if (interview.candidateFeedbackText) {
       setText(interview.candidateFeedbackText)
       return
     }
 
-    generateFeedback(interview)
+    generateFeedback(interview, { isRegenerate: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interview?.interviewId])
 
-  async function generateFeedback(target) {
+  async function generateFeedback(target, { isRegenerate = true } = {}) {
     const source = target || interview
     if (!source) return
+
+    if (isRegenerate) {
+      if (feedbackLimit && feedbackLimit.canRegenerateFeedback === false) {
+        setError("AI feedback generation limit reached for this interview. Edit and send the existing feedback instead.")
+        return
+      }
+      const remaining = feedbackLimit?.remainingFeedbackGenerations
+      const confirmMessage =
+        typeof remaining === "number"
+          ? `Regenerate AI feedback? This will use 1 of your remaining feedback generation attempts. ${remaining} generation${remaining === 1 ? "" : "s"} remaining.`
+          : "Regenerate AI feedback?"
+      if (!window.confirm(confirmMessage)) return
+    }
 
     setIsGenerating(true)
     setError("")
     try {
       const response = await fetch(
         buildAuthUrl(`/api/interview/${source.interviewId}/candidate-feedback`, searchParams),
-        { method: "POST", credentials: "include" }
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
       )
       const data = await response.json()
       if (!response.ok || !data.success) {
+        if (data?.error?.remainingFeedbackGenerations !== undefined) {
+          setFeedbackLimit({
+            feedbackGenerationLimit: data.error.feedbackGenerationLimit,
+            feedbackGenerationAttempts: data.error.feedbackGenerationAttempts,
+            remainingFeedbackGenerations: data.error.remainingFeedbackGenerations,
+            canRegenerateFeedback: data.error.canRegenerateFeedback,
+          })
+        }
         throw new Error(data?.error?.message || "Failed to generate candidate feedback")
       }
       setText(data.data.text)
+      setFeedbackLimit({
+        feedbackGenerationLimit: data.data.feedbackGenerationLimit,
+        feedbackGenerationAttempts: data.data.feedbackGenerationAttempts,
+        remainingFeedbackGenerations: data.data.remainingFeedbackGenerations,
+        canRegenerateFeedback: data.data.canRegenerateFeedback,
+      })
     } catch (generateError) {
       setError(generateError instanceof Error ? generateError.message : "Failed to generate candidate feedback")
     } finally {
@@ -156,6 +196,13 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
               <p className="mt-2 text-sm text-slate-400">
                 {interview?.candidateName || "Candidate"} · {interview?.jobTitle || "Role"}
               </p>
+              {typeof feedbackLimit?.remainingFeedbackGenerations === "number" ? (
+                <p className="mt-1.5 text-xs text-slate-500">
+                  {feedbackLimit.canRegenerateFeedback
+                    ? `${feedbackLimit.remainingFeedbackGenerations} AI feedback generation${feedbackLimit.remainingFeedbackGenerations === 1 ? "" : "s"} remaining`
+                    : "AI feedback generation limit reached"}
+                </p>
+              ) : null}
             </div>
             <button
               type="button"
@@ -272,6 +319,13 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
               <div className="mb-4 rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-100">{error}</div>
             ) : null}
 
+            {feedbackLimit?.canRegenerateFeedback === false ? (
+              <div className="mb-4 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-xs text-slate-400">
+                You&apos;ve used all {feedbackLimit.feedbackGenerationLimit} AI feedback generation attempts for this
+                interview. You can continue reviewing the existing feedback and adding recruiter notes.
+              </div>
+            ) : null}
+
             <textarea
               value={text}
               onChange={(event) => setText(event.target.value)}
@@ -284,8 +338,9 @@ export function CandidateFeedbackModal({ interview, searchParams, onClose, onSen
             <div className="mt-5 flex flex-col gap-3 border-t border-slate-800/90 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
-                onClick={() => generateFeedback(interview)}
-                disabled={isGenerating || isSending}
+                onClick={() => generateFeedback(interview, { isRegenerate: true })}
+                disabled={isGenerating || isSending || feedbackLimit?.canRegenerateFeedback === false}
+                title={feedbackLimit?.canRegenerateFeedback === false ? "AI feedback generation limit reached for this interview" : undefined}
                 className="inline-flex items-center gap-2 self-start rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/40 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Sparkles className="h-4 w-4" aria-hidden="true" />

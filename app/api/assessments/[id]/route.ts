@@ -5,6 +5,7 @@ import { updateAssessmentSchema } from "@/lib/server/assessment/validators"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse, successResponse } from "@/lib/server/response"
+import { generationLimitInfo } from "@/lib/server/ai-generation-limit"
 
 async function loadAssessmentOrThrow(id: string, organizationId: string) {
   const assessment = await prisma.assessment.findFirst({
@@ -63,7 +64,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     return successResponse({
       ...assessment,
       jobTitle: job?.jobTitle ?? null,
-      versions,
+      versions: versions.map((v) => ({ ...v, ...generationLimitInfo(v.generationAttempts) })),
     })
   } catch (error) {
     return errorResponse(error)
