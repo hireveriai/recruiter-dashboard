@@ -427,45 +427,60 @@ export default function AssessmentQuestionsPage() {
           </div>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <span className="text-sm text-slate-300">Generate more with AI</span>
-          <input
-            type="number"
-            min={1}
-            max={50}
-            value={genCount}
-            onChange={(e) => setGenCount(e.target.value)}
-            className="w-20 rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-sm text-white outline-none"
-          />
-          <select
-            value={genType}
-            onChange={(e) => setGenType(e.target.value)}
-            title="Question type to generate"
-            className="rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-sm text-slate-200 outline-none"
-          >
-            <option value="ALL">All Types</option>
-            {MANUAL_ADD_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {QUESTION_TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleGenerate}
-            disabled={busy || displayVersion?.canGenerate === false}
-            title={displayVersion?.canGenerate === false ? "AI generation limit reached for this draft" : undefined}
-            className="rounded-full border border-violet-400/40 bg-violet-500/10 px-4 py-1.5 text-sm font-medium text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {busy ? "Working..." : "Generate"}
-          </button>
-          {typeof displayVersion?.remainingGenerations === "number" ? (
-            <span className="rounded-full bg-slate-800/70 px-3 py-1 text-xs text-slate-400">
-              {displayVersion.canGenerate
-                ? `${displayVersion.remainingGenerations} AI generation${displayVersion.remainingGenerations === 1 ? "" : "s"} remaining`
-                : "AI generation limit reached"}
-            </span>
-          ) : null}
-          <div className="ml-auto flex items-center gap-2">
+        <div className="mt-5 flex flex-col gap-5 rounded-2xl border border-slate-800 bg-slate-950/40 p-4 lg:flex-row lg:items-start lg:gap-6">
+          <div className="flex-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-300/80">AI Generation</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Generates new questions with AI and adds them to this draft. &ldquo;All Types&rdquo; mixes across the
+              types configured for this assessment; picking one type generates only that type.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={genCount}
+                onChange={(e) => setGenCount(e.target.value)}
+                className="w-20 rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-sm text-white outline-none"
+              />
+              <select
+                value={genType}
+                onChange={(e) => setGenType(e.target.value)}
+                title="Question type to generate"
+                className="rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-sm text-slate-200 outline-none"
+              >
+                <option value="ALL">All Types</option>
+                {MANUAL_ADD_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {QUESTION_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleGenerate}
+                disabled={busy || displayVersion?.canGenerate === false}
+                title={displayVersion?.canGenerate === false ? "AI generation limit reached for this draft" : undefined}
+                className="rounded-full border border-violet-400/40 bg-violet-500/10 px-4 py-1.5 text-sm font-medium text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busy ? "Working..." : "Generate"}
+              </button>
+              {typeof displayVersion?.remainingGenerations === "number" ? (
+                <span className="rounded-full bg-slate-800/70 px-3 py-1 text-xs text-slate-400">
+                  {displayVersion.canGenerate
+                    ? `${displayVersion.remainingGenerations} AI generation${displayVersion.remainingGenerations === 1 ? "" : "s"} remaining`
+                    : "AI generation limit reached"}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="hidden w-px self-stretch bg-slate-800 lg:block" aria-hidden="true" />
+          <div className="h-px w-full bg-slate-800 lg:hidden" aria-hidden="true" />
+
+          <div className="lg:w-64 lg:shrink-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Add Manually</p>
+            <p className="mt-1 text-xs text-slate-500">Adds one blank question of the chosen type for you to write yourself — no AI involved.</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
             <select
               value={manualType}
               onChange={(e) => setManualType(e.target.value)}
@@ -484,6 +499,7 @@ export default function AssessmentQuestionsPage() {
             >
               + Add Manual Question
             </button>
+            </div>
           </div>
         </div>
 
