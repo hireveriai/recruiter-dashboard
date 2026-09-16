@@ -92,6 +92,11 @@ export async function GET(
     })
 
     const riskLevel = attempt.result?.riskLevel ?? computeRiskLevel(attempt.signals.length)
+    const summary = attempt.result?.summary
+    const aiAssistanceRisk =
+      summary && typeof summary === "object" && "aiAssistanceRisk" in summary
+        ? (summary as Record<string, unknown>).aiAssistanceRisk
+        : null
 
     return successResponse({
       attempt: {
@@ -112,6 +117,7 @@ export async function GET(
       assessmentTitle: assessment.title,
       invite: { sentAt: attempt.invite.sentAt, completedAt: attempt.invite.completedAt },
       riskLevel,
+      aiAssistanceRisk,
       signals: attempt.signals.map((s) => ({ id: s.id, type: s.type, value: s.value, createdAt: s.createdAt })),
       questions: questionBreakdown,
     })

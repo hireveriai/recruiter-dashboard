@@ -28,6 +28,57 @@ function riskTone(riskLevel) {
   return "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
 }
 
+// "Potential AI Assistance" is heuristic evidence for a recruiter to review -
+// never a claim that a specific tool was used. Same LOW/ELEVATED/REVIEW
+// vocabulary discipline as the integrity risk badge above.
+function formatAiAssistanceLevel(level) {
+  if (!level) return "-"
+  if (level === "REVIEW_RECOMMENDED") return "REVIEW RECOMMENDED"
+  if (level === "ELEVATED") return "ELEVATED RISK"
+  return "LOW RISK"
+}
+
+function aiAssistanceTone(level) {
+  if (level === "REVIEW_RECOMMENDED") return "border-rose-500/30 bg-rose-500/12 text-rose-200"
+  if (level === "ELEVATED") return "border-amber-500/30 bg-amber-500/12 text-amber-200"
+  return "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
+}
+
+const SIGNAL_TYPE_LABELS = {
+  tab_switch: "Tab switch",
+  visibility_hidden: "Tab hidden",
+  copy: "Copy",
+  paste: "Paste",
+  large_paste: "Large paste",
+  paste_blocked: "Paste blocked",
+  copy_blocked: "Copy blocked",
+  inactivity: "Inactivity",
+  fullscreen_exit: "Left full screen",
+  face_present: "Face detected",
+  face_absent: "Face not detected",
+  multiple_faces: "Multiple faces detected",
+  multiple_faces_ended: "Multiple faces no longer detected",
+  camera_unavailable: "Camera unavailable",
+  camera_restored: "Camera restored",
+  ip_changed: "IP address changed",
+  ai_assistance_risk: "Potential AI assistance signal",
+  suspicious_activity: "Suspicious activity",
+}
+
+function formatSignalType(type) {
+  return SIGNAL_TYPE_LABELS[type] ?? type.replace(/_/g, " ")
+}
+
+function formatSignalValue(value) {
+  if (!value || typeof value !== "object") return null
+  const entries = Object.entries(value).filter(([, v]) => v !== null && v !== undefined && v !== "")
+  if (entries.length === 0) return null
+  if (Array.isArray(value.evidence)) {
+    return value.evidence.join("; ")
+  }
+  return entries.map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" · ")
+}
+
 export default function AssessmentAttemptDetailPage() {
   const { id, attemptId } = useParams()
   const searchParams = useAuthSearchParams()
@@ -107,6 +158,31 @@ export default function AssessmentAttemptDetailPage() {
           </div>
         </div>
 
+        {detail.aiAssistanceRisk ? (
+          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-slate-500">Potential AI Assistance</p>
+              <span
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${aiAssistanceTone(detail.aiAssistanceRisk.level)}`}
+              >
+                {formatAiAssistanceLevel(detail.aiAssistanceRisk.level)}
+              </span>
+            </div>
+            {detail.aiAssistanceRisk.evidence?.length ? (
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-300">
+                {detail.aiAssistanceRisk.evidence.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">No supporting evidence detected.</p>
+            )}
+            <p className="mt-3 text-xs text-slate-500">
+              Heuristic signal for review only - not proof that a specific tool was used.
+            </p>
+          </div>
+        ) : null}
+
         <h2 className="mt-8 text-lg font-semibold text-white">Question Breakdown</h2>
         <div className="mt-3 space-y-4">
           {detail.questions.map((question, index) => {
@@ -179,12 +255,18 @@ export default function AssessmentAttemptDetailPage() {
           {detail.signals.length === 0 ? (
             <p className="text-sm text-slate-500">No integrity signals recorded for this attempt.</p>
           ) : (
-            detail.signals.map((signal) => (
-              <div key={signal.id} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/35 px-4 py-2.5 text-sm text-slate-300">
-                <span>{signal.type}</span>
-                <span className="text-xs text-slate-500">{formatDateTime(signal.createdAt)}</span>
-              </div>
-            ))
+            detail.signals.map((signal) => {
+              const detailText = formatSignalValue(signal.value)
+              return (
+                <div key={signal.id} className="rounded-xl border border-slate-800 bg-slate-950/35 px-4 py-2.5 text-sm text-slate-300">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{formatSignalType(signal.type)}</span>
+                    <span className="text-xs text-slate-500">{formatDateTime(signal.createdAt)}</span>
+                  </div>
+                  {detailText ? <p className="mt-1 text-xs text-slate-500">{detailText}</p> : null}
+                </div>
+              )
+            })
           )}
         </div>
       </main>
