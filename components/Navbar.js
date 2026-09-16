@@ -620,7 +620,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               </span>
             </Link>
 
-            <nav className="hidden min-w-0 flex-1 flex-nowrap items-center justify-center gap-0.5 overflow-visible md:flex xl:gap-1">
+            <nav className="hv-navbar-links hidden min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto overflow-y-visible md:flex xl:gap-1">
               {visibleNavItems.map((item) => {
                 const active = isActivePath(pathname, item.href);
 
