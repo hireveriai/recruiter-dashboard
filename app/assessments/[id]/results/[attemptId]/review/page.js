@@ -150,19 +150,54 @@ export default function ManagerReviewPage() {
         <div className="mt-3 space-y-5">
           {detail.questions.map((question, index) => {
             const draft = drafts[question.answerId] ?? { score: "", feedback: "" }
+            const isObjective = question.questionType === "SINGLE_CHOICE" || question.questionType === "MULTI_SELECT"
+            const selectedOptionIds = Array.isArray(question.candidateAnswer?.selectedOptionIds)
+              ? question.candidateAnswer.selectedOptionIds
+              : []
+
             return (
               <div key={question.questionId} className="rounded-[20px] border border-slate-800 bg-slate-900/40 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Q{index + 1}</p>
                 <p className="mt-2 text-base text-white">{question.questionText}</p>
 
-                <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-300">
-                  <p className="mb-1 text-xs uppercase tracking-[0.18em] text-slate-500">Submission</p>
-                  <p className="whitespace-pre-wrap">
-                    {question.candidateAnswer?.text ?? question.candidateAnswer?.code ?? "No submission"}
-                  </p>
-                </div>
+                {isObjective ? (
+                  // SINGLE_CHOICE/MULTI_SELECT are auto-scored by exact option
+                  // match, never AI- or manager-evaluated (no evaluation row
+                  // is ever created for them - see assessment/lib/server/
+                  // scoring.ts's OBJECTIVE_TYPES/DEFERRED_TYPES split), so
+                  // this shows the employee's selection against the correct
+                  // answer(s) directly instead of a Submission/Evaluation panel.
+                  <ul className="mt-3 space-y-1.5 text-sm">
+                    {question.options.map((option) => {
+                      const wasSelected = selectedOptionIds.includes(option.id)
+                      return (
+                        <li
+                          key={option.id}
+                          className={`rounded-lg border px-3 py-2 ${
+                            option.isCorrect
+                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                              : wasSelected
+                                ? "border-rose-500/30 bg-rose-500/10 text-rose-200"
+                                : "border-slate-800 bg-slate-950/40 text-slate-400"
+                          }`}
+                        >
+                          {option.optionText}
+                          {option.isCorrect ? " (correct)" : ""}
+                          {wasSelected ? " — employee's answer" : ""}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-300">
+                    <p className="mb-1 text-xs uppercase tracking-[0.18em] text-slate-500">Submission</p>
+                    <p className="whitespace-pre-wrap">
+                      {question.candidateAnswer?.text ?? question.candidateAnswer?.code ?? "No submission"}
+                    </p>
+                  </div>
+                )}
 
-                {question.evaluation ? (
+                {!isObjective && question.evaluation ? (
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-3 text-sm text-violet-100">
                       <p className="mb-1 text-xs uppercase tracking-[0.18em] text-violet-300">
@@ -206,9 +241,9 @@ export default function ManagerReviewPage() {
                       ) : null}
                     </div>
                   </div>
-                ) : (
+                ) : !isObjective ? (
                   <p className="mt-3 text-sm text-slate-500">Not yet evaluated.</p>
-                )}
+                ) : null}
               </div>
             )
           })}

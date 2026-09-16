@@ -187,8 +187,8 @@ export default function AssessmentAttemptDetailPage() {
         <div className="mt-3 space-y-4">
           {detail.questions.map((question, index) => {
             const isObjective = question.questionType === "SINGLE_CHOICE" || question.questionType === "MULTI_SELECT"
-            const selected = Array.isArray(question.candidateAnswer?.optionIds)
-              ? question.candidateAnswer.optionIds
+            const selected = Array.isArray(question.candidateAnswer?.selectedOptionIds)
+              ? question.candidateAnswer.selectedOptionIds
               : []
 
             return (
