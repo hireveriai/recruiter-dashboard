@@ -1,5 +1,6 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { assertCanAssessment } from "@/lib/server/assessment/auth"
+import { assertCanEmployees, hasOrgWideEmployeeActivityAccess } from "@/lib/server/employees/auth"
 import { computeRiskLevel } from "@/lib/server/assessment/versions"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
@@ -11,7 +12,6 @@ export async function GET(
 ) {
   try {
     const auth = await getRecruiterRequestContext(request)
-    await assertCanAssessment(auth, "assessments.view_results")
     const { id, attemptId } = await context.params
 
     const assessment = await prisma.assessment.findFirst({
@@ -19,6 +19,13 @@ export async function GET(
     })
     if (!assessment) {
       throw new ApiError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found")
+    }
+
+    const isEmployeeActivity = assessment.participantType === "EMPLOYEE"
+    if (isEmployeeActivity) {
+      await assertCanEmployees(auth, "employeeActivities.view_results")
+    } else {
+      await assertCanAssessment(auth, "assessments.view_results")
     }
 
     const attempt = await prisma.assessmentAttempt.findFirst({
@@ -40,16 +47,32 @@ export async function GET(
       throw new ApiError(404, "ATTEMPT_NOT_FOUND", "Attempt not found")
     }
 
-    const [candidate, job] = await Promise.all([
-      prisma.candidate.findUnique({
-        where: { candidateId: attempt.candidateId },
-        select: { candidateId: true, fullName: true, email: true },
-      }),
+    const [candidate, employee, job] = await Promise.all([
+      attempt.candidateId
+        ? prisma.candidate.findUnique({
+            where: { candidateId: attempt.candidateId },
+            select: { candidateId: true, fullName: true, email: true },
+          })
+        : Promise.resolve(null),
+      attempt.employeeId
+        ? prisma.employee.findUnique({
+            where: { id: attempt.employeeId },
+            select: { id: true, fullName: true, email: true, managerUserId: true, department: true, title: true },
+          })
+        : Promise.resolve(null),
       prisma.jobPosition.findUnique({
         where: { jobId: attempt.jobId },
         select: { jobId: true, jobTitle: true },
       }),
     ])
+
+    // Manager (direct-report) scoping — same rule as the results list route.
+    if (isEmployeeActivity && employee) {
+      const canSeeAllEmployees = await hasOrgWideEmployeeActivityAccess(auth)
+      if (!canSeeAllEmployees && employee.managerUserId !== auth.userId) {
+        throw new ApiError(403, "NOT_YOUR_DIRECT_REPORT", "You can only view results for your direct reports")
+      }
+    }
 
     // All questions of the attempted version, so unanswered ones show up too.
     const allQuestions = await prisma.assessmentQuestion.findMany({
@@ -72,20 +95,29 @@ export async function GET(
         orderIndex: question.orderIndex,
         // Recruiter-facing detail view: correct answers/rubrics are fine to
         // include here, since this endpoint is gated on
-        // assessments.view_results (recruiter-only), never exposed to a
-        // candidate.
+        // assessments.view_results/employeeActivities.view_results
+        // (recruiter/manager-only), never exposed to a candidate or employee.
         options: isObjective
           ? question.options.map((o) => ({ id: o.id, optionText: o.optionText, isCorrect: o.isCorrect }))
           : [],
         rubric: !isObjective ? question.rubric : null,
+        answerId: answer?.id ?? null,
         candidateAnswer: answer?.answer ?? null,
         answeredAt: answer?.answeredAt ?? null,
         evaluation: answer?.evaluation
           ? {
+              // AI evaluation — untouched by manager review.
               score: answer.evaluation.score,
               maxScore: answer.evaluation.maxScore,
               feedback: answer.evaluation.feedback,
               status: answer.evaluation.status,
+              // Manager review, when one has been submitted (see
+              // POST .../results/[attemptId]/evaluations/[answerId]/review).
+              // AI's own score/feedback above are never overwritten by this.
+              evaluatorType: answer.evaluation.evaluatorType,
+              managerScore: answer.evaluation.managerScore,
+              managerFeedback: answer.evaluation.managerFeedback,
+              managerEvaluatedAt: answer.evaluation.managerEvaluatedAt,
             }
           : null,
       }
@@ -113,6 +145,8 @@ export async function GET(
         passed: attempt.passed,
       },
       candidate,
+      employee,
+      activityType: assessment.activityType,
       jobTitle: job?.jobTitle ?? null,
       assessmentTitle: assessment.title,
       invite: { sentAt: attempt.invite.sentAt, completedAt: attempt.invite.completedAt },

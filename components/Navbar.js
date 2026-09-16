@@ -23,6 +23,7 @@ const navItems = [
   { href: "/", label: "Dashboard", feature: "dashboard" },
   { href: "/ai-screening", label: "VERIS Screening", feature: "aiScreening" },
   { href: "/assessments", label: "Assessment", feature: "assessments" },
+  { href: "/employees", label: "Employees", feature: "employees" },
   { href: "/jobs", label: "Jobs", feature: "jobs" },
   { href: "/candidates", label: "Candidates", feature: "candidates" },
   { href: "/interviews", label: "Interviews", feature: "interviews" },

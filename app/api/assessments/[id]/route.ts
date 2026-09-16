@@ -1,5 +1,6 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { assertCanAssessment } from "@/lib/server/assessment/auth"
+import { assertCanEmployees } from "@/lib/server/employees/auth"
 import { updateAssessmentSchema } from "@/lib/server/assessment/validators"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
@@ -17,13 +18,31 @@ async function loadAssessmentOrThrow(id: string, organizationId: string) {
   return assessment
 }
 
+// Employee-participant assessments are gated by employeeActivities.*
+// instead of assessments.* — this loads the (still org-scoped) row first so
+// the correct permission domain can be checked based on its participantType.
+async function assertCanAccess(
+  auth: Awaited<ReturnType<typeof getRecruiterRequestContext>>,
+  assessment: { participantType: string },
+  kind: "view" | "edit" | "manage",
+) {
+  if (assessment.participantType === "EMPLOYEE") {
+    const permission =
+      kind === "view" ? "employeeActivities.view" : kind === "edit" ? "employeeActivities.edit" : "employeeActivities.manage"
+    await assertCanEmployees(auth, permission)
+  } else {
+    const permission = kind === "view" ? "assessments.view" : kind === "edit" ? "assessments.edit" : "assessments.manage"
+    await assertCanAssessment(auth, permission)
+  }
+}
+
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getRecruiterRequestContext(request)
-    await assertCanAssessment(auth, "assessments.view")
     const { id } = await context.params
 
     const assessment = await loadAssessmentOrThrow(id, auth.organizationId)
+    await assertCanAccess(auth, assessment, "view")
 
     const versions = await prisma.assessmentVersion.findMany({
       where: { assessmentId: id },
@@ -54,10 +73,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getRecruiterRequestContext(request)
-    await assertCanAssessment(auth, "assessments.edit")
     const { id } = await context.params
 
     const assessment = await loadAssessmentOrThrow(id, auth.organizationId)
+    await assertCanAccess(auth, assessment, "edit")
     const payload = updateAssessmentSchema.parse(await request.json())
 
     // Guardrail: once PUBLISHED, fields that change scoring semantics for an
@@ -110,10 +129,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getRecruiterRequestContext(request)
-    await assertCanAssessment(auth, "assessments.manage")
     const { id } = await context.params
 
-    await loadAssessmentOrThrow(id, auth.organizationId)
+    const assessment = await loadAssessmentOrThrow(id, auth.organizationId)
+    await assertCanAccess(auth, assessment, "manage")
 
     const inviteCount = await prisma.assessmentInvite.count({ where: { assessmentId: id } })
     if (inviteCount > 0) {

@@ -98,7 +98,7 @@ export default function AssessmentResultsPage() {
             <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-slate-950/20 text-slate-400">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Candidate</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Participant</th>
                   <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Job</th>
                   <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Status</th>
                   <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Score</th>
@@ -118,8 +118,8 @@ export default function AssessmentResultsPage() {
                   results.map((row) => (
                     <tr key={row.id} className="border-t border-slate-800/80 text-slate-200">
                       <td className="px-4 py-3">
-                        <div className="font-medium text-white">{row.candidate?.fullName ?? "-"}</div>
-                        <div className="text-xs text-slate-500">{row.candidate?.email ?? ""}</div>
+                        <div className="font-medium text-white">{row.employee?.fullName ?? row.candidate?.fullName ?? "-"}</div>
+                        <div className="text-xs text-slate-500">{row.employee?.email ?? row.candidate?.email ?? ""}</div>
                       </td>
                       <td className="px-4 py-3 text-slate-400">{row.jobTitle ?? "-"}</td>
                       <td className="px-4 py-3 text-slate-300">{row.status}</td>
@@ -137,12 +137,22 @@ export default function AssessmentResultsPage() {
                       <td className="px-4 py-3 text-slate-400">{row.sentAt ? formatDate(row.sentAt) : "-"}</td>
                       <td className="px-4 py-3 text-slate-400">{row.completedAt ? formatDate(row.completedAt) : "-"}</td>
                       <td className="px-4 py-3 text-right">
-                        <Link
-                          href={buildAuthUrl(`/assessments/${id}/results/${row.attemptId}`, searchParams)}
-                          className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-200 transition hover:text-white"
-                        >
-                          View
-                        </Link>
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={buildAuthUrl(`/assessments/${id}/results/${row.attemptId}`, searchParams)}
+                            className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-200 transition hover:text-white"
+                          >
+                            View
+                          </Link>
+                          {row.employee ? (
+                            <Link
+                              href={buildAuthUrl(`/assessments/${id}/results/${row.attemptId}/review`, searchParams)}
+                              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-500/20"
+                            >
+                              Review
+                            </Link>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))

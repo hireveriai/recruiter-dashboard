@@ -19,6 +19,12 @@ const QUESTION_TYPE_OPTIONS = [
   { value: "CODING", label: "Coding" },
 ];
 
+const ACTIVITY_TYPE_OPTIONS = [
+  { value: "ASSESSMENT", label: "Assessment", hint: "What do you know?" },
+  { value: "CHALLENGE", label: "Challenge", hint: "Can you solve this problem?" },
+  { value: "TASK", label: "Task", hint: "Can you perform this work?" },
+];
+
 const DEFAULT_FORM = {
   jobId: "",
   title: "",
@@ -33,6 +39,12 @@ const DEFAULT_FORM = {
   linkExpiryDays: 7,
   blockCopyPaste: false,
   cameraMonitoring: false,
+  // Defaults preserve today's candidate-assessment behavior exactly — the
+  // candidate workflow looks and behaves identically unless a recruiter
+  // explicitly switches Participant to Employee.
+  activityType: "ASSESSMENT",
+  participantType: "CANDIDATE",
+  skills: "",
 };
 
 export default function CreateAssessmentModal({ open, onClose, initialAssessment, defaultJobId, onSuccess }) {
@@ -66,6 +78,9 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
         linkExpiryDays: initialAssessment.linkExpiryDays ?? 7,
         blockCopyPaste: Boolean(initialAssessment.settings?.security?.blockCopyPaste),
         cameraMonitoring: Boolean(initialAssessment.settings?.security?.cameraMonitoring),
+        activityType: initialAssessment.activityType ?? "ASSESSMENT",
+        participantType: initialAssessment.participantType ?? "CANDIDATE",
+        skills: Array.isArray(initialAssessment.skills) ? initialAssessment.skills.join(", ") : "",
       });
     } else {
       setForm({ ...DEFAULT_FORM, jobId: defaultJobId ?? "" });
@@ -100,7 +115,14 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
 
   const handleSubmit = async () => {
     if (!form.jobId || !form.title.trim()) {
-      showActionFeedback({ tone: "error", title: "Missing details", message: "Job and title are required." });
+      showActionFeedback({
+        tone: "error",
+        title: "Missing details",
+        message:
+          form.participantType === "EMPLOYEE"
+            ? "Title is required. A Job is still required too — pick (or create once) a generic job such as 'Internal / Employee Development'."
+            : "Job and title are required.",
+      });
       return;
     }
 
@@ -123,6 +145,11 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
           blockCopyPaste: Boolean(form.blockCopyPaste),
           cameraMonitoring: Boolean(form.cameraMonitoring),
         },
+        activityType: form.activityType,
+        participantType: form.participantType,
+        skills: form.skills
+          ? form.skills.split(",").map((s) => s.trim()).filter(Boolean)
+          : [],
       };
 
       const endpoint = isEditMode
@@ -195,8 +222,53 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
+            {!isEditMode && (
+              <>
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Participant</label>
+                  <select
+                    value={form.participantType}
+                    onChange={(e) => handleChange("participantType", e.target.value)}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="CANDIDATE">Candidate</option>
+                    <option value="EMPLOYEE">Employee</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Activity Type</label>
+                  <select
+                    value={form.activityType}
+                    onChange={(e) => handleChange("activityType", e.target.value)}
+                    className={SELECT_CLASS}
+                  >
+                    {ACTIVITY_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label} — {option.hint}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {form.participantType === "EMPLOYEE" && (
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-sm text-slate-300">Skills / Tags (comma separated)</label>
+                    <input
+                      value={form.skills}
+                      onChange={(e) => handleChange("skills", e.target.value)}
+                      placeholder="e.g. SQL, Performance Tuning, Incident Response"
+                      className={FIELD_CLASS}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
             <div>
-              <label className="mb-2 block text-sm text-slate-300">Job</label>
+              <label className="mb-2 block text-sm text-slate-300">
+                Job {form.participantType === "EMPLOYEE" ? "(still required — pick any existing job)" : ""}
+              </label>
               <select
                 value={form.jobId}
                 onChange={(e) => handleJobChange(e.target.value)}
