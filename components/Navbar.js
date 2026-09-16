@@ -23,7 +23,6 @@ const navItems = [
   { href: "/", label: "Dashboard", feature: "dashboard" },
   { href: "/ai-screening", label: "VERIS Screening", feature: "aiScreening" },
   { href: "/assessments", label: "Assessment", feature: "assessments" },
-  { href: "/employees", label: "Employees", feature: "employees" },
   { href: "/jobs", label: "Jobs", feature: "jobs" },
   { href: "/candidates", label: "Candidates", feature: "candidates" },
   { href: "/interviews", label: "Interviews", feature: "interviews" },
@@ -82,6 +81,17 @@ function TeamIcon() {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function EmployeesIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18" />
+      <circle cx="9" cy="14" r="1.6" />
+      <path d="M13 14h5" />
     </svg>
   );
 }
@@ -254,6 +264,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
   );
   const canViewAlerts = canAccessFeature(permissionProfile, "alerts");
   const canManageTeam = canAccessFeature(displayProfile, "manageTeam");
+  const canViewEmployees = canAccessFeature(displayProfile, "employees");
   const canViewBilling = canAccessFeature(displayProfile, "billing");
   const canManageSettings = canAccessFeature(displayProfile, "settings");
   const canUseCopilot = canAccessFeature(permissionProfile, "copilot");
@@ -620,7 +631,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               </span>
             </Link>
 
-            <nav className="hv-navbar-links hidden min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto overflow-y-visible md:flex xl:gap-1">
+            <nav className="hidden min-w-0 flex-1 flex-nowrap items-center justify-center gap-0.5 overflow-visible md:flex xl:gap-1">
               {visibleNavItems.map((item) => {
                 const active = isActivePath(pathname, item.href);
 
@@ -764,6 +775,13 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                     <Link href="/manage-team" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-200 transition hover:bg-slate-800/70 hover:text-white" onClick={() => { setProfileOpen(false); handleNavigationClick("/manage-team"); }}>
                       <TeamIcon />
                       <span>Manage Team</span>
+                    </Link>
+                    ) : null}
+
+                    {canViewEmployees ? (
+                    <Link href="/employees" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-200 transition hover:bg-slate-800/70 hover:text-white" onClick={() => { setProfileOpen(false); handleNavigationClick("/employees"); }}>
+                      <EmployeesIcon />
+                      <span>Employees</span>
                     </Link>
                     ) : null}
 
