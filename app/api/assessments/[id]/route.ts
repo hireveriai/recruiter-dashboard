@@ -89,6 +89,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         ...(payload.randomizeOptions !== undefined ? { randomizeOptions: payload.randomizeOptions } : {}),
         ...(payload.linkExpiryDays !== undefined ? { linkExpiryDays: payload.linkExpiryDays } : {}),
         ...(payload.status !== undefined ? { status: payload.status } : {}),
+        ...(payload.security !== undefined
+          ? {
+              settings: {
+                ...(assessment.settings && typeof assessment.settings === "object" ? assessment.settings : {}),
+                security: payload.security,
+              },
+            }
+          : {}),
         updatedAt: new Date(),
       },
     })

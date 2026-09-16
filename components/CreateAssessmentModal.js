@@ -30,6 +30,8 @@ const DEFAULT_FORM = {
   randomizeQuestions: false,
   randomizeOptions: false,
   linkExpiryDays: 7,
+  blockCopyPaste: false,
+  cameraMonitoring: false,
 };
 
 export default function CreateAssessmentModal({ open, onClose, initialAssessment, defaultJobId, onSuccess }) {
@@ -61,6 +63,8 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
         randomizeQuestions: Boolean(initialAssessment.randomizeQuestions),
         randomizeOptions: Boolean(initialAssessment.randomizeOptions),
         linkExpiryDays: initialAssessment.linkExpiryDays ?? 7,
+        blockCopyPaste: Boolean(initialAssessment.settings?.security?.blockCopyPaste),
+        cameraMonitoring: Boolean(initialAssessment.settings?.security?.cameraMonitoring),
       });
     } else {
       setForm({ ...DEFAULT_FORM, jobId: defaultJobId ?? "" });
@@ -114,6 +118,10 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
         randomizeQuestions: Boolean(form.randomizeQuestions),
         randomizeOptions: Boolean(form.randomizeOptions),
         linkExpiryDays: Number(form.linkExpiryDays),
+        security: {
+          blockCopyPaste: Boolean(form.blockCopyPaste),
+          cameraMonitoring: Boolean(form.cameraMonitoring),
+        },
       };
 
       const endpoint = isEditMode
@@ -327,6 +335,42 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
                 />
                 Randomize option order
               </label>
+            </div>
+
+            <div className="md:col-span-2 flex flex-col gap-3 rounded-[20px] border border-slate-800 bg-slate-950/40 p-4">
+              <div>
+                <p className="text-sm font-medium text-slate-200">Integrity &amp; Security</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Signals are recorded for recruiter review only - VerisNova never auto-decides a candidate cheated.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-2 text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={form.blockCopyPaste}
+                    onChange={(e) => handleChange("blockCopyPaste", e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-500"
+                  />
+                  Block copy/paste
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={form.cameraMonitoring}
+                    onChange={(e) => handleChange("cameraMonitoring", e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-500"
+                  />
+                  Camera-based integrity monitoring
+                </label>
+              </div>
+              {form.cameraMonitoring && (
+                <p className="text-xs text-slate-500">
+                  Candidates will be asked to grant camera access before starting. VerisNova detects face
+                  presence and multiple-person presence only - no video is recorded, stored, or shown to
+                  recruiters.
+                </p>
+              )}
             </div>
           </div>
 

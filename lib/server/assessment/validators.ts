@@ -19,6 +19,15 @@ export const ASSESSMENT_DIFFICULTIES = ["JUNIOR", "MID", "SENIOR"] as const
 
 export const ASSESSMENT_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const
 
+// VERIS Integrity settings, persisted into Assessment.settings.security
+// (a generic Json column - no new scalar columns needed). Both flags default
+// to off so an assessment created before this feature existed keeps behaving
+// exactly as before: no camera prompt, no paste blocking.
+export const assessmentSecuritySettingsSchema = z.object({
+  blockCopyPaste: z.boolean().default(false),
+  cameraMonitoring: z.boolean().default(false),
+})
+
 export const createAssessmentSchema = z.object({
   jobId: uuidField,
   title: z.string().trim().min(1).max(200),
@@ -31,6 +40,7 @@ export const createAssessmentSchema = z.object({
   randomizeQuestions: z.boolean().default(false),
   randomizeOptions: z.boolean().default(false),
   linkExpiryDays: z.number().int().min(1).max(90).default(7),
+  security: assessmentSecuritySettingsSchema.optional(),
 })
 
 export const updateAssessmentSchema = z.object({
@@ -45,6 +55,7 @@ export const updateAssessmentSchema = z.object({
   randomizeOptions: z.boolean().optional(),
   linkExpiryDays: z.number().int().min(1).max(90).optional(),
   status: z.enum(["DRAFT", "ARCHIVED"]).optional(),
+  security: assessmentSecuritySettingsSchema.optional(),
 })
 
 export const listAssessmentsQuerySchema = z.object({

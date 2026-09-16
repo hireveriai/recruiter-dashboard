@@ -92,6 +92,7 @@ export async function POST(request: Request) {
         linkExpiryDays: payload.linkExpiryDays,
         status: "DRAFT",
         createdBy: auth.userId,
+        ...(payload.security ? { settings: { security: payload.security } } : {}),
       },
     })
 
