@@ -594,7 +594,14 @@ model Invoice {
 model Assessment {
   id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   organizationId     String              @db.Uuid @map("organization_id")
-  jobId              String              @db.Uuid @map("job_id")
+  // Nullable: required for CANDIDATE-participant activities (which job is
+  // this for?), optional for EMPLOYEE-participant activities — an employee
+  // activity assesses an existing employee's knowledge/skill/ability, not
+  // fit for a specific open job. When set on an employee activity, it's
+  // optional context (e.g. a target role for future internal mobility),
+  // never a requirement to create the activity. See lib/server/assessment/
+  // validators.ts for the participantType-conditional requirement.
+  jobId              String?             @db.Uuid @map("job_id")
   title              String
   description        String?
   durationMinutes    Int                 @default(30) @map("duration_minutes")
@@ -686,7 +693,7 @@ model AssessmentInvite {
   id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   assessmentId   String              @db.Uuid @map("assessment_id")
   versionId      String              @db.Uuid @map("version_id")
-  jobId          String              @db.Uuid @map("job_id")
+  jobId          String?             @db.Uuid @map("job_id")
   // Nullable: exactly one of candidateId/employeeId is set, matching the
   // parent Assessment.participantType. candidateId's own semantics/behavior
   // for the existing candidate flow are unchanged — only the NOT NULL
@@ -719,7 +726,7 @@ model AssessmentAttempt {
   inviteId        String             @unique @db.Uuid @map("invite_id")
   assessmentId    String             @db.Uuid @map("assessment_id")
   versionId       String             @db.Uuid @map("version_id")
-  jobId           String             @db.Uuid @map("job_id")
+  jobId           String?            @db.Uuid @map("job_id")
   candidateId     String?            @db.Uuid @map("candidate_id")
   employeeId      String?            @db.Uuid @map("employee_id")
   organizationId  String             @db.Uuid @map("organization_id")
@@ -801,7 +808,7 @@ model AssessmentResult {
   id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   attemptId       String            @unique @db.Uuid @map("attempt_id")
   assessmentId    String            @db.Uuid @map("assessment_id")
-  jobId           String            @db.Uuid @map("job_id")
+  jobId           String?           @db.Uuid @map("job_id")
   candidateId     String?           @db.Uuid @map("candidate_id")
   employeeId      String?           @db.Uuid @map("employee_id")
   organizationId  String            @db.Uuid @map("organization_id")

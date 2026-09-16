@@ -54,6 +54,11 @@ export type AssessmentQuestionGenerationInput = {
   entityId?: string | null
   /** Only set when the job has coding enabled — see jobPositionsSupportCodingConfig(). */
   codingLanguages?: string[] | null
+  /** ASSESSMENT | CHALLENGE | TASK — shapes the framing sentence only. */
+  activityType?: "ASSESSMENT" | "CHALLENGE" | "TASK"
+  /** CANDIDATE | EMPLOYEE — "pre-hire skills test" only makes sense for a
+   * candidate; an employee activity evaluates someone already on the team. */
+  participantType?: "CANDIDATE" | "EMPLOYEE"
 }
 
 export class AssessmentQuestionGenerationError extends Error {
@@ -142,10 +147,24 @@ const RESPONSE_SCHEMA = {
   },
 } as const
 
-function buildSystemPrompt(includeCoding: boolean) {
+function buildSystemPrompt(
+  includeCoding: boolean,
+  activityType: "ASSESSMENT" | "CHALLENGE" | "TASK" = "ASSESSMENT",
+  participantType: "CANDIDATE" | "EMPLOYEE" = "CANDIDATE",
+) {
+  const framingByActivity: Record<typeof activityType, string> = {
+    ASSESSMENT: "test the person's existing knowledge of the subject",
+    CHALLENGE: "present a realistic problem and evaluate how the person would solve it",
+    TASK: "evaluate whether the person can actually perform a piece of real work",
+  }
+  const openingLine =
+    participantType === "EMPLOYEE"
+      ? `You write ${activityType.toLowerCase()} questions used to ${framingByActivity[activityType]} for an existing employee — not a hiring decision.`
+      : `You write ${activityType.toLowerCase()} questions for a pre-hire skills test, to ${framingByActivity[activityType]}.`
+
   return [
-    "You write assessment questions for a pre-hire skills test.",
-    "You work across every industry and profession. Infer everything about the role from the supplied job data alone. Never assume the role is technical.",
+    openingLine,
+    "You work across every industry, function, and profession — sales, HR, marketing, finance, operations, customer support, management, project management, design, healthcare, legal, retail, education, engineering, and more. Infer everything about the subject matter from the supplied context data alone. Never assume the role or activity is technical unless the context data says so.",
     "",
     "QUESTION TYPES",
     "- SINGLE_CHOICE: one correct option among 3-5 plausible options.",
@@ -171,10 +190,13 @@ function buildSystemPrompt(includeCoding: boolean) {
       : []),
     "",
     "RULES",
-    "- Each question tests one clear skill or competency from the job data.",
+    "- Each question tests one clear skill or competency from the supplied context.",
     "- Plain, unambiguous language. No trick questions.",
-    "- Never quote or reference a resume, CV, application, or the word 'job description'.",
+    "- Never quote or reference a resume, CV, or application.",
     "- `explanation` is one sentence explaining the correct answer or what a strong answer/solution covers; always provide it.",
+    participantType === "EMPLOYEE"
+      ? "- The person answering is an existing employee, not a job candidate — never use the word 'candidate' anywhere in question_text or explanation."
+      : "- The person answering is a job candidate.",
     "",
     "Return JSON only, matching the provided schema.",
   ].join("\n")
@@ -331,7 +353,7 @@ function mapQuestions(raw: unknown[]): GeneratedAssessmentQuestion[] {
 export async function generateAssessmentQuestions(
   input: AssessmentQuestionGenerationInput
 ): Promise<{ questions: GeneratedAssessmentQuestion[]; model: string }> {
-  const system = buildSystemPrompt(input.questionTypes.includes("CODING"))
+  const system = buildSystemPrompt(input.questionTypes.includes("CODING"), input.activityType, input.participantType)
   const user = buildUserPrompt(input)
 
   const controller = new AbortController()

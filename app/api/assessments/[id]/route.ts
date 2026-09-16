@@ -56,10 +56,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       },
     })
 
-    const job = await prisma.jobPosition.findUnique({
-      where: { jobId: assessment.jobId },
-      select: { jobId: true, jobTitle: true },
-    })
+    const job = assessment.jobId
+      ? await prisma.jobPosition.findUnique({
+          where: { jobId: assessment.jobId },
+          select: { jobId: true, jobTitle: true },
+        })
+      : null
 
     return successResponse({
       ...assessment,

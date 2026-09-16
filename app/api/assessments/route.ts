@@ -72,8 +72,9 @@ export async function GET(request: Request) {
     ])
 
     // jobId is a plain scalar FK (see schema note), so job titles are
-    // resolved with a separate lookup rather than a Prisma relation.
-    const jobIds = [...new Set(assessments.map((a) => a.jobId))]
+    // resolved with a separate lookup rather than a Prisma relation. Null
+    // for employee activities with no job/target-role context set.
+    const jobIds = [...new Set(assessments.map((a) => a.jobId).filter((v): v is string => Boolean(v)))]
     const jobs = jobIds.length
       ? await prisma.jobPosition.findMany({
           where: { jobId: { in: jobIds }, organizationId: auth.organizationId },
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
     return successResponse({
       assessments: assessments.map((a) => ({
         ...a,
-        jobTitle: jobTitleById.get(a.jobId) ?? null,
+        jobTitle: a.jobId ? jobTitleById.get(a.jobId) ?? null : null,
       })),
       meta: {
         page: query.page,
@@ -111,20 +112,20 @@ export async function POST(request: Request) {
       await assertCanAssessment(auth, "assessments.create")
     }
 
-    // jobId remains required for every activity, including Employee
-    // Assessments/Challenges/Tasks — this schema deliberately did not touch
-    // that NOT NULL constraint. An organization creating employee-only
-    // activities can reuse (or create once) a generic JobPosition such as
-    // "Internal / Employee Development" to satisfy it; see the
-    // implementation report's Known Limitations for the follow-up option of
-    // making Assessment.jobId nullable in a future pass.
-    const job = await prisma.jobPosition.findFirst({
-      where: { jobId: payload.jobId, organizationId: auth.organizationId },
-      select: { jobId: true },
-    })
+    // jobId is required for a candidate activity (validated by
+    // createAssessmentSchema's refine) and always org-scoped-verified when
+    // present; for an employee activity it's optional context (e.g. a
+    // target role) and may be omitted entirely — an employee activity
+    // assesses the person, not fit for a specific open job.
+    if (payload.jobId) {
+      const job = await prisma.jobPosition.findFirst({
+        where: { jobId: payload.jobId, organizationId: auth.organizationId },
+        select: { jobId: true },
+      })
 
-    if (!job) {
-      throw new ApiError(404, "JOB_NOT_FOUND", "Job not found for this organization")
+      if (!job) {
+        throw new ApiError(404, "JOB_NOT_FOUND", "Job not found for this organization")
+      }
     }
 
     const assessment = await prisma.assessment.create({

@@ -121,10 +121,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const recipient = employee ?? candidate!
 
     const [job, organization] = await Promise.all([
-      prisma.jobPosition.findUnique({
-        where: { jobId: assessment.jobId },
-        select: { jobId: true, jobTitle: true },
-      }),
+      assessment.jobId
+        ? prisma.jobPosition.findUnique({
+            where: { jobId: assessment.jobId },
+            select: { jobId: true, jobTitle: true },
+          })
+        : Promise.resolve(null),
       prisma.organization.findUnique({
         where: { organizationId: auth.organizationId },
         select: { organizationName: true },

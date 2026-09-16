@@ -44,7 +44,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     // not Prisma relations to JobPosition/Candidate/Employee).
     const candidateIds = [...new Set(results.map((r) => r.candidateId).filter((v): v is string => Boolean(v)))]
     const employeeIds = [...new Set(results.map((r) => r.employeeId).filter((v): v is string => Boolean(v)))]
-    const jobIds = [...new Set(results.map((r) => r.jobId))]
+    const jobIds = [...new Set(results.map((r) => r.jobId).filter((v): v is string => Boolean(v)))]
     const attemptIds = results.map((r) => r.attemptId)
 
     const [candidates, employees, jobs, signalCounts] = await Promise.all([
@@ -94,7 +94,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
           assessmentId: result.assessmentId,
           candidate: result.candidateId ? candidateById.get(result.candidateId) ?? null : null,
           employee: result.employeeId ? employeeById.get(result.employeeId) ?? null : null,
-          jobTitle: jobById.get(result.jobId) ?? null,
+          jobTitle: result.jobId ? jobById.get(result.jobId) ?? null : null,
           status: result.attempt.status,
           percentage: result.percentage,
           passed: result.passed,

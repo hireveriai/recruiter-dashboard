@@ -60,10 +60,12 @@ export async function GET(
             select: { id: true, fullName: true, email: true, managerUserId: true, department: true, title: true },
           })
         : Promise.resolve(null),
-      prisma.jobPosition.findUnique({
-        where: { jobId: attempt.jobId },
-        select: { jobId: true, jobTitle: true },
-      }),
+      attempt.jobId
+        ? prisma.jobPosition.findUnique({
+            where: { jobId: attempt.jobId },
+            select: { jobId: true, jobTitle: true },
+          })
+        : Promise.resolve(null),
     ])
 
     // Manager (direct-report) scoping — same rule as the results list route.

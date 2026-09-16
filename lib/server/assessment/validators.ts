@@ -35,23 +35,38 @@ export const assessmentSecuritySettingsSchema = z.object({
   cameraMonitoring: z.boolean().default(false),
 })
 
-export const createAssessmentSchema = z.object({
-  jobId: uuidField,
-  title: z.string().trim().min(1).max(200),
-  description: z.string().trim().max(4000).optional().nullable(),
-  durationMinutes: z.number().int().min(5).max(240).default(30),
-  passingPercentage: z.number().min(0).max(100).default(60),
-  questionCount: z.number().int().min(1).max(100).optional().nullable(),
-  difficulty: z.enum(ASSESSMENT_DIFFICULTIES).optional().nullable(),
-  questionTypes: z.array(z.enum(ASSESSMENT_QUESTION_TYPES)).default([]),
-  randomizeQuestions: z.boolean().default(false),
-  randomizeOptions: z.boolean().default(false),
-  linkExpiryDays: z.number().int().min(1).max(90).default(7),
-  security: assessmentSecuritySettingsSchema.optional(),
-  activityType: z.enum(ASSESSMENT_ACTIVITY_TYPES).default("ASSESSMENT"),
-  participantType: z.enum(ASSESSMENT_PARTICIPANT_TYPES).default("CANDIDATE"),
-  skills: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
-})
+// jobId is required for a CANDIDATE-participant activity ("is this
+// candidate suitable for this open job?") but optional for an
+// EMPLOYEE-participant one ("does this existing employee have the required
+// knowledge/skill/ability?", which has no inherent job to attach to). When
+// an employee activity does set jobId, it's optional context only — e.g. a
+// target role for future internal mobility, never a requirement.
+export const createAssessmentSchema = z
+  .object({
+    jobId: uuidField.optional().nullable(),
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().max(4000).optional().nullable(),
+    durationMinutes: z.number().int().min(5).max(240).default(30),
+    passingPercentage: z.number().min(0).max(100).default(60),
+    questionCount: z.number().int().min(1).max(100).optional().nullable(),
+    difficulty: z.enum(ASSESSMENT_DIFFICULTIES).optional().nullable(),
+    questionTypes: z.array(z.enum(ASSESSMENT_QUESTION_TYPES)).default([]),
+    randomizeQuestions: z.boolean().default(false),
+    randomizeOptions: z.boolean().default(false),
+    linkExpiryDays: z.number().int().min(1).max(90).default(7),
+    security: assessmentSecuritySettingsSchema.optional(),
+    activityType: z.enum(ASSESSMENT_ACTIVITY_TYPES).default("ASSESSMENT"),
+    participantType: z.enum(ASSESSMENT_PARTICIPANT_TYPES).default("CANDIDATE"),
+    // Generic tags — technical (SQL, Cloud), functional (Sales, Recruitment),
+    // behavioral (Communication, Negotiation), or competency (Conflict
+    // Resolution) labels are all just strings here; nothing in this schema
+    // assumes a category or industry.
+    skills: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  })
+  .refine((value) => value.participantType === "EMPLOYEE" || Boolean(value.jobId), {
+    message: "jobId is required for a candidate activity",
+    path: ["jobId"],
+  })
 
 export const updateAssessmentSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),

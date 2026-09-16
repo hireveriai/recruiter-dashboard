@@ -1,5 +1,6 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { assertCanAssessment } from "@/lib/server/assessment/auth"
+import { assertCanEmployees } from "@/lib/server/employees/auth"
 import { generateAssessmentQuestions } from "@/lib/server/assessment/question-generator"
 import { generateQuestionsSchema } from "@/lib/server/assessment/validators"
 import {
@@ -30,7 +31,14 @@ type JobCodingConfigRow = {
  * (see jobPositionsSupportCodingConfig's capability-probe pattern) and this
  * route only wants an explicit, recruiter-confirmed signal.
  */
-async function loadJobCodingConfig(jobId: string): Promise<{ enabled: boolean; languages: string[] }> {
+async function loadJobCodingConfig(jobId: string | null): Promise<{ enabled: boolean; languages: string[] }> {
+  // No job attached (an employee activity with no job/target-role context) —
+  // there's no job-level coding flag to gate on, so CODING is allowed
+  // whenever the recruiter explicitly requested it (see the caller): the
+  // activityType/questionTypes selection already is the explicit signal
+  // this gate exists to require for the candidate/job path.
+  if (!jobId) return { enabled: true, languages: [] }
+
   const supported = await jobPositionsSupportCodingConfig()
   if (!supported) return { enabled: false, languages: [] }
 
@@ -48,7 +56,6 @@ async function loadJobCodingConfig(jobId: string): Promise<{ enabled: boolean; l
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getRecruiterRequestContext(request)
-    await assertCanAssessment(auth, "assessments.edit")
     const { id } = await context.params
 
     const assessment = await prisma.assessment.findFirst({
@@ -57,6 +64,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     if (!assessment) {
       throw new ApiError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found")
+    }
+
+    if (assessment.participantType === "EMPLOYEE") {
+      await assertCanEmployees(auth, "employeeActivities.edit")
+    } else {
+      await assertCanAssessment(auth, "assessments.edit")
     }
 
     const payload = generateQuestionsSchema.parse(await request.json().catch(() => ({})))
@@ -70,10 +83,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     let created
     try {
-      const job = await prisma.jobPosition.findUnique({
-        where: { jobId: assessment.jobId },
-        select: { jobTitle: true, jobDescription: true, coreSkills: true, difficultyProfile: true },
-      })
+      // Job context is only present when this activity has one set — always
+      // for a candidate activity, optionally for an employee activity (see
+      // createAssessmentSchema). When absent, the Activity's own
+      // title/description/skills stand in as the generation context, so
+      // question generation works for any role/function, not just hiring
+      // for a specific open job.
+      const job = assessment.jobId
+        ? await prisma.jobPosition.findUnique({
+            where: { jobId: assessment.jobId },
+            select: { jobTitle: true, jobDescription: true, coreSkills: true, difficultyProfile: true },
+          })
+        : null
 
       const questionCount = payload.questionCount ?? assessment.questionCount ?? 10
       const requestedQuestionTypes = payload.questionTypes ?? assessment.questionTypes ?? []
@@ -88,14 +109,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         : requestedQuestionTypes.filter((type) => type !== "CODING")
 
       const { questions, model } = await generateAssessmentQuestions({
-        jobTitle: job?.jobTitle,
-        jobDescription: job?.jobDescription,
-        coreSkills: job?.coreSkills,
+        jobTitle: job?.jobTitle ?? assessment.title,
+        jobDescription: job?.jobDescription ?? assessment.description,
+        coreSkills: job?.coreSkills?.length ? job.coreSkills : assessment.skills,
         difficultyProfile: difficulty ?? job?.difficultyProfile,
         questionCount,
         questionTypes,
         entityId: assessment.id,
         codingLanguages: jobCoding.languages,
+        activityType: assessment.activityType as "ASSESSMENT" | "CHALLENGE" | "TASK",
+        participantType: assessment.participantType as "CANDIDATE" | "EMPLOYEE",
       })
 
       // generating questions never touches assessments.status - it only ever

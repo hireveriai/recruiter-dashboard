@@ -114,14 +114,16 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
   };
 
   const handleSubmit = async () => {
-    if (!form.jobId || !form.title.trim()) {
+    // Job is required for a candidate activity ("is this candidate suitable
+    // for this open job?") but never for an employee activity ("does this
+    // employee have the required knowledge/skill/ability?", which has no
+    // inherent job to attach to).
+    const jobRequired = form.participantType !== "EMPLOYEE";
+    if ((jobRequired && !form.jobId) || !form.title.trim()) {
       showActionFeedback({
         tone: "error",
         title: "Missing details",
-        message:
-          form.participantType === "EMPLOYEE"
-            ? "Title is required. A Job is still required too — pick (or create once) a generic job such as 'Internal / Employee Development'."
-            : "Job and title are required.",
+        message: jobRequired ? "Job and title are required." : "Title is required.",
       });
       return;
     }
@@ -130,7 +132,7 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
       setLoading(true);
 
       const payload = {
-        jobId: form.jobId,
+        jobId: form.jobId || null,
         title: form.title.trim(),
         description: form.description?.trim() || null,
         durationMinutes: Number(form.durationMinutes),
@@ -253,11 +255,11 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
 
                 {form.participantType === "EMPLOYEE" && (
                   <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm text-slate-300">Skills / Tags (comma separated)</label>
+                    <label className="mb-2 block text-sm text-slate-300">Skills / Competencies (comma separated)</label>
                     <input
                       value={form.skills}
                       onChange={(e) => handleChange("skills", e.target.value)}
-                      placeholder="e.g. SQL, Performance Tuning, Incident Response"
+                      placeholder="e.g. Negotiation, Conflict Resolution, Financial Analysis, SQL — any technical, functional, or behavioral skill"
                       className={FIELD_CLASS}
                     />
                   </div>
@@ -267,7 +269,7 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
 
             <div>
               <label className="mb-2 block text-sm text-slate-300">
-                Job {form.participantType === "EMPLOYEE" ? "(still required — pick any existing job)" : ""}
+                {form.participantType === "EMPLOYEE" ? "Job / Target Role (optional)" : "Job"}
               </label>
               <select
                 value={form.jobId}
@@ -275,13 +277,19 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
                 className={SELECT_CLASS}
                 disabled={isEditMode}
               >
-                <option value="">Select Job</option>
+                <option value="">{form.participantType === "EMPLOYEE" ? "No job / target role" : "Select Job"}</option>
                 {jobs.map((job) => (
                   <option key={job.jobId ?? job.job_id} value={job.jobId ?? job.job_id}>
                     {job.jobTitle ?? job.job_title}
                   </option>
                 ))}
               </select>
+              {form.participantType === "EMPLOYEE" && (
+                <p className="mt-1.5 text-xs text-slate-500">
+                  Optional context only — e.g. a target role for future internal mobility. This employee&apos;s
+                  activity does not need a job.
+                </p>
+              )}
             </div>
 
             <div>
@@ -389,8 +397,9 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
               </div>
               {form.questionTypes.includes("CODING") ? (
                 <p className="mt-2 text-xs text-slate-500">
-                  Coding questions are only generated if this job has coding enabled (Job settings &rarr; Coding
-                  Assessment). Otherwise they&apos;re skipped automatically.
+                  {form.participantType === "EMPLOYEE" && !form.jobId
+                    ? "Coding questions will be generated as requested for this employee activity."
+                    : "Coding questions are only generated if this job has coding enabled (Job settings → Coding Assessment). Otherwise they're skipped automatically."}
                 </p>
               ) : null}
             </div>
