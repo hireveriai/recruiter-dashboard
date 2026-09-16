@@ -56,13 +56,15 @@ export async function PATCH(
         ...(payload.points !== undefined ? { points: payload.points } : {}),
         ...(payload.orderIndex !== undefined ? { orderIndex: payload.orderIndex } : {}),
         ...(payload.required !== undefined ? { required: payload.required } : {}),
-        ...(payload.rubric !== undefined
-          ? {
-              rubric: payload.rubric
-                ? { criteria: payload.rubric.criteria, modelAnswerNotes: payload.rubric.modelAnswerNotes ?? null }
-                : undefined,
-            }
-          : {}),
+        ...(payload.codingSpec !== undefined
+          ? { rubric: payload.codingSpec ? { codingSpec: payload.codingSpec } : undefined }
+          : payload.rubric !== undefined
+            ? {
+                rubric: payload.rubric
+                  ? { criteria: payload.rubric.criteria, modelAnswerNotes: payload.rubric.modelAnswerNotes ?? null }
+                  : undefined,
+              }
+            : {}),
         ...(payload.explanation !== undefined ? { explanation: payload.explanation } : {}),
         updatedAt: new Date(),
       },

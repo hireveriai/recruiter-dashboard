@@ -16,6 +16,7 @@ const QUESTION_TYPE_OPTIONS = [
   { value: "MULTI_SELECT", label: "Multi Select" },
   { value: "SHORT_ANSWER", label: "Short Answer" },
   { value: "SCENARIO", label: "Scenario" },
+  { value: "CODING", label: "Coding" },
 ];
 
 const DEFAULT_FORM = {
@@ -314,6 +315,12 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
                   );
                 })}
               </div>
+              {form.questionTypes.includes("CODING") ? (
+                <p className="mt-2 text-xs text-slate-500">
+                  Coding questions are only generated if this job has coding enabled (Job settings &rarr; Coding
+                  Assessment). Otherwise they&apos;re skipped automatically.
+                </p>
+              ) : null}
             </div>
 
             <div className="md:col-span-2 flex flex-col gap-3 rounded-[20px] border border-slate-800 bg-slate-950/40 p-4 sm:flex-row sm:items-center sm:justify-between">

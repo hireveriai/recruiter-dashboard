@@ -15,6 +15,15 @@ const QUESTION_TYPE_LABELS = {
   MULTI_SELECT: "Multi Select",
   SHORT_ANSWER: "Short Answer",
   SCENARIO: "Scenario",
+  CODING: "Coding",
+}
+
+const MANUAL_ADD_TYPES = ["SHORT_ANSWER", "SINGLE_CHOICE", "MULTI_SELECT", "SCENARIO", "CODING"]
+
+const DEFAULT_CODING_SPEC = {
+  language: "python",
+  starterCode: "",
+  testCases: [{ input: "", expectedOutput: "", hidden: false }],
 }
 
 const FIELD_CLASS =
@@ -33,6 +42,7 @@ export default function AssessmentQuestionsPage() {
   const [preview, setPreview] = useState(false)
   const [genCount, setGenCount] = useState(5)
   const [inviteCount, setInviteCount] = useState(0)
+  const [manualType, setManualType] = useState("SHORT_ANSWER")
 
   const apiBase = useMemo(() => buildAuthUrl(`/api/assessments/${id}`, searchParams), [id, searchParams])
 
@@ -117,18 +127,27 @@ export default function AssessmentQuestionsPage() {
   }
 
   const handleAddManual = async () => {
+    const isObjective = manualType === "SINGLE_CHOICE" || manualType === "MULTI_SELECT"
+    const isCoding = manualType === "CODING"
+
+    const body = {
+      questionType: manualType,
+      questionText: "New question - edit me",
+      points: 1,
+      ...(isObjective
+        ? { options: [{ optionText: "Option 1", isCorrect: true }, { optionText: "Option 2", isCorrect: false }] }
+        : isCoding
+          ? { codingSpec: DEFAULT_CODING_SPEC }
+          : { rubric: { criteria: ["Answer addresses the question"] } }),
+    }
+
     try {
       setBusy(true)
       const res = await fetch(buildAuthUrl(`/api/assessments/${id}/questions`, searchParams), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionType: "SHORT_ANSWER",
-          questionText: "New question - edit me",
-          points: 1,
-          rubric: { criteria: ["Answer addresses the question"] },
-        }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || "Failed to add question")
@@ -205,6 +224,18 @@ export default function AssessmentQuestionsPage() {
     if (!Number.isFinite(points) || points === Number(question.points)) return
     try {
       await patchQuestion(question.id, { points })
+      markSaved()
+    } catch (err) {
+      showActionFeedback({ tone: "error", title: "Save failed", message: err.message })
+    }
+  }
+
+  const handleCodingSpecUpdate = async (question, partialSpec) => {
+    const currentSpec = question.rubric?.codingSpec ?? DEFAULT_CODING_SPEC
+    const nextSpec = { ...currentSpec, ...partialSpec }
+    try {
+      await patchQuestion(question.id, { codingSpec: nextSpec })
+      await load()
       markSaved()
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Save failed", message: err.message })
@@ -380,13 +411,26 @@ export default function AssessmentQuestionsPage() {
           >
             {busy ? "Working..." : "Generate"}
           </button>
-          <button
-            onClick={handleAddManual}
-            disabled={busy}
-            className="ml-auto rounded-full border border-slate-700 bg-slate-900/80 px-4 py-1.5 text-sm text-slate-200 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            + Add Manual Question
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <select
+              value={manualType}
+              onChange={(e) => setManualType(e.target.value)}
+              className="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-sm text-slate-200 outline-none"
+            >
+              {MANUAL_ADD_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {QUESTION_TYPE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAddManual}
+              disabled={busy}
+              className="rounded-full border border-slate-700 bg-slate-900/80 px-4 py-1.5 text-sm text-slate-200 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              + Add Manual Question
+            </button>
+          </div>
         </div>
 
         <div className="mt-5 space-y-4">
@@ -397,6 +441,8 @@ export default function AssessmentQuestionsPage() {
           ) : (
             questions.map((question, index) => {
               const isObjective = question.questionType === "SINGLE_CHOICE" || question.questionType === "MULTI_SELECT"
+              const isCoding = question.questionType === "CODING"
+              const codingSpec = question.rubric?.codingSpec ?? null
               return (
                 <div key={question.id} className="rounded-[20px] border border-slate-800 bg-slate-900/40 p-5">
                   <div className="flex items-start justify-between gap-4">
@@ -438,7 +484,109 @@ export default function AssessmentQuestionsPage() {
                     )}
                   </div>
 
-                  {isObjective ? (
+                  {isCoding ? (
+                    <div className="mt-3 space-y-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+                      <div className="flex items-center gap-2 text-sm text-slate-300">
+                        <span className="text-xs uppercase tracking-[0.18em] text-slate-500">Language</span>
+                        {preview ? (
+                          <span className="text-white">{codingSpec?.language ?? "-"}</span>
+                        ) : (
+                          <input
+                            defaultValue={codingSpec?.language ?? ""}
+                            onBlur={(e) => handleCodingSpecUpdate(question, { language: e.target.value.trim() })}
+                            disabled={!editable}
+                            className={`${FIELD_CLASS} w-32`}
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="mb-1 text-xs uppercase tracking-[0.18em] text-slate-500">Starter Code</p>
+                        {preview ? (
+                          <pre className="whitespace-pre-wrap text-xs text-slate-300">{codingSpec?.starterCode || "(none)"}</pre>
+                        ) : (
+                          <textarea
+                            defaultValue={codingSpec?.starterCode ?? ""}
+                            onBlur={(e) => handleCodingSpecUpdate(question, { starterCode: e.target.value })}
+                            disabled={!editable}
+                            rows={4}
+                            className={`${FIELD_CLASS} font-mono text-xs`}
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="mb-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                          Test Cases (executed against the candidate&apos;s code — hidden ones are used for grading only)
+                        </p>
+                        <div className="space-y-2">
+                          {(codingSpec?.testCases ?? []).map((testCase, tcIndex) => (
+                            <div key={tcIndex} className="grid gap-2 rounded-lg border border-slate-800 p-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+                              <input
+                                defaultValue={testCase.input}
+                                placeholder="stdin input"
+                                onBlur={(e) => {
+                                  const testCases = [...codingSpec.testCases]
+                                  testCases[tcIndex] = { ...testCase, input: e.target.value }
+                                  handleCodingSpecUpdate(question, { testCases })
+                                }}
+                                disabled={!editable || preview}
+                                className={`${FIELD_CLASS} font-mono text-xs`}
+                              />
+                              <input
+                                defaultValue={testCase.expectedOutput}
+                                placeholder="expected stdout"
+                                onBlur={(e) => {
+                                  const testCases = [...codingSpec.testCases]
+                                  testCases[tcIndex] = { ...testCase, expectedOutput: e.target.value }
+                                  handleCodingSpecUpdate(question, { testCases })
+                                }}
+                                disabled={!editable || preview}
+                                className={`${FIELD_CLASS} font-mono text-xs`}
+                              />
+                              <label className="flex items-center gap-1 text-xs text-slate-400">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(testCase.hidden)}
+                                  onChange={(e) => {
+                                    const testCases = [...codingSpec.testCases]
+                                    testCases[tcIndex] = { ...testCase, hidden: e.target.checked }
+                                    handleCodingSpecUpdate(question, { testCases })
+                                  }}
+                                  disabled={!editable || preview}
+                                  className="h-4 w-4 rounded border-slate-600 bg-slate-900"
+                                />
+                                Hidden
+                              </label>
+                              {editable && !preview ? (
+                                <button
+                                  onClick={() => {
+                                    const testCases = codingSpec.testCases.filter((_, i) => i !== tcIndex)
+                                    handleCodingSpecUpdate(question, { testCases })
+                                  }}
+                                  className="text-xs text-rose-300"
+                                >
+                                  Remove
+                                </button>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                        {editable && !preview ? (
+                          <button
+                            onClick={() =>
+                              handleCodingSpecUpdate(question, {
+                                testCases: [...(codingSpec?.testCases ?? []), { input: "", expectedOutput: "", hidden: false }],
+                              })
+                            }
+                            className="mt-2 text-xs font-medium text-violet-300"
+                          >
+                            + Add test case
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : isObjective ? (
                     <div className="mt-3 space-y-2">
                       {question.options.map((option) => (
                         <div key={option.id} className="flex items-center gap-2">

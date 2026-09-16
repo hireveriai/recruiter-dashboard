@@ -13,6 +13,7 @@ export const ASSESSMENT_QUESTION_TYPES = [
   "MULTI_SELECT",
   "SHORT_ANSWER",
   "SCENARIO",
+  "CODING",
 ] as const
 
 export const ASSESSMENT_DIFFICULTIES = ["JUNIOR", "MID", "SENIOR"] as const
@@ -70,6 +71,27 @@ export const generateQuestionsSchema = z.object({
   difficulty: z.enum(ASSESSMENT_DIFFICULTIES).optional(),
 })
 
+// A CODING question's language/starter code/test cases, stored inside the
+// existing rubric Json column as rubric.codingSpec (no new table/column —
+// see the assessment app's lib/server/coding-spec.ts, which reads this
+// exact shape). Test cases are graded by actually executing the candidate's
+// code, so input/expectedOutput must be exact stdin/stdout values.
+export const codingSpecSchema = z.object({
+  language: z.string().trim().min(1).max(40),
+  starterCode: z.string().max(20000).default(""),
+  timeLimitMs: z.number().int().min(500).max(15000).optional(),
+  testCases: z
+    .array(
+      z.object({
+        input: z.string().max(5000).default(""),
+        expectedOutput: z.string().trim().min(1).max(5000),
+        hidden: z.boolean().default(false),
+      })
+    )
+    .min(1)
+    .max(20),
+})
+
 export const createQuestionSchema = z.object({
   questionType: z.enum(ASSESSMENT_QUESTION_TYPES),
   questionText: z.string().trim().min(1).max(4000),
@@ -83,6 +105,7 @@ export const createQuestionSchema = z.object({
     })
     .optional()
     .nullable(),
+  codingSpec: codingSpecSchema.optional().nullable(),
   explanation: z.string().trim().max(2000).optional().nullable(),
   options: z
     .array(
@@ -107,6 +130,7 @@ export const updateQuestionSchema = z.object({
     })
     .optional()
     .nullable(),
+  codingSpec: codingSpecSchema.optional().nullable(),
   explanation: z.string().trim().max(2000).optional().nullable(),
 })
 

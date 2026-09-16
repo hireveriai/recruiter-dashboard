@@ -26,6 +26,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (isObjective && (!payload.options || payload.options.length < 2)) {
       throw new ApiError(400, "OPTIONS_REQUIRED", "SINGLE_CHOICE/MULTI_SELECT questions need at least 2 options")
     }
+    if (payload.questionType === "CODING" && !payload.codingSpec) {
+      throw new ApiError(400, "CODING_SPEC_REQUIRED", "CODING questions need a language and at least one test case")
+    }
 
     const question = await prisma.$transaction(async (tx) => {
       const draft = await getOrCreateDraftVersion(id, tx)
@@ -40,9 +43,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           points: payload.points,
           orderIndex,
           required: payload.required,
-          rubric: payload.rubric
-            ? { criteria: payload.rubric.criteria, modelAnswerNotes: payload.rubric.modelAnswerNotes ?? null }
-            : undefined,
+          rubric: payload.codingSpec
+            ? { codingSpec: payload.codingSpec }
+            : payload.rubric
+              ? { criteria: payload.rubric.criteria, modelAnswerNotes: payload.rubric.modelAnswerNotes ?? null }
+              : undefined,
           explanation: payload.explanation ?? null,
           origin: "MANUAL",
         },
