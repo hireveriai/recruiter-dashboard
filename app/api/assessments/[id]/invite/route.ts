@@ -120,10 +120,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     const recipient = employee ?? candidate!
 
-    const job = await prisma.jobPosition.findUnique({
-      where: { jobId: assessment.jobId },
-      select: { jobId: true, jobTitle: true },
-    })
+    const [job, organization] = await Promise.all([
+      prisma.jobPosition.findUnique({
+        where: { jobId: assessment.jobId },
+        select: { jobId: true, jobTitle: true },
+      }),
+      prisma.organization.findUnique({
+        where: { organizationId: auth.organizationId },
+        select: { organizationName: true },
+      }),
+    ])
 
     // Soft pre-check only: sending an invite must NEVER deduct a credit
     // (deductAssessmentCredit is only ever called by the separate
@@ -185,7 +191,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         durationMinutes: assessment.durationMinutes,
         expiresAt,
         assessmentUrl,
-        companyName: null,
+        companyName: organization?.organizationName ?? null,
+        activityType: assessment.activityType as "ASSESSMENT" | "CHALLENGE" | "TASK",
+        participantType: assessment.participantType as "CANDIDATE" | "EMPLOYEE",
       })
       emailSent = true
     } catch (error) {

@@ -1161,7 +1161,18 @@ type SendAssessmentInvitationEmailParams = {
   expiresAt: string | Date;
   assessmentUrl: string;
   companyName?: string | null;
+  // Employee Assessments/Challenges/Tasks: both default to the pre-existing
+  // candidate values, so every call site that predates these params (or
+  // passes neither) gets byte-identical copy to before.
+  activityType?: "ASSESSMENT" | "CHALLENGE" | "TASK";
+  participantType?: "CANDIDATE" | "EMPLOYEE";
 };
+
+function activityTypeLabel(activityType: "ASSESSMENT" | "CHALLENGE" | "TASK") {
+  if (activityType === "CHALLENGE") return "Challenge";
+  if (activityType === "TASK") return "Task";
+  return "Assessment";
+}
 
 function getAssessmentEmailFrom() {
   const configured = process.env.ASSESSMENT_EMAIL_FROM?.trim();
@@ -1187,11 +1198,16 @@ export async function sendAssessmentInvitationEmail({
   expiresAt,
   assessmentUrl,
   companyName,
+  activityType = "ASSESSMENT",
+  participantType = "CANDIDATE",
 }: SendAssessmentInvitationEmailParams) {
-  const displayName = normalizeText(candidateName, "Candidate");
+  const isEmployee = participantType === "EMPLOYEE";
+  const activityLabel = activityTypeLabel(activityType);
+
+  const displayName = normalizeText(candidateName, isEmployee ? "there" : "Candidate");
   const displayCompany = normalizeText(companyName, "Hiring Team");
   const displayRole = normalizeText(jobTitle, "the open role");
-  const displayAssessment = normalizeText(assessmentTitle, "VERIS Assessment");
+  const displayAssessment = normalizeText(assessmentTitle, `VERIS ${activityLabel}`);
   const durationLabel = formatDurationLabel(durationMinutes);
   const expiryLabel = formatOrgDateTime(expiresAt);
 
@@ -1202,34 +1218,52 @@ export async function sendAssessmentInvitationEmail({
   const safeAssessment = escapeHtml(displayAssessment);
   const safeDuration = escapeHtml(durationLabel);
   const safeExpiry = escapeHtml(expiryLabel);
+  const safeActivityLabel = escapeHtml(activityLabel);
 
-  const subject = `Your VERIS Assessment for ${displayRole} at ${displayCompany}`;
+  // Employee copy drops the "hiring process for {role} at {company}" framing
+  // entirely - an employee isn't being hired, and there's no candidate-
+  // facing job title to reference (see the invite route's known limitation:
+  // Assessment.jobId is still required internally, but never shown here).
+  const subject = isEmployee
+    ? `Your VERIS ${activityLabel}: ${displayAssessment}`
+    : `Your VERIS Assessment for ${displayRole} at ${displayCompany}`;
+
+  const introLine = isEmployee
+    ? `You've been assigned the ${displayAssessment} ${activityLabel.toLowerCase()} at ${displayCompany}.`
+    : `As part of the hiring process for ${displayRole} at ${displayCompany}, you've been invited to complete the ${displayAssessment}.`;
+
+  const headerCompanyLine = isEmployee ? displayCompany : `${displayCompany} Hiring Team`;
+  const safeHeaderCompanyLine = escapeHtml(headerCompanyLine);
+
+  const footerLine = isEmployee
+    ? `This VERIS ${activityLabel} is a scored evaluation assigned by your manager or HR team.`
+    : "This VERIS Assessment is a scored skills test, separate from any interview you may also be asked to complete.";
 
   return sendWithRetry({
     from: getAssessmentEmailFrom(),
     to,
     subject,
     text: [
-      `${displayCompany} Hiring Team`,
+      headerCompanyLine,
       "powered by VerisNova",
       "",
       `Hi ${displayName},`,
       "",
-      `As part of the hiring process for ${displayRole} at ${displayCompany}, you've been invited to complete the ${displayAssessment}.`,
+      introLine,
       "",
-      "Assessment Details:",
+      `${activityLabel} Details:`,
       `- Estimated duration: ${durationLabel}`,
       `- Link expires: ${expiryLabel}`,
       "",
-      "Start your assessment:",
+      `Start your ${activityLabel.toLowerCase()}:`,
       assessmentUrl,
       "",
       "Instructions:",
       "- Use a laptop or desktop with a stable internet connection.",
       "- Find a quiet space free of distractions before you begin.",
-      "- Once started, try to complete the assessment in one sitting.",
+      `- Once started, try to complete the ${activityLabel.toLowerCase()} in one sitting.`,
       "",
-      "This VERIS Assessment is a scored skills test, separate from any interview you may also be asked to complete.",
+      footerLine,
     ].join("\n"),
     html: `
       <div style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
@@ -1241,15 +1275,19 @@ export async function sendAssessmentInvitationEmail({
                   <td style="padding:0;">
                     <div style="border:1px solid #dbe3ee;border-radius:22px;background:#ffffff;box-shadow:0 18px 48px rgba(15,23,42,0.10);overflow:hidden;">
                       <div style="padding:28px 30px 22px;background:#f8fafc;border-bottom:1px solid #e5e7eb;">
-                        <div style="font-size:20px;line-height:28px;font-weight:800;color:#0f172a;">${safeCompany} Hiring Team</div>
+                        <div style="font-size:20px;line-height:28px;font-weight:800;color:#0f172a;">${safeHeaderCompanyLine}</div>
                         <div style="margin-top:3px;font-size:12px;line-height:18px;color:#64748b;">powered by VerisNova</div>
                       </div>
 
                       <div style="padding:30px;">
                         <p style="margin:0 0 18px;font-size:16px;line-height:26px;color:#334155;">Hi ${safeName},</p>
-                        <h1 style="margin:0 0 14px;font-size:24px;line-height:32px;color:#0f172a;font-weight:800;">You've been invited to a VERIS Assessment</h1>
+                        <h1 style="margin:0 0 14px;font-size:24px;line-height:32px;color:#0f172a;font-weight:800;">You've been ${isEmployee ? "assigned" : "invited to"} a VERIS ${safeActivityLabel}</h1>
                         <p style="margin:0 0 22px;font-size:16px;line-height:26px;color:#334155;">
-                          As part of the hiring process for <strong style="color:#0f172a;">${safeRole}</strong> at <strong style="color:#0f172a;">${safeCompany}</strong>, please complete the <strong style="color:#0f172a;">${safeAssessment}</strong>.
+                          ${
+                            isEmployee
+                              ? `You've been assigned the <strong style="color:#0f172a;">${safeAssessment}</strong> ${safeActivityLabel.toLowerCase()} at <strong style="color:#0f172a;">${safeCompany}</strong>.`
+                              : `As part of the hiring process for <strong style="color:#0f172a;">${safeRole}</strong> at <strong style="color:#0f172a;">${safeCompany}</strong>, please complete the <strong style="color:#0f172a;">${safeAssessment}</strong>.`
+                          }
                         </p>
 
                         <div style="border:1px solid #e2e8f0;border-radius:18px;background:#f8fafc;padding:4px 18px;margin:0 0 26px;">
@@ -1272,7 +1310,7 @@ export async function sendAssessmentInvitationEmail({
                         <div style="text-align:center;margin:0 0 22px;">
                           <a href="${safeLink}"
                              style="display:block;width:100%;box-sizing:border-box;padding:15px 20px;background:#0b1220;color:#ffffff;text-decoration:none;border-radius:14px;font-size:15px;line-height:20px;font-weight:800;text-align:center;">
-                            Start VERIS Assessment
+                            Start VERIS ${safeActivityLabel}
                           </a>
                         </div>
 
@@ -1283,11 +1321,15 @@ export async function sendAssessmentInvitationEmail({
 
                         <div style="border-radius:16px;background:#f1f5f9;padding:16px 18px;margin:0 0 22px;">
                           <p style="margin:0 0 8px;font-size:13px;line-height:21px;color:#475569;">Use a laptop or desktop with a stable internet connection, in a quiet space free of distractions.</p>
-                          <p style="margin:0;font-size:13px;line-height:21px;color:#475569;">Once started, try to complete the assessment in one sitting.</p>
+                          <p style="margin:0;font-size:13px;line-height:21px;color:#475569;">Once started, try to complete the ${safeActivityLabel.toLowerCase()} in one sitting.</p>
                         </div>
 
                         <p style="margin:0;font-size:13px;line-height:21px;color:#64748b;">
-                          This VERIS Assessment is a scored skills test, separate from any interview you may also be asked to complete.
+                          ${
+                            isEmployee
+                              ? `This VERIS ${safeActivityLabel} is a scored evaluation assigned by your manager or HR team.`
+                              : "This VERIS Assessment is a scored skills test, separate from any interview you may also be asked to complete."
+                          }
                         </p>
                       </div>
                     </div>
