@@ -519,6 +519,21 @@ function formatAnswerScore(score) {
   return `${Math.round(numeric)}%`
 }
 
+// "Code Similarity" is a heuristic review cue (candidate's coding-interview
+// answer resembles another candidate's answer to the same question, within
+// the same organization) - never a plagiarism verdict.
+function formatCodeSimilarityLevel(level) {
+  if (level === "REVIEW_RECOMMENDED") return "REVIEW RECOMMENDED"
+  if (level === "ELEVATED") return "ELEVATED"
+  return "LOW"
+}
+
+function codeSimilarityTone(level) {
+  if (level === "REVIEW_RECOMMENDED") return "border-rose-500/40 bg-rose-500/10 text-rose-200"
+  if (level === "ELEVATED") return "border-amber-500/40 bg-amber-500/10 text-amber-200"
+  return "border-slate-700 bg-slate-900/70 text-slate-300"
+}
+
 function formatEvaluationText(evaluation) {
   if (!evaluation) {
     return null
@@ -725,6 +740,14 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                                 </span>
                               ))
                             )}
+                            {answer.codeSimilarity ? (
+                              <span
+                                className={`rounded-full border px-3 py-1 text-xs ${codeSimilarityTone(answer.codeSimilarity.level)}`}
+                              >
+                                Code Similarity: {formatCodeSimilarityLevel(answer.codeSimilarity.level)}
+                                {answer.codeSimilarity.score !== null ? ` (${Math.round(answer.codeSimilarity.score)}%)` : ""}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
 

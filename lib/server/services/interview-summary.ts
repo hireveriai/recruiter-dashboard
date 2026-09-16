@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 import { evaluateCandidateResponse } from "@/lib/server/ai/interview-flow"
 import { prisma } from "@/lib/server/prisma"
 import {
@@ -6,12 +7,48 @@ import {
   fillMissingAnswersFromTranscript,
 } from "@/lib/server/services/transcript-fallback"
 
+// calm-room adds similarity_score/similarity_level to
+// interview_code_submissions out-of-band (lazily, on first coding answer
+// after that feature shipped), so - same capability-probe pattern already
+// used for job_positions' coding_* columns - check before selecting them
+// rather than assuming they exist in every environment.
+let hasCodeSimilarityColumnsCache: boolean | null = null
+
+async function interviewCodeSubmissionsSupportSimilarity() {
+  if (hasCodeSimilarityColumnsCache !== null) {
+    return hasCodeSimilarityColumnsCache
+  }
+
+  try {
+    const rows = await prisma.$queryRaw<{ exists: boolean }[]>(Prisma.sql`
+      select exists (
+        select 1
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'interview_code_submissions'
+          and column_name in ('similarity_score', 'similarity_level')
+        group by table_schema, table_name
+        having count(*) = 2
+      )
+    `)
+
+    hasCodeSimilarityColumnsCache = Boolean(rows[0]?.exists)
+    return hasCodeSimilarityColumnsCache
+  } catch (error) {
+    console.warn("Code similarity capability lookup failed", error)
+    hasCodeSimilarityColumnsCache = false
+    return false
+  }
+}
+
 type InterviewAnswerSummaryRow = {
   attempt_id: string
   answer_id: string
   answer_text: string | null
   code_text: string | null
   language: string | null
+  code_similarity_score: unknown | null
+  code_similarity_level: string | null
   answer_payload: unknown | null
   answered_at: Date | null
   question_text: string | null
@@ -115,6 +152,9 @@ function mapAnswerSummaryRow(row: InterviewAnswerSummaryRow) {
     confidenceScore: toNumberOrNull(row.confidence_score),
     fraudScore: toNumberOrNull(row.fraud_score),
     evaluation: row.evaluation_json ?? null,
+    codeSimilarity: row.code_similarity_level
+      ? { level: row.code_similarity_level, score: toNumberOrNull(row.code_similarity_score) }
+      : null,
   }
 }
 
@@ -147,6 +187,7 @@ function mapSessionQuestionFallbackRow(
     confidenceScore: null,
     fraudScore: null,
     evaluation: null,
+    codeSimilarity: null,
   }
 }
 
@@ -295,6 +336,8 @@ export async function fetchAnswerSummaries(attemptIds: string[]) {
   }
 
   try {
+    const supportsCodeSimilarity = await interviewCodeSubmissionsSupportSimilarity()
+
     const rows = await prisma.$queryRawUnsafe<InterviewAnswerSummaryRow[]>(
       `
         select
@@ -303,6 +346,7 @@ export async function fetchAnswerSummaries(attemptIds: string[]) {
           ans.answer_text,
           cs.code_text,
           cs.language,
+          ${supportsCodeSimilarity ? "cs.similarity_score as code_similarity_score, cs.similarity_level as code_similarity_level," : "null as code_similarity_score, null as code_similarity_level,"}
           ans.answer_payload,
           ans.answered_at,
           coalesce(sq.content, iq.question_text, q.question_text) as question_text,
