@@ -61,6 +61,11 @@ export async function GET(request: Request) {
 
       const byCandidate: Record<string, unknown> = {}
       for (const result of results) {
+        // Every row here came from a `candidateId: { in: candidateIds }`
+        // filter, so candidateId is always populated — this guard only
+        // narrows the type for TS (candidateId is nullable on the schema
+        // now that Employee-participant rows exist).
+        if (!result.candidateId) continue
         // Most recent result per candidate wins - results are already ordered desc.
         if (byCandidate[result.candidateId]) continue
         byCandidate[result.candidateId] = {

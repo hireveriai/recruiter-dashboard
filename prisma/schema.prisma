@@ -246,6 +246,34 @@ model RecruiterUserPermissionOverride {
   @@map("recruiter_user_permission_overrides")
 }
 
+/// Employee Assessments/Challenges/Tasks. Deliberately NOT a Candidate and
+/// NOT a User/organization_memberships row: candidates have no login by
+/// design (see auth's identity split), and organization_memberships is a
+/// staff-role table (RECRUITER/ORG_OWNER/ADMIN/INTERVIEWER/SYSTEM) that must
+/// stay staff-only. An employee is a third, independent participant type,
+/// scoped by plain organizationId like every other model here. No login
+/// identity is linked yet (MVP participation is invite-token only, mirroring
+/// how candidates already take assessments with no login) — see
+/// employee_identity_links note in the implementation report for the future
+/// phase where employee self-service login is added.
+model Employee {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  organizationId String   @db.Uuid @map("organization_id")
+  fullName       String   @map("full_name")
+  email          String
+  managerUserId  String?  @db.Uuid @map("manager_user_id")
+  department     String?
+  title          String?
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  @@unique([organizationId, email], map: "uq_employees_org_email")
+  @@index([organizationId], map: "employees_organization_id_idx")
+  @@index([managerUserId], map: "employees_manager_user_id_idx")
+  @@map("employees")
+}
+
 model Candidate {
   candidateId     String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("candidate_id")
   organizationId  String      @db.Uuid @map("organization_id")
@@ -554,6 +582,13 @@ model Invoice {
 /// JobPosition/Candidate/Organization/Interview*). Owned by the recruiter-
 /// dashboard app for CRUD; the separate `assessment` app writes attempts/
 /// answers/results/signals during a live candidate session.
+///
+/// Extended (Employee Assessments/Challenges/Tasks) with activityType and
+/// participantType so the same pipeline serves both pre-hire candidates and
+/// existing employees — see AssessmentInvite/AssessmentAttempt/
+/// AssessmentResult.employeeId below. Both new columns default to the
+/// pre-existing candidate behavior, so every row/query written before this
+/// change keeps behaving identically.
 model Assessment {
   id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   organizationId     String              @db.Uuid @map("organization_id")
@@ -574,6 +609,13 @@ model Assessment {
   createdBy          String?             @db.Uuid @map("created_by")
   createdAt          DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
   updatedAt          DateTime            @default(now()) @db.Timestamptz(6) @map("updated_at")
+  // ASSESSMENT | CHALLENGE | TASK — product/UI distinction only; all three
+  // share this exact persistence pipeline.
+  activityType       String              @default("ASSESSMENT") @map("activity_type")
+  // CANDIDATE | EMPLOYEE — who this activity is for.
+  participantType    String              @default("CANDIDATE") @map("participant_type")
+  // Free-form skill/topic tags for Challenges/Tasks; optional everywhere.
+  skills             String[]            @default([])
   versions           AssessmentVersion[] @relation("assessment_versions")
   invites            AssessmentInvite[]
   attempts           AssessmentAttempt[]
@@ -582,6 +624,7 @@ model Assessment {
   @@index([organizationId], map: "assessments_organization_id_idx")
   @@index([jobId], map: "assessments_job_id_idx")
   @@index([status], map: "assessments_status_idx")
+  @@index([organizationId, activityType, participantType], map: "assessments_org_activity_participant_idx")
   @@map("assessments")
 }
 
@@ -641,7 +684,12 @@ model AssessmentInvite {
   assessmentId   String              @db.Uuid @map("assessment_id")
   versionId      String              @db.Uuid @map("version_id")
   jobId          String              @db.Uuid @map("job_id")
-  candidateId    String              @db.Uuid @map("candidate_id")
+  // Nullable: exactly one of candidateId/employeeId is set, matching the
+  // parent Assessment.participantType. candidateId's own semantics/behavior
+  // for the existing candidate flow are unchanged — only the NOT NULL
+  // constraint was loosened so an employee-participant row can omit it.
+  candidateId    String?             @db.Uuid @map("candidate_id")
+  employeeId     String?             @db.Uuid @map("employee_id")
   organizationId String              @db.Uuid @map("organization_id")
   tokenHash      String              @unique @map("token_hash")
   status         String              @default("INVITED")
@@ -658,6 +706,7 @@ model AssessmentInvite {
   @@index([organizationId], map: "assessment_invites_organization_id_idx")
   @@index([jobId], map: "assessment_invites_job_id_idx")
   @@index([candidateId], map: "assessment_invites_candidate_id_idx")
+  @@index([employeeId], map: "assessment_invites_employee_id_idx")
   @@index([status], map: "assessment_invites_status_idx")
   @@map("assessment_invites")
 }
@@ -668,7 +717,8 @@ model AssessmentAttempt {
   assessmentId    String             @db.Uuid @map("assessment_id")
   versionId       String             @db.Uuid @map("version_id")
   jobId           String             @db.Uuid @map("job_id")
-  candidateId     String             @db.Uuid @map("candidate_id")
+  candidateId     String?            @db.Uuid @map("candidate_id")
+  employeeId      String?            @db.Uuid @map("employee_id")
   organizationId  String             @db.Uuid @map("organization_id")
   startedAt       DateTime?          @db.Timestamptz(6) @map("started_at")
   endsAt          DateTime?          @db.Timestamptz(6) @map("ends_at")
@@ -694,6 +744,7 @@ model AssessmentAttempt {
 
   @@index([assessmentId], map: "assessment_attempts_assessment_id_idx")
   @@index([candidateId], map: "assessment_attempts_candidate_id_idx")
+  @@index([employeeId], map: "assessment_attempts_employee_id_idx")
   @@index([organizationId], map: "assessment_attempts_organization_id_idx")
   @@index([status], map: "assessment_attempts_status_idx")
   @@map("assessment_attempts")
@@ -727,6 +778,17 @@ model AssessmentAnswerEvaluation {
   status       String           @default("PENDING")
   evaluatedAt  DateTime?        @db.Timestamptz(6) @map("evaluated_at")
   createdAt    DateTime         @default(now()) @db.Timestamptz(6) @map("created_at")
+  // Manager-review fields. AI evaluation above (score/feedback/provider/
+  // model) is never overwritten by a manager review — a manager's score and
+  // feedback are stored separately here so both are visible at once and the
+  // original AI evaluation is preserved as an audit trail. evaluatorType
+  // flips to "MANAGER" only once a manager has actually submitted a review
+  // (default "AI" otherwise, matching current/candidate behavior exactly).
+  evaluatorType      String    @default("AI") @map("evaluator_type")
+  evaluatorUserId    String?   @db.Uuid @map("evaluator_user_id")
+  managerScore       Decimal?  @db.Decimal(6, 2) @map("manager_score")
+  managerFeedback    String?   @map("manager_feedback")
+  managerEvaluatedAt DateTime? @db.Timestamptz(6) @map("manager_evaluated_at")
   answer       AssessmentAnswer @relation(fields: [answerId], references: [id])
 
   @@map("assessment_answer_evaluations")
@@ -737,7 +799,8 @@ model AssessmentResult {
   attemptId       String            @unique @db.Uuid @map("attempt_id")
   assessmentId    String            @db.Uuid @map("assessment_id")
   jobId           String            @db.Uuid @map("job_id")
-  candidateId     String            @db.Uuid @map("candidate_id")
+  candidateId     String?           @db.Uuid @map("candidate_id")
+  employeeId      String?           @db.Uuid @map("employee_id")
   organizationId  String            @db.Uuid @map("organization_id")
   objectiveScore  Decimal?          @db.Decimal(8, 2) @map("objective_score")
   subjectiveScore Decimal?          @db.Decimal(8, 2) @map("subjective_score")
@@ -755,6 +818,7 @@ model AssessmentResult {
   @@index([organizationId], map: "assessment_results_organization_id_idx")
   @@index([jobId], map: "assessment_results_job_id_idx")
   @@index([candidateId], map: "assessment_results_candidate_id_idx")
+  @@index([employeeId], map: "assessment_results_employee_id_idx")
   @@map("assessment_results")
 }
 

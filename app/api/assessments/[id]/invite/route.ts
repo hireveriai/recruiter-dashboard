@@ -2,6 +2,7 @@ import { randomBytes, createHash } from "crypto"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { assertCanAssessment } from "@/lib/server/assessment/auth"
+import { assertCanEmployees } from "@/lib/server/employees/auth"
 import { inviteAssessmentSchema } from "@/lib/server/assessment/validators"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
@@ -16,7 +17,6 @@ function hashToken(token: string) {
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getRecruiterRequestContext(request)
-    await assertCanAssessment(auth, "assessments.send")
     const { id } = await context.params
 
     const assessment = await prisma.assessment.findFirst({
@@ -25,6 +25,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     if (!assessment) {
       throw new ApiError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found")
+    }
+
+    const isEmployeeActivity = assessment.participantType === "EMPLOYEE"
+    if (isEmployeeActivity) {
+      await assertCanEmployees(auth, "employeeActivities.assign")
+    } else {
+      await assertCanAssessment(auth, "assessments.send")
     }
 
     // Unpublished/unreviewed AI questions (including question.rubric and
@@ -51,41 +58,67 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
     }
 
-    let candidate = payload.candidateId
-      ? await prisma.candidate.findFirst({
-          where: { candidateId: payload.candidateId, organizationId: auth.organizationId },
-        })
-      : null
+    let candidate: { candidateId: string; email: string; fullName: string } | null = null
+    let employee: { id: string; email: string; fullName: string } | null = null
 
-    if (!candidate && payload.candidateId) {
-      throw new ApiError(404, "CANDIDATE_NOT_FOUND", "Candidate not found for this organization")
-    }
+    if (isEmployeeActivity) {
+      if (!payload.employeeId) {
+        throw new ApiError(400, "EMPLOYEE_REQUIRED", "employeeId is required for an Employee activity")
+      }
 
-    // Manual-email path: a recruiter can invite someone who isn't already a
-    // candidate in this workspace. Find-or-create scoped to this org, rather
-    // than requiring them to exist beforehand.
-    if (!candidate && payload.candidateEmail) {
-      candidate = await prisma.candidate.findFirst({
-        where: {
-          organizationId: auth.organizationId,
-          email: { equals: payload.candidateEmail, mode: "insensitive" },
-        },
+      // Unlike candidates, an employee is never find-or-created here — they
+      // must already be registered via the Employees page, and must belong
+      // to this organization (never trust a client-supplied employeeId
+      // beyond using it to look the row up scoped to auth.organizationId).
+      const employeeRow = await prisma.employee.findFirst({
+        where: { id: payload.employeeId, organizationId: auth.organizationId },
       })
+      if (!employeeRow) {
+        throw new ApiError(404, "EMPLOYEE_NOT_FOUND", "Employee not found for this organization")
+      }
+      if (employeeRow.status !== "ACTIVE") {
+        throw new ApiError(409, "EMPLOYEE_INACTIVE", "This employee is inactive and cannot be assigned an activity")
+      }
+      employee = employeeRow
+    } else {
+      candidate = payload.candidateId
+        ? await prisma.candidate.findFirst({
+            where: { candidateId: payload.candidateId, organizationId: auth.organizationId },
+          })
+        : null
 
-      if (!candidate) {
-        candidate = await prisma.candidate.create({
-          data: {
+      if (!candidate && payload.candidateId) {
+        throw new ApiError(404, "CANDIDATE_NOT_FOUND", "Candidate not found for this organization")
+      }
+
+      // Manual-email path: a recruiter can invite someone who isn't already a
+      // candidate in this workspace. Find-or-create scoped to this org, rather
+      // than requiring them to exist beforehand.
+      if (!candidate && payload.candidateEmail) {
+        candidate = await prisma.candidate.findFirst({
+          where: {
             organizationId: auth.organizationId,
-            email: payload.candidateEmail,
-            fullName: payload.candidateName?.trim() || payload.candidateEmail,
+            email: { equals: payload.candidateEmail, mode: "insensitive" },
           },
         })
+
+        if (!candidate) {
+          candidate = await prisma.candidate.create({
+            data: {
+              organizationId: auth.organizationId,
+              email: payload.candidateEmail,
+              fullName: payload.candidateName?.trim() || payload.candidateEmail,
+            },
+          })
+        }
+      }
+
+      if (!candidate) {
+        throw new ApiError(400, "CANDIDATE_REQUIRED", "candidateId or candidateEmail is required")
       }
     }
 
-    if (!candidate) {
-      throw new ApiError(400, "CANDIDATE_REQUIRED", "candidateId or candidateEmail is required")
-    }
+    const recipient = employee ?? candidate!
 
     const job = await prisma.jobPosition.findUnique({
       where: { jobId: assessment.jobId },
@@ -104,7 +137,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     try {
       const snapshot = await getAssessmentCreditSnapshot(auth.organizationId)
       if (!snapshot.canRunAssessment) {
-        creditWarning = "This workspace has no VERIS Assessment credits remaining. The candidate can still be invited, but completing the assessment may fail to score without available credits."
+        creditWarning = "This workspace has no VERIS Assessment credits remaining. The invite can still be sent, but completing it may fail to score without available credits."
       }
     } catch (error) {
       console.warn("Assessment credit pre-check failed", error)
@@ -119,7 +152,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         assessmentId: id,
         versionId,
         jobId: assessment.jobId,
-        candidateId: candidate.candidateId,
+        candidateId: candidate ? candidate.candidateId : null,
+        employeeId: employee ? employee.id : null,
         organizationId: auth.organizationId,
         tokenHash,
         status: "INVITED",
@@ -131,7 +165,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     // Matches the fallback pattern in lib/server/interview-url.ts: prefer the
     // configured env var, but degrade to the intended production domain
-    // rather than hard-failing invite creation when it isn't set yet.
+    // rather than hard-failing invite creation when it isn't set yet. The
+    // token-based /a/{token} flow in the assessment app is participant-
+    // agnostic (it resolves everything from the invite row), so the same URL
+    // shape serves both candidate and employee invites.
     const baseUrl =
       (process.env.ASSESSMENT_APP_BASE_URL || "").trim().replace(/\/+$/, "") ||
       "https://assessment.verisnova.com"
@@ -141,8 +178,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     let emailError: string | null = null
     try {
       await sendAssessmentInvitationEmail({
-        to: candidate.email,
-        candidateName: candidate.fullName,
+        to: recipient.email,
+        candidateName: recipient.fullName,
         jobTitle: job?.jobTitle ?? "the open role",
         assessmentTitle: assessment.title,
         durationMinutes: assessment.durationMinutes,

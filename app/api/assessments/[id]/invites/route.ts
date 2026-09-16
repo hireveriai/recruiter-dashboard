@@ -37,19 +37,30 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       }),
     ])
 
-    const candidateIds = [...new Set(invites.map((i) => i.candidateId))]
-    const candidates = candidateIds.length
-      ? await prisma.candidate.findMany({
-          where: { candidateId: { in: candidateIds } },
-          select: { candidateId: true, fullName: true, email: true },
-        })
-      : []
+    const candidateIds = [...new Set(invites.map((i) => i.candidateId).filter((v): v is string => Boolean(v)))]
+    const employeeIds = [...new Set(invites.map((i) => i.employeeId).filter((v): v is string => Boolean(v)))]
+    const [candidates, employees] = await Promise.all([
+      candidateIds.length
+        ? prisma.candidate.findMany({
+            where: { candidateId: { in: candidateIds } },
+            select: { candidateId: true, fullName: true, email: true },
+          })
+        : Promise.resolve([]),
+      employeeIds.length
+        ? prisma.employee.findMany({
+            where: { id: { in: employeeIds }, organizationId: auth.organizationId },
+            select: { id: true, fullName: true, email: true },
+          })
+        : Promise.resolve([]),
+    ])
     const candidateById = new Map(candidates.map((c) => [c.candidateId, c]))
+    const employeeById = new Map(employees.map((e) => [e.id, e]))
 
     return successResponse({
       invites: invites.map((invite) => ({
         ...invite,
-        candidate: candidateById.get(invite.candidateId) ?? null,
+        candidate: invite.candidateId ? candidateById.get(invite.candidateId) ?? null : null,
+        employee: invite.employeeId ? employeeById.get(invite.employeeId) ?? null : null,
       })),
       meta: {
         page: query.page,

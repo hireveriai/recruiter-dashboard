@@ -20,6 +20,12 @@ export const ASSESSMENT_DIFFICULTIES = ["JUNIOR", "MID", "SENIOR"] as const
 
 export const ASSESSMENT_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const
 
+// Employee Assessments/Challenges/Tasks — product/UI distinction only, all
+// three share this exact persistence pipeline. Defaults preserve today's
+// candidate-assessment behavior exactly.
+export const ASSESSMENT_ACTIVITY_TYPES = ["ASSESSMENT", "CHALLENGE", "TASK"] as const
+export const ASSESSMENT_PARTICIPANT_TYPES = ["CANDIDATE", "EMPLOYEE"] as const
+
 // VERIS Integrity settings, persisted into Assessment.settings.security
 // (a generic Json column - no new scalar columns needed). Both flags default
 // to off so an assessment created before this feature existed keeps behaving
@@ -42,6 +48,9 @@ export const createAssessmentSchema = z.object({
   randomizeOptions: z.boolean().default(false),
   linkExpiryDays: z.number().int().min(1).max(90).default(7),
   security: assessmentSecuritySettingsSchema.optional(),
+  activityType: z.enum(ASSESSMENT_ACTIVITY_TYPES).default("ASSESSMENT"),
+  participantType: z.enum(ASSESSMENT_PARTICIPANT_TYPES).default("CANDIDATE"),
+  skills: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
 })
 
 export const updateAssessmentSchema = z.object({
@@ -61,6 +70,8 @@ export const updateAssessmentSchema = z.object({
 
 export const listAssessmentsQuerySchema = z.object({
   status: z.enum(ASSESSMENT_STATUSES).optional(),
+  activityType: z.enum(ASSESSMENT_ACTIVITY_TYPES).optional(),
+  participantType: z.enum(ASSESSMENT_PARTICIPANT_TYPES).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 })
@@ -151,12 +162,19 @@ export const inviteAssessmentSchema = z
     candidateId: uuidField.optional(),
     candidateEmail: z.string().trim().email().optional(),
     candidateName: z.string().trim().min(1).max(200).optional(),
+    // Set instead of candidateId/candidateEmail when the target Assessment's
+    // participantType is EMPLOYEE. Unlike candidates, an employee is never
+    // find-or-created here — they must already exist via the Employees page.
+    employeeId: uuidField.optional(),
     versionId: uuidField.optional(),
   })
-  .refine((value) => Boolean(value.candidateId) || Boolean(value.candidateEmail), {
-    message: "Either candidateId or candidateEmail is required",
-    path: ["candidateEmail"],
-  })
+  .refine(
+    (value) => Boolean(value.candidateId) || Boolean(value.candidateEmail) || Boolean(value.employeeId),
+    {
+      message: "Either candidateId, candidateEmail, or employeeId is required",
+      path: ["candidateEmail"],
+    },
+  )
 
 export const listInvitesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
