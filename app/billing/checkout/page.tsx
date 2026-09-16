@@ -1287,26 +1287,55 @@ function ProductComparisonTable({ plans }: { plans: Plan[] }) {
     },
   ]
 
-  // Workspace features are role-gated, not product-gated (see
+  // Generic dashboard tooling is role-gated, not product-gated (see
   // lib/client/permissions.js) - every paid organization gets the same
-  // dashboard regardless of which product it buys, so every column is "yes".
+  // workspace tools regardless of which product it buys.
   const workspaceIncluded: Record<ProductKey, ComparisonCellValue> = {
     BUNDLE: "yes",
     INTERVIEW: "yes",
     ASSESSMENT: "yes",
     SCREENING: "yes",
   }
+
+  // Candidates Queue and Interview Queue are populated by real workflow
+  // outcomes, not just role permission, so they are NOT blanket-included:
+  //  - Screening-only: every screened candidate lands in Candidates Queue,
+  //    but nothing ever reaches Interview Queue (no interview capability).
+  //  - Assessment-only: results live on the assessment's own results page;
+  //    Assessment does not add candidates to Candidates Queue or Interview
+  //    Queue (see components/AssessmentWorkflowGuide.js - assessment is a
+  //    separate, independent flow, not the candidate/interview pipeline).
+  //  - Interview or Hiring Suite: Candidates Queue holds everyone invited,
+  //    and Interview Queue holds whoever is actually sent an interview link
+  //    (e.g. 5 of 10 screened candidates shortlisted from Candidates Queue).
+  const candidatesQueueValues: Record<ProductKey, ComparisonCellValue> = {
+    BUNDLE: "yes",
+    INTERVIEW: "yes",
+    ASSESSMENT: "no",
+    SCREENING: "yes",
+  }
+  const interviewQueueValues: Record<ProductKey, ComparisonCellValue> = {
+    BUNDLE: "yes",
+    INTERVIEW: "yes",
+    ASSESSMENT: "no",
+    SCREENING: "no",
+  }
+  // Review Flags surfaces interview fraud/integrity flags (see
+  // CognitiveDock.tsx's alerts panel and fraudAlerts in app/page.js) - the
+  // same interview-only scope as Interview Queue.
+  const reviewFlagsValues = interviewQueueValues
+
   const recruiterWorkspaceRows: ComparisonRowDef[] = [
-    "Create & Manage Jobs",
-    "Candidate Management",
-    "Interview Queue",
-    "Review Flags",
-    "Reports & Insights",
-    "VERIS AI",
-    "Universal Search",
-    "Manage Teams",
-    "Alerts",
-  ].map((label) => ({ label, values: workspaceIncluded }))
+    { label: "Create & Manage Jobs", values: workspaceIncluded },
+    { label: "Candidates Queue", values: candidatesQueueValues },
+    { label: "Interview Queue", values: interviewQueueValues },
+    { label: "Review Flags", values: reviewFlagsValues },
+    { label: "Reports & Insights", values: workspaceIncluded },
+    { label: "VERIS AI", values: workspaceIncluded },
+    { label: "Universal Search", values: workspaceIncluded },
+    { label: "Manage Teams", values: workspaceIncluded },
+    { label: "Alerts", values: workspaceIncluded },
+  ]
 
   const hasAddonRow = candidateEvaluationRows.some((row) => Object.values(row.values).includes("addon"))
 
