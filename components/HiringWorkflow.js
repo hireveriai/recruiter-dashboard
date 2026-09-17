@@ -208,8 +208,51 @@ function getCompletedStageCount(facts) {
   )
 }
 
-function getWorkflowState(overview) {
+function getWorkflowState(overview, capabilities = {}) {
   const facts = getWorkflowFacts(overview)
+  const { canCreateJob = true, canUseAiScreening = true, canViewAssessments = true } = capabilities
+
+  // Everything below this point assumes the org can create a job (AI
+  // Interview) -- activeInterviews/pendingDecisions/pendingReports/
+  // invitesSent are only ever non-zero once a job exists, so a
+  // Screening-only or Assessment-only org would otherwise always fall
+  // through to the "!facts.hasJobs" branch below and be told to do
+  // something they don't have.
+  if (!facts.hasJobs && !canCreateJob) {
+    if (canUseAiScreening && canViewAssessments) {
+      return {
+        activeStepId: "veris-screening",
+        recommendation: "Start with VERIS Screening or VERIS Assessment -- use either independently.",
+        statuses: buildStepStatuses("veris-screening"),
+        facts,
+      }
+    }
+
+    if (canUseAiScreening) {
+      return {
+        activeStepId: "veris-screening",
+        recommendation: "Screen your first candidates with VERIS Screening.",
+        statuses: buildStepStatuses("veris-screening"),
+        facts,
+      }
+    }
+
+    if (canViewAssessments) {
+      return {
+        activeStepId: "veris-assessment",
+        recommendation: "Create and send your first VERIS Assessment.",
+        statuses: buildStepStatuses("veris-assessment"),
+        facts,
+      }
+    }
+
+    return {
+      activeStepId: null,
+      recommendation: "Your workspace is ready.",
+      statuses: buildStepStatuses(null),
+      facts,
+    }
+  }
 
   if (!facts.hasJobs) {
     return {
@@ -468,7 +511,16 @@ function WorkflowStepCard({ step, status, onAction, profile }) {
 }
 
 export default function HiringWorkflow({ overview, profile = null, onAction }) {
-  const state = useMemo(() => getWorkflowState(overview), [overview])
+  const entitlements = profile?.entitlements
+  const capabilities = useMemo(
+    () => ({
+      canCreateJob: canAccessFeature(profile, "createJob", entitlements),
+      canUseAiScreening: canAccessFeature(profile, "aiScreening", entitlements),
+      canViewAssessments: canAccessFeature(profile, "assessments", entitlements),
+    }),
+    [profile, entitlements]
+  )
+  const state = useMemo(() => getWorkflowState(overview, capabilities), [overview, capabilities])
 
   const handleAction = (action) => {
     onAction(action)
