@@ -15,9 +15,9 @@ function statusTone(status) {
 
 function StatTile({ label, value }) {
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-950/35 px-4 py-3">
-      <p className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.06em] text-slate-400">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
+    <div className="w-[212px] shrink-0 rounded-xl border border-slate-700 bg-slate-950/35 px-3 py-2.5">
+      <p className="whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.04em] text-slate-400">{label}</p>
+      <p className="mt-1.5 text-2xl font-semibold text-white">{value}</p>
     </div>
   )
 }
@@ -88,7 +88,7 @@ export default function AssessmentSummary({ isLoading = false }) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(200px,236px))]">
+          <div className="grid grid-cols-2 justify-items-start gap-3 sm:grid-cols-4">
             <StatTile label="Assessments" value={summary?.totalAssessments ?? 0} />
             <StatTile label="Published" value={summary?.publishedAssessments ?? 0} />
             <StatTile label="Invites Sent" value={summary?.invitesSent ?? 0} />

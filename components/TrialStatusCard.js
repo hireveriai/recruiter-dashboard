@@ -11,22 +11,26 @@ const OFFER_LINE = "10 AI Interviews + 25 VERIS Screenings"
 
 function Stat({ label, value, depleted }) {
   return (
-    <div className={`rounded-xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
-      <p className={`whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.06em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
+    <div className={`w-[212px] shrink-0 rounded-xl border px-3 py-2.5 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
+      <p className={`whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.04em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
         {label}
       </p>
-      <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
+      <p className="mt-1.5 text-2xl font-semibold text-white">{value}</p>
     </div>
   )
 }
 
-// Grid with a hard per-column cap instead of an even 1/N split, and
-// `auto-fit` collapses unused tracks instead of stretching them -- so 1, 2,
-// or 3 visible credit tiles all render at the same compact size rather than
-// each one growing to fill whatever fraction of the row it happens to have.
-// 236px (not 220px) is the narrowest width "VERIS ASSESSMENT CREDITS" -- the
-// longest label -- fits on one line at the reduced tracking above.
-const STAT_GRID_CLASS = "mt-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,236px))]"
+// `auto-fit`/minmax grids turned out to size tiles unpredictably across
+// browsers (observed stretching to ~350px instead of the declared cap, and
+// wrapping to 2+1 instead of one row). Fixed-width tiles (declared on Stat
+// itself) plus `justify-items-start` so the grid cell never stretches them,
+// with the column COUNT set explicitly to match how many tiles are visible
+// -- this is unambiguous: N visible tiles always render as N columns in one
+// row, at a fixed compact width, with no dependency on container size.
+function statGridClass(count) {
+  const cols = count <= 1 ? "grid-cols-1" : count === 2 ? "grid-cols-2" : "grid-cols-3"
+  return `mt-4 grid gap-3 justify-items-start ${cols}`
+}
 
 function Shell({ eyebrow, title, children }) {
   return (
@@ -146,7 +150,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
 
     return (
       <Shell eyebrow="Subscription Credits" title="Subscription Credits">
-        <div className={STAT_GRID_CLASS}>
+        <div className={statGridClass(visibleStatCount)}>
           {showInterview ? <Stat label="AI Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screening Credits" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessment Credits" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
@@ -198,7 +202,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
             </button>
           </div>
         ) : null}
-        <div className={STAT_GRID_CLASS}>
+        <div className={statGridClass(visibleStatCount)}>
           {showInterview ? <Stat label="AI Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screenings Remaining" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessments Remaining" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
