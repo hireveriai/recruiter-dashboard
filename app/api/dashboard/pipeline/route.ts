@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse } from "@/lib/server/response"
 import { getDashboardPipelineData } from "@/lib/server/services/dashboard-pipeline"
 import { getDashboardRecordings } from "@/lib/server/services/dashboard-recordings"
@@ -17,6 +18,7 @@ function parseLimit(value: string | null): number | "all" {
 export async function GET(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { searchParams } = new URL(request.url)
     const limit = parseLimit(searchParams.get("limit"))
     const includeRecordings =

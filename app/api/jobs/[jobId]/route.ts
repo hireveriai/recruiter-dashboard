@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { updateJobScreenActiveState, upsertJobScreenData } from "@/lib/server/services/recruiter-screen-writes"
@@ -12,6 +13,7 @@ export async function PATCH(
 ) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { jobId } = await context.params
     const payload = await request.json()
 

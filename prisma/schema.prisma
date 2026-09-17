@@ -524,6 +524,9 @@ model Subscription {
   usedCredits      Int       @default(0)
   screeningCredits Int       @default(0)
   assessmentCredits Int      @default(0)
+  screeningEnabled  Boolean  @default(false) @map("screening_enabled")
+  assessmentEnabled Boolean  @default(false) @map("assessment_enabled")
+  interviewEnabled  Boolean  @default(false) @map("interview_enabled")
   status           String    @default("pending")
   amountPaid       Int       @default(0)
   currency         String    @default("INR")
@@ -537,6 +540,18 @@ model Subscription {
   @@index([planId], map: "hireveri_user_subscriptions_plan_id_idx")
   @@index([status, expiresAt], map: "hireveri_user_subscriptions_status_expires_at_idx")
   @@map("hireveri_user_subscriptions")
+}
+
+model OrganizationEntitlementOverride {
+  organizationId  String   @db.Uuid @map("organization_id")
+  entitlementCode String   @map("entitlement_code")
+  isEnabled       Boolean  @map("is_enabled")
+  updatedBy       String?  @db.Uuid @map("updated_by")
+  updatedAt       DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  @@id([organizationId, entitlementCode])
+  @@index([organizationId], map: "idx_organization_entitlement_overrides_org")
+  @@map("organization_entitlement_overrides")
 }
 
 model Invoice {

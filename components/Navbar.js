@@ -192,6 +192,7 @@ function cachePermissionProfile(profile) {
   try {
     window.sessionStorage.setItem(PROFILE_PERMISSION_CACHE_KEY, JSON.stringify({
       permissions: profile.permissions,
+      entitlements: profile.entitlements,
       name: profile.name,
       organization: profile.organization,
       userId: profile.userId,
@@ -258,16 +259,17 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
   const [profile, setProfile] = useState(() => initialProfile);
   const displayProfile = initialProfile?.name ? initialProfile : profile;
   const permissionProfile = displayProfile?.permissions?.length ? displayProfile : DEFAULT_RECRUITER_PERMISSION_PROFILE;
+  const entitlements = displayProfile?.entitlements;
   const visibleNavItems = useMemo(
-    () => navItems.filter((item) => canAccessFeature(permissionProfile, item.feature)),
-    [permissionProfile]
+    () => navItems.filter((item) => canAccessFeature(permissionProfile, item.feature, entitlements)),
+    [permissionProfile, entitlements]
   );
-  const canViewAlerts = canAccessFeature(permissionProfile, "alerts");
-  const canManageTeam = canAccessFeature(displayProfile, "manageTeam");
-  const canViewEmployees = canAccessFeature(displayProfile, "employees");
-  const canViewBilling = canAccessFeature(displayProfile, "billing");
-  const canManageSettings = canAccessFeature(displayProfile, "settings");
-  const canUseCopilot = canAccessFeature(permissionProfile, "copilot");
+  const canViewAlerts = canAccessFeature(permissionProfile, "alerts", entitlements);
+  const canManageTeam = canAccessFeature(displayProfile, "manageTeam", entitlements);
+  const canViewEmployees = canAccessFeature(displayProfile, "employees", entitlements);
+  const canViewBilling = canAccessFeature(displayProfile, "billing", entitlements);
+  const canManageSettings = canAccessFeature(displayProfile, "settings", entitlements);
+  const canUseCopilot = canAccessFeature(permissionProfile, "copilot", entitlements);
   const alertReadStorageKey = useMemo(() => getAlertReadStorageKey(displayProfile), [displayProfile]);
 
   useEffect(() => {

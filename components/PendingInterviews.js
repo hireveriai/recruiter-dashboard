@@ -279,8 +279,8 @@ function openDashboardAction(action) {
 }
 
 function GuidedInterviewEmptyState({ compact = false, profile = null }) {
-  const canCreateJob = canAccessFeature(profile, "createJob")
-  const canSendInterview = canAccessFeature(profile, "sendInterview")
+  const canCreateJob = canAccessFeature(profile, "createJob", profile?.entitlements)
+  const canSendInterview = canAccessFeature(profile, "sendInterview", profile?.entitlements)
 
   return (
     <div className={`hv-invited-empty-state rounded-2xl border border-cyan-300/15 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.82),rgba(2,6,23,0.72))] text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${compact ? "px-4 py-6" : "px-6 py-8"}`}>
@@ -315,10 +315,10 @@ function GuidedInterviewEmptyState({ compact = false, profile = null }) {
 }
 
 function PendingInterviewsModal({ isOpen, onClose, interviews, onCopy, onEdit, onDelete, onRetryPreparation, onRetryEmail, onRecoveryAction, onViewRecoveryAudit, nowTick, copiedLink, busyInviteId, profile }) {
-  const canEditInterview = canAccessFeature(profile, "editInterview")
-  const canDeleteInterview = canAccessFeature(profile, "deleteInterview")
-  const canRetryInterview = canAccessFeature(profile, "retryInterview")
-  const canViewWarRoom = canAccessFeature(profile, "warRoom")
+  const canEditInterview = canAccessFeature(profile, "editInterview", profile?.entitlements)
+  const canDeleteInterview = canAccessFeature(profile, "deleteInterview", profile?.entitlements)
+  const canRetryInterview = canAccessFeature(profile, "retryInterview", profile?.entitlements)
+  const canViewWarRoom = canAccessFeature(profile, "warRoom", profile?.entitlements)
 
   if (!isOpen) {
     return null
@@ -443,10 +443,10 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
   const [nowTick, setNowTick] = useState(() => Date.now())
   const [copiedLink, setCopiedLink] = useState("")
   const hasInitial = initialPendingInterviews !== undefined
-  const canEditInterview = canAccessFeature(profile, "editInterview")
-  const canDeleteInterview = canAccessFeature(profile, "deleteInterview")
-  const canRetryInterview = canAccessFeature(profile, "retryInterview")
-  const canViewWarRoom = canAccessFeature(profile, "warRoom")
+  const canEditInterview = canAccessFeature(profile, "editInterview", profile?.entitlements)
+  const canDeleteInterview = canAccessFeature(profile, "deleteInterview", profile?.entitlements)
+  const canRetryInterview = canAccessFeature(profile, "retryInterview", profile?.entitlements)
+  const canViewWarRoom = canAccessFeature(profile, "warRoom", profile?.entitlements)
 
   useEffect(() => {
     if (!hasInitial) {

@@ -364,13 +364,14 @@ function WorkflowAction({ step, onAction, highlighted = false }) {
 }
 
 function WorkflowStepCard({ step, status, onAction, profile }) {
+  const entitlements = profile?.entitlements;
   const canUseStep =
-    (step.id === "create-job" && canAccessFeature(profile, "createJob")) ||
-    (step.id === "veris-screening" && canAccessFeature(profile, "aiScreening")) ||
-    (step.id === "send-link" && canAccessFeature(profile, "sendInterview")) ||
-    (step.id === "ai-interview" && canAccessFeature(profile, "interviews")) ||
-    (step.id === "review-reports" && canAccessFeature(profile, "reports")) ||
-    (step.id === "hiring-decision" && canAccessFeature(profile, "candidates"))
+    (step.id === "create-job" && canAccessFeature(profile, "createJob", entitlements)) ||
+    (step.id === "veris-screening" && canAccessFeature(profile, "aiScreening", entitlements)) ||
+    (step.id === "send-link" && canAccessFeature(profile, "sendInterview", entitlements)) ||
+    (step.id === "ai-interview" && canAccessFeature(profile, "interviews", entitlements)) ||
+    (step.id === "review-reports" && canAccessFeature(profile, "reports", entitlements)) ||
+    (step.id === "hiring-decision" && canAccessFeature(profile, "candidates", entitlements))
 
   if (!canUseStep) {
     return null
@@ -447,7 +448,7 @@ function WorkflowStepCard({ step, status, onAction, profile }) {
               <p className="mt-1.5 text-[11px] leading-4 text-slate-400">{step.description}</p>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 <WorkflowAction step={step} onAction={onAction} highlighted={isActive} />
-                {step.secondaryCta && isActive && canAccessFeature(profile, "sendInterview") ? (
+                {step.secondaryCta && isActive && canAccessFeature(profile, "sendInterview", profile?.entitlements) ? (
                   <button
                     type="button"
                     className="inline-flex items-center justify-center rounded-lg border border-violet-300/15 px-2.5 py-1.5 text-[11px] font-semibold text-violet-200 transition duration-200 hover:border-violet-300/35 hover:bg-violet-500/10"

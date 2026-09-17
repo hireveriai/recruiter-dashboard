@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { ApiError } from "@/lib/server/errors"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse } from "@/lib/server/response"
 import { parseResumeWithAI } from "@/lib/server/resumeParser"
 import {
@@ -70,6 +71,7 @@ async function processInBatches<T, R>(items: T[], batchSize: number, worker: (it
 export async function POST(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const formData = await request.formData()
     const files = getResumeFiles(formData)
     const requestedBatchId = String(formData.get("batchId") ?? formData.get("batch_id") ?? "").trim()

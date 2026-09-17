@@ -154,8 +154,8 @@ export default function Sidebar({ initialProfile = null, overview = null }) {
 
   const displayUser = initialProfile ?? user
   const displayProfileError = initialProfile ? "" : profileError
-  const canCreateJob = canAccessFeature(displayUser, "createJob")
-  const canSendInterview = canAccessFeature(displayUser, "sendInterview")
+  const canCreateJob = canAccessFeature(displayUser, "createJob", displayUser?.entitlements)
+  const canSendInterview = canAccessFeature(displayUser, "sendInterview", displayUser?.entitlements)
 
   const initials = useMemo(
     () =>

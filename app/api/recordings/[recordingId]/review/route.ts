@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse } from "@/lib/server/response"
@@ -234,6 +235,7 @@ function getSignalDescription(type: string) {
 export async function GET(request: Request, context: { params: Promise<{ recordingId: string }> }) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { recordingId } = await context.params
 
     const recordings = await prisma.$queryRaw<RecordingRow[]>`

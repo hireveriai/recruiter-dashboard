@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse } from "@/lib/server/response"
 import { getJobsScreenData } from "@/lib/server/services/recruiter-screen-data"
 
 export async function GET(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const url = new URL(request.url)
     const view = url.searchParams.get("view") || url.searchParams.get("fields")
     const includeInactive =

@@ -27,9 +27,9 @@ function ActionButton({ href, onClick, children, tone = "primary" }) {
 }
 
 export default function DashboardIntelligenceBanner({ overview, profile = null, onCreateJob, onSendInterview }) {
-  const canCreateJob = canAccessFeature(profile, "createJob");
-  const canSendInterview = canAccessFeature(profile, "sendInterview");
-  const canUseAiScreening = canAccessFeature(profile, "aiScreening");
+  const canCreateJob = canAccessFeature(profile, "createJob", profile?.entitlements);
+  const canSendInterview = canAccessFeature(profile, "sendInterview", profile?.entitlements);
+  const canUseAiScreening = canAccessFeature(profile, "aiScreening", profile?.entitlements);
 
   if (!overview) {
     return (

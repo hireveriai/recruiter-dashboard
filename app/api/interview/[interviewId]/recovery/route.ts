@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse } from "@/lib/server/response"
 import {
   decideInterviewRecovery,
@@ -19,6 +20,7 @@ type RequestBody = {
 export async function GET(request: Request, { params }: Params) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { interviewId } = await params
     const events = await getInterviewRecoveryAudit(auth.organizationId, interviewId)
 
@@ -36,6 +38,7 @@ export async function GET(request: Request, { params }: Params) {
 export async function POST(request: Request, { params }: Params) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { interviewId } = await params
     const body = (await request.json().catch(() => ({}))) as RequestBody
     const action = body.action ?? "approve"

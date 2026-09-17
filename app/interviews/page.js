@@ -12,6 +12,7 @@ import { formatLabel } from "@/lib/client/format-label"
 import { isSessionJsonCacheFresh, readSessionJsonCache, writeSessionJsonCache } from "@/lib/client/session-json-cache"
 
 import BackToDashboardLink from "../../components/BackToDashboardLink"
+import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "../../components/Navbar"
 import SendInterviewModal from "../../components/SendInterviewModal"
 import { CandidateActionModal } from "../../components/dashboard/CandidateActionModal"
@@ -796,6 +797,7 @@ export default function InterviewsPage() {
   const [accessFilter, setAccessFilter] = useState("ALL")
   const [evaluationFilter, setEvaluationFilter] = useState("ALL")
   const [recruiterDecisionFilter, setRecruiterDecisionFilter] = useState("ALL")
+  const [lockedFeature, setLockedFeature] = useState(null)
 
   async function loadInterviews() {
     const response = await fetch(buildAuthUrl("/api/dashboard/interviews?includeAnswers=0", searchParams), {
@@ -837,7 +839,16 @@ export default function InterviewsPage() {
     })
       .then((res) => res.json())
       .then((data) => {
-        if (isMounted && data.success) {
+        if (!isMounted) {
+          return
+        }
+
+        if (data?.error?.code === "FEATURE_NOT_IN_PLAN") {
+          setLockedFeature(data.error.entitlement || "AI_INTERVIEW")
+          return
+        }
+
+        if (data.success) {
           setInterviews(data.data ?? [])
           writeSessionJsonCache(cacheKey, data.data ?? [])
         }
@@ -1096,6 +1107,10 @@ export default function InterviewsPage() {
       setCopiedInterviewId(interview.interviewId)
       setTimeout(() => setCopiedInterviewId(""), 1600)
     }
+  }
+
+  if (lockedFeature) {
+    return <FeatureLockedNotice feature={lockedFeature} />
   }
 
   if (loading) {

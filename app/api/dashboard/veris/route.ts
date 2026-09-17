@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse } from "@/lib/server/response"
 import { getFastVerisSummaryCards } from "@/lib/server/services/dashboard-fast-snapshot"
 import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
@@ -9,6 +10,7 @@ import { getVerisSummaryCards } from "@/lib/server/services/reports.service"
 export async function GET(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const { searchParams } = new URL(request.url)
     const rawLimit = searchParams.get("limit")
     const rawOffset = Number.parseInt(searchParams.get("offset") ?? "0", 10)

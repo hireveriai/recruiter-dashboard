@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { errorResponse } from "@/lib/server/response"
 import { prisma } from "@/lib/server/prisma"
@@ -274,6 +275,7 @@ async function getInterviewJobEmailContext(organizationId: string, jobId: string
 export async function POST(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const body = (await request.json()) as {
       job_id?: string
       jobId?: string

@@ -1,4 +1,5 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { generationLimitInfo } from "@/lib/server/ai-generation-limit"
@@ -19,6 +20,7 @@ type Params = { params: Promise<{ jobId: string }> }
 export async function GET(request: Request, context: Params) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { jobId } = await context.params
 
     const result = await getQuestionnaireForEditing({
@@ -64,6 +66,7 @@ export async function GET(request: Request, context: Params) {
 export async function PUT(request: Request, context: Params) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { jobId } = await context.params
     const body = await request.json().catch(() => ({}))
 
@@ -105,6 +108,7 @@ export async function PUT(request: Request, context: Params) {
 export async function POST(request: Request, context: Params) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { jobId } = await context.params
     const body = await request.json().catch(() => ({}))
     const action = String(body.action ?? "finalize")

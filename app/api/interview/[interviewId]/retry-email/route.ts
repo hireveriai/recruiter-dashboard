@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { sendInterviewEmailForInterview } from "@/lib/server/services/interview-workflow"
@@ -14,6 +15,7 @@ export async function POST(
 ) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { interviewId } = await context.params
     const emailResult = await sendInterviewEmailForInterview(auth.organizationId, interviewId)
 

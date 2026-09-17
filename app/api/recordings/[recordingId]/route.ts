@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse } from "@/lib/server/response"
@@ -221,6 +222,7 @@ function asAttachmentUrl(playbackUrl: string, recordingId: string) {
 export async function GET(_request: Request, context: { params: Promise<{ recordingId: string }> }) {
   try {
     const auth = await getRecruiterRequestContext(_request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { recordingId } = await context.params
     const wantsDownload = new URL(_request.url).searchParams.get("download") === "1"
     const columns = await getRecordingColumns()

@@ -235,14 +235,15 @@ export default function CognitiveDock({
   const permissionProfile = Array.isArray(profile?.permissions) && profile.permissions.length > 0
     ? profile
     : DEFAULT_RECRUITER_PERMISSION_PROFILE;
-  const canCreateJob = canAccessFeature(permissionProfile, "createJob");
-  const canSendInterview = canAccessFeature(permissionProfile, "sendInterview");
-  const canViewCandidates = canAccessFeature(permissionProfile, "candidates");
-  const canViewInterviews = canAccessFeature(permissionProfile, "interviews");
-  const canViewReports = canAccessFeature(permissionProfile, "reports");
-  const canViewAlerts = canAccessFeature(permissionProfile, "alerts");
-  const canUseCopilot = canAccessFeature(permissionProfile, "copilot");
-  const canViewAssessments = canAccessFeature(permissionProfile, "assessments");
+  const entitlements = profile?.entitlements;
+  const canCreateJob = canAccessFeature(permissionProfile, "createJob", entitlements);
+  const canSendInterview = canAccessFeature(permissionProfile, "sendInterview", entitlements);
+  const canViewCandidates = canAccessFeature(permissionProfile, "candidates", entitlements);
+  const canViewInterviews = canAccessFeature(permissionProfile, "interviews", entitlements);
+  const canViewReports = canAccessFeature(permissionProfile, "reports", entitlements);
+  const canViewAlerts = canAccessFeature(permissionProfile, "alerts", entitlements);
+  const canUseCopilot = canAccessFeature(permissionProfile, "copilot", entitlements);
+  const canViewAssessments = canAccessFeature(permissionProfile, "assessments", entitlements);
 
   useEffect(() => {
     workspaceRef.current = workspace;

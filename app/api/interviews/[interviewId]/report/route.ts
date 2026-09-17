@@ -1,4 +1,5 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse } from "@/lib/server/response"
 import { generateCandidateReportPdf } from "@/lib/server/services/candidate-report-pdf"
 
@@ -11,6 +12,7 @@ type Params = {
 export async function GET(request: Request, { params }: Params) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { interviewId } = await params
     const report = await generateCandidateReportPdf(auth.organizationId, interviewId)
     const body = new Uint8Array(report.bytes).buffer

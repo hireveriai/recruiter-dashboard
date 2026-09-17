@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { FALLBACK_CURRENCY, normalizeCurrency, type CurrencyCode } from "@/lib/server/pricing/currency"
 import { createAndSendInvoiceForPayment } from "@/lib/server/services/invoices"
+import { ensureEntitlementSchema } from "@/lib/server/entitlements"
 
 const PLAN_SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,80}$/
 const RAZORPAY_MINIMUM_AMOUNT_PAISE = 100
@@ -1270,6 +1271,7 @@ export async function verifyAndActivatePayment(input: {
   }
 
   await validatePendingPaymentAgainstCurrentDb(payment)
+  await ensureEntitlementSchema()
   const razorpayPayment = await fetchAndCaptureRazorpayPayment(payment, input.razorpayPaymentId)
 
   const activationResult = await prisma.$transaction(async (tx) => {
@@ -1358,6 +1360,16 @@ export async function verifyAndActivatePayment(input: {
     `)
 
     const activatedPlan = buildCheckoutPlan(validation.plan, validation.addonPlan)
+    // Module entitlements are additive and never revoked by a later purchase
+    // (mirrors the credit accumulation below): once an org has bought a
+    // module, either as the base plan or as an addon, it stays unlocked even
+    // if a subsequent purchase is a different plan type.
+    const grantsInterview = validation.plan.planType === "INTERVIEW" || validation.plan.planType === "BUNDLE"
+    const grantsAssessment = validation.plan.planType === "ASSESSMENT" || validation.plan.planType === "BUNDLE"
+    const grantsScreening =
+      validation.plan.planType === "SCREENING" ||
+      validation.plan.planType === "BUNDLE" ||
+      validation.addonPlan?.planType === "SCREENING"
     const subscriptionRows = await tx.$queryRaw<
       Array<{
         id: string
@@ -1380,6 +1392,9 @@ export async function verifyAndActivatePayment(input: {
         "totalCredits" = "totalCredits" + ${activatedPlan.interviewSessions},
         "screeningCredits" = "screeningCredits" + ${activatedPlan.screeningReviews},
         "assessmentCredits" = "assessmentCredits" + ${activatedPlan.assessmentCredits},
+        interview_enabled = interview_enabled or ${grantsInterview},
+        screening_enabled = screening_enabled or ${grantsScreening},
+        assessment_enabled = assessment_enabled or ${grantsAssessment},
         "amountPaid" = "amountPaid" + ${lockedPayment.final_amount_paise},
         currency = ${lockedPayment.currency},
         "razorpayOrderId" = ${lockedPayment.razorpay_order_id},

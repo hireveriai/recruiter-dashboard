@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { getInterviewExposure } from "@/lib/server/interview/question-exposure"
 import { prisma } from "@/lib/server/prisma"
@@ -21,6 +22,7 @@ type Params = { params: Promise<{ interviewId: string }> }
 export async function GET(request: Request, context: Params) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { interviewId } = await context.params
 
     const rows = await prisma.$queryRaw<

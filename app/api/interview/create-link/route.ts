@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 
 import { ApiError } from "@/lib/server/errors"
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { jobPositionsSupportIsActive } from "@/lib/server/services/jobs"
@@ -195,6 +196,7 @@ export async function POST(request: Request) {
   try {
     console.log("🚀 USING NEW QUESTION PIPELINE")
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const payload = await request.json()
     const jobId = String(payload.jobId ?? payload.job_id ?? "").trim()
     const candidateId = String(payload.candidateId ?? payload.candidate_id ?? "").trim()

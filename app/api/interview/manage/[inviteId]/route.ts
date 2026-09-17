@@ -1,4 +1,5 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { revokeInterviewInviteSchema, updateInterviewInviteSchema } from "@/lib/server/validators"
 import { revokeInterviewInvite, updateInterviewInvite } from "@/lib/server/services/interview.service"
@@ -13,6 +14,7 @@ type RouteContext = {
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const body = await request.json()
     const parsed = updateInterviewInviteSchema.parse(body)
     const { inviteId } = await context.params
@@ -34,6 +36,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 export async function DELETE(request: Request, context: RouteContext) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const body = await request.json().catch(() => ({}))
     const parsed = revokeInterviewInviteSchema.parse(body)
     const { inviteId } = await context.params

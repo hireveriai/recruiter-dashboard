@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 
 import { ApiError } from "@/lib/server/errors"
+import { getOrganizationEntitlements, type EntitlementMap } from "@/lib/server/entitlements"
 import { prisma } from "@/lib/server/prisma"
 import { RecruiterRequestContext } from "@/lib/server/auth-context"
 
@@ -37,6 +38,7 @@ export type RecruiterProfile = {
   recruiterProfileExists: boolean
   sessionCookieMatched: boolean
   sessionValidatedVia: "auth_session" | "identity_cookie" | "jwt"
+  entitlements: EntitlementMap
 }
 
 async function tableExists(tableName: string) {
@@ -162,6 +164,11 @@ export async function getRecruiterProfile(auth: RecruiterRequestContext): Promis
 
   const uniquePermissions = [...new Set(permissions.filter(Boolean))]
 
+  const entitlements = await getOrganizationEntitlements(auth.organizationId).catch((error) => {
+    console.error("Organization entitlement lookup failed", error)
+    return { AI_INTERVIEW: true, SCREENING: true, ASSESSMENT: true, EMPLOYEE_ACTIVITIES: true } as EntitlementMap
+  })
+
   return {
     name: recruiter.recruiter_name ?? recruiter.recruiter_email,
     email: recruiter.recruiter_email,
@@ -176,5 +183,6 @@ export async function getRecruiterProfile(auth: RecruiterRequestContext): Promis
     recruiterProfileExists,
     sessionCookieMatched: auth.sessionCookieMatched,
     sessionValidatedVia: auth.sessionValidatedVia,
+    entitlements,
   }
 }

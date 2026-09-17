@@ -138,18 +138,19 @@ function DashboardContent({ profile, overview, isLoading }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const displayProfile = profile ?? overview?.profile ?? null;
   const permissionProfile = displayProfile?.permissions?.length ? displayProfile : DEFAULT_RECRUITER_PERMISSION_PROFILE;
+  const entitlements = displayProfile?.entitlements;
   const fullOverview = normalizeDashboardOverview(overview) ?? createEmptyDashboardOverview(displayProfile);
   const isPartialOverview = Boolean(fullOverview?.partial);
   const [trialCredits, setTrialCredits] = useState(overview?.trialCredits ?? null);
   const activeInterviewCount = fullOverview?.pendingInterviewsTotal ?? fullOverview?.pendingInterviews?.length ?? 0;
   const candidateCount = fullOverview?.candidates?.length ?? 0;
-  const canCreateJob = canAccessFeature(permissionProfile, "createJob");
-  const canSendInterview = canAccessFeature(permissionProfile, "sendInterview");
-  const canViewCandidates = canAccessFeature(permissionProfile, "candidates");
-  const canViewInterviews = canAccessFeature(permissionProfile, "interviews");
-  const canViewReports = canAccessFeature(permissionProfile, "reports");
-  const canUseAiScreening = canAccessFeature(permissionProfile, "aiScreening");
-  const canViewWarRoom = canAccessFeature(displayProfile, "warRoom");
+  const canCreateJob = canAccessFeature(permissionProfile, "createJob", entitlements);
+  const canSendInterview = canAccessFeature(permissionProfile, "sendInterview", entitlements);
+  const canViewCandidates = canAccessFeature(permissionProfile, "candidates", entitlements);
+  const canViewInterviews = canAccessFeature(permissionProfile, "interviews", entitlements);
+  const canViewReports = canAccessFeature(permissionProfile, "reports", entitlements);
+  const canUseAiScreening = canAccessFeature(permissionProfile, "aiScreening", entitlements);
+  const canViewWarRoom = canAccessFeature(displayProfile, "warRoom", entitlements);
   const fraudAlerts = (overview?.alerts ?? []).filter((alert) => {
     const text = `${alert?.tone ?? ""} ${alert?.type ?? ""} ${alert?.title ?? ""} ${alert?.message ?? ""}`.toLowerCase();
     return text.includes("danger") || text.includes("fraud") || text.includes("flag") || text.includes("suspicion") || text.includes("anomaly");

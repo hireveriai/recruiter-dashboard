@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { getScreeningRunSnapshot } from "@/lib/server/ai-screening/service"
 import { errorResponse } from "@/lib/server/response"
 
@@ -12,6 +13,7 @@ export async function GET(
 ) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const params = await context.params
     const snapshot = await getScreeningRunSnapshot({
       organizationId: auth.organizationId,

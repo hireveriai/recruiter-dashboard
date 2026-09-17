@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { ApiError } from "@/lib/server/errors"
+import { getOrganizationEntitlements, type EntitlementCode, type EntitlementMap } from "@/lib/server/entitlements"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse } from "@/lib/server/response"
 import {
@@ -112,6 +113,45 @@ type ExistingUserRow = {
 }
 
 const INVITE_TTL_HOURS = 72
+
+/** Global Administrator always keeps full access regardless of the org's purchased plan. */
+function isGlobalAdministratorPermissionSet(permissionCodes: string[]) {
+  return permissionCodes.includes("users.manage") && permissionCodes.includes("organization.settings")
+}
+
+/**
+ * Which entitlement (if any) a permission code belongs to. Permissions with
+ * no entry here are Core — account/org-level functionality (candidates,
+ * reports, billing, team management, alerts) that isn't tied to a single
+ * paid product module and always stays visible regardless of plan. This is
+ * the same categorization used to decide Navbar/dashboard/page visibility
+ * (see lib/client/permissions.js FEATURE_ENTITLEMENTS) — one source of truth
+ * for "which product module does this functionality belong to."
+ */
+function getPermissionEntitlement(permissionCode: string): EntitlementCode | null {
+  if (permissionCode.startsWith("assessments.")) {
+    return "ASSESSMENT"
+  }
+
+  if (permissionCode === "ai.use") {
+    return "SCREENING"
+  }
+
+  if (permissionCode.startsWith("employeeActivities.") || permissionCode.startsWith("employees.")) {
+    return "EMPLOYEE_ACTIVITIES"
+  }
+
+  if (permissionCode.startsWith("interviews.") || permissionCode.startsWith("warroom.")) {
+    return "AI_INTERVIEW"
+  }
+
+  return null
+}
+
+function isPermissionAllowed(permissionCode: string, entitlements: EntitlementMap) {
+  const requiredEntitlement = getPermissionEntitlement(permissionCode)
+  return requiredEntitlement === null || entitlements[requiredEntitlement]
+}
 
 function getRecruiterAppUrl() {
   return (
@@ -329,6 +369,21 @@ async function saveUserPermissionOverrides(input: {
 
   if (validPermissions.size !== input.permissionCodes.length) {
     throw new ApiError(400, "INVALID_PERMISSION", "One or more selected permissions are not available")
+  }
+
+  if (!isGlobalAdministratorPermissionSet(input.permissionCodes)) {
+    const entitlements = await getOrganizationEntitlements(input.auth.organizationId)
+    const disallowed = input.permissionCodes.filter(
+      (permission) => !isPermissionAllowed(permission, entitlements)
+    )
+
+    if (disallowed.length > 0) {
+      throw new ApiError(
+        403,
+        "PERMISSION_NOT_IN_PLAN",
+        `The following permissions require an upgraded plan: ${disallowed.join(", ")}`
+      )
+    }
   }
 
   const baseRows = await prisma.$queryRaw<{ permission: string }[]>(Prisma.sql`
@@ -930,23 +985,44 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
     ? currentMember?.permissions?.some((permission) => permission.code === "users.manage") ?? false
     : currentMember?.platformRole === "ADMIN" || currentMember?.platformRole === "ORG_OWNER"
 
+  const entitlements = await getOrganizationEntitlements(auth.organizationId)
+
+  const filteredTeam = team.map((member) => ({
+    ...member,
+    permissions: member.permissions.filter((permission) => isPermissionAllowed(permission.code, entitlements)),
+  }))
+
+  const availableRoles = availableRoleRows
+    .filter((role) => {
+      const rolePermissionCodes = (role.permission_details ?? []).map((permission) => permission.code)
+
+      return (
+        isGlobalAdministratorPermissionSet(rolePermissionCodes) ||
+        rolePermissionCodes.every((code) => isPermissionAllowed(code, entitlements))
+      )
+    })
+    .map((role) => ({
+      recruiterRoleId: role.recruiter_role_id,
+      code: role.code,
+      description: role.description,
+      permissions: (role.permission_details ?? []).filter((permission) =>
+        isPermissionAllowed(permission.code, entitlements)
+      ),
+    }))
+
   return {
     organization: summary.organization_name ?? "",
+    entitlements,
     summary: {
       totalMembers: summary.total_members,
       activeMembers: summary.active_members,
       recruiters: summary.recruiters,
       admins: summary.admins,
     },
-    team,
+    team: filteredTeam,
     canManageUsers,
-    availableRoles: availableRoleRows.map((role) => ({
-      recruiterRoleId: role.recruiter_role_id,
-      code: role.code,
-      description: role.description,
-      permissions: role.permission_details ?? [],
-    })),
-    allPermissions: permissionRows,
+    availableRoles,
+    allPermissions: permissionRows.filter((permission) => isPermissionAllowed(permission.code, entitlements)),
   }
 }
 

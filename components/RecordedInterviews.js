@@ -18,7 +18,7 @@ function getInterviewActivityTime(interview) {
 }
 
 function RecordedInterviewsModal({ isOpen, onClose, interviews, organizationId, profile }) {
-  const canOpenWarRoom = canAccessFeature(profile, "warRoom")
+  const canOpenWarRoom = canAccessFeature(profile, "warRoom", profile?.entitlements)
 
   if (!isOpen) {
     return null
@@ -77,7 +77,7 @@ export default function RecordedInterviews({ initialRecordedInterviews, organiza
   const [isModalOpen, setIsModalOpen] = useState(false)
   const displayInterviews = interviews
   const isBusy = isLoading || isFetching
-  const canOpenWarRoom = canAccessFeature(profile, "warRoom")
+  const canOpenWarRoom = canAccessFeature(profile, "warRoom", profile?.entitlements)
 
   useEffect(() => {
     if (initialRecordedInterviews !== undefined) {

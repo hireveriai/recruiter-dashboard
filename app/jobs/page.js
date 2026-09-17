@@ -9,6 +9,7 @@ import { buildAuthUrl } from "@/lib/client/auth-query"
 import { isSessionJsonCacheFresh, readSessionJsonCache, writeSessionJsonCache } from "@/lib/client/session-json-cache"
 
 import BackToDashboardLink from "../../components/BackToDashboardLink"
+import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "../../components/Navbar"
 import SendInterviewModal from "../../components/SendInterviewModal"
 import SendAssessmentModal from "../../components/SendAssessmentModal"
@@ -204,6 +205,7 @@ export default function JobsPage() {
   const [experienceFilter, setExperienceFilter] = useState("ALL")
   const [activityFilter, setActivityFilter] = useState("ALL")
   const [experienceLevels, setExperienceLevels] = useState([])
+  const [lockedFeature, setLockedFeature] = useState(null)
   const actionMenuRef = useRef(null)
 
   useEffect(() => {
@@ -282,7 +284,16 @@ export default function JobsPage() {
         })
         const data = await response.json()
 
-        if (!isMounted || !data.success) {
+        if (!isMounted) {
+          return
+        }
+
+        if (data?.error?.code === "FEATURE_NOT_IN_PLAN") {
+          setLockedFeature(data.error.entitlement || "AI_INTERVIEW")
+          return
+        }
+
+        if (!data.success) {
           return
         }
 
@@ -440,6 +451,10 @@ export default function JobsPage() {
     } finally {
       setPendingJobId("")
     }
+  }
+
+  if (lockedFeature) {
+    return <FeatureLockedNotice feature={lockedFeature} />
   }
 
   return (
@@ -780,6 +795,10 @@ export default function JobsPage() {
             cache: "no-store",
           })
           const data = await response.json()
+          if (data?.error?.code === "FEATURE_NOT_IN_PLAN") {
+            setLockedFeature(data.error.entitlement || "AI_INTERVIEW")
+            return
+          }
           if (data.success) {
             setJobs(data.jobs ?? [])
             setSupportsJobActiveState(Boolean(data.meta?.supportsJobActiveState))

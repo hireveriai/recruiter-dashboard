@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { ApiError } from "@/lib/server/errors"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse } from "@/lib/server/response"
 import { matchCandidateToJobWithAI } from "@/lib/server/ai-screening/openai"
 import {
@@ -86,6 +87,7 @@ function filterMatchesToCandidateIds<T extends { candidateId: string }>(matches:
 export async function GET(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const url = new URL(request.url)
     const jobId = await resolveScreeningJobId(auth.organizationId, {
       jobId: String(url.searchParams.get("job_id") ?? url.searchParams.get("jobId") ?? "").trim(),
@@ -199,6 +201,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const body = (await request.json()) as {
       job_id?: string
       jobId?: string

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { errorResponse } from "@/lib/server/response"
 import { deleteResumeFromSupabaseStorage } from "@/lib/server/ai-screening/storage"
@@ -48,6 +49,7 @@ async function deleteStorageObjects(storageObjects: Array<{ bucket: string; key:
 export async function POST(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const body = (await request.json()) as CleanupBody
     const action = body.action
     const jobId = String(body.job_id ?? body.jobId ?? "").trim()

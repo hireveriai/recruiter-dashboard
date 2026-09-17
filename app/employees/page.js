@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import BackToDashboardLink from "@/components/BackToDashboardLink"
+import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "@/components/Navbar"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatDate } from "@/lib/client/date-format"
@@ -33,12 +34,20 @@ export default function EmployeesPage() {
   const [openCreate, setOpenCreate] = useState(false)
   const [form, setForm] = useState(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
+  const [lockedFeature, setLockedFeature] = useState(null)
 
   const loadEmployees = () => {
     setLoading(true)
     fetch(buildAuthUrl("/api/employees?pageSize=100", searchParams), { credentials: "include" })
       .then((res) => res.json())
-      .then((data) => setEmployees(Array.isArray(data?.data?.employees) ? data.data.employees : []))
+      .then((data) => {
+        if (data?.error?.code === "FEATURE_NOT_IN_PLAN") {
+          setLockedFeature(data.error.entitlement || "EMPLOYEE_ACTIVITIES")
+          return
+        }
+
+        setEmployees(Array.isArray(data?.data?.employees) ? data.data.employees : [])
+      })
       .catch(() => setEmployees([]))
       .finally(() => setLoading(false))
   }
@@ -97,6 +106,10 @@ export default function EmployeesPage() {
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Update failed", message: err instanceof Error ? err.message : "Something went wrong" })
     }
+  }
+
+  if (lockedFeature) {
+    return <FeatureLockedNotice feature={lockedFeature} />
   }
 
   return (

@@ -1,4 +1,5 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { repairInterviewQuestions } from "@/lib/server/services/interview-question-repair"
@@ -6,6 +7,7 @@ import { repairInterviewQuestions } from "@/lib/server/services/interview-questi
 export async function POST(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const body = await request.json().catch(() => ({}))
 
     if (Array.isArray(body.questions)) {

@@ -1,4 +1,5 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { generateStructuredQuestionnaire } from "@/lib/server/interview/questionnaire-generator"
@@ -34,6 +35,7 @@ type Params = { params: Promise<{ jobId: string }> }
 export async function POST(request: Request, context: Params) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { jobId } = await context.params
     const body = await request.json().catch(() => ({}))
     const scope = String(body.scope ?? "all")

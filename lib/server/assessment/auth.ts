@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 
 import { ApiError } from "@/lib/server/errors"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { prisma } from "@/lib/server/prisma"
 import type { RecruiterRequestContext } from "@/lib/server/auth-context"
 
@@ -9,6 +10,13 @@ import type { RecruiterRequestContext } from "@/lib/server/auth-context"
  * assertCanManageUsers in app/api/manage-team/route.ts: role_permissions +
  * recruiter_user_permission_overrides, scoped to organizationId, joined
  * through public.permissions (permission codes must exist there too).
+ *
+ * Checks BOTH authorization layers: the org's ASSESSMENT entitlement first
+ * (does this organization's plan include VERIS Assessment at all — see
+ * lib/server/entitlements.ts), then the recruiter's own permission (does
+ * this specific user have `permission`). Entitlement is checked first so an
+ * org that never bought Assessment gets a plan-upgrade message rather than a
+ * misleading "ask your admin" error.
  */
 export async function assertCanAssessment(
   auth: RecruiterRequestContext,
@@ -21,6 +29,8 @@ export async function assertCanAssessment(
     | "assessments.view_results"
     | "assessments.manage",
 ) {
+  await assertEntitlement(auth, "ASSESSMENT")
+
   const rows = await prisma.$queryRaw<{ can_access: boolean }[]>(Prisma.sql`
     select exists (
       select 1

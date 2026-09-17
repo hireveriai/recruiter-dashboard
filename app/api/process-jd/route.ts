@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { ApiError } from "@/lib/server/errors"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse } from "@/lib/server/response"
 import { parseJobDescriptionWithAI } from "@/lib/server/ai-screening/openai"
 import {
@@ -16,6 +17,7 @@ export const runtime = "nodejs"
 export async function GET(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const jobs = await getScreeningJobs(auth.organizationId)
 
     return NextResponse.json({
@@ -30,6 +32,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const body = (await request.json()) as {
       existingJobId?: string
       existing_job_id?: string

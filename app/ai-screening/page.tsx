@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import Navbar from "@/components/Navbar"
+import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import TrialStatusCard from "@/components/TrialStatusCard"
 import BackToDashboardLink from "@/components/BackToDashboardLink"
 import { InsightTooltip } from "@/components/ui/InsightTooltip"
@@ -899,6 +900,7 @@ export default function AiScreeningPage() {
   const [loadingRunId, setLoadingRunId] = useState("")
   const [runLoadDiagnostics, setRunLoadDiagnostics] = useState("")
   const [screeningLoaderPhase, setScreeningLoaderPhase] = useState<ScreeningLoaderPhase | null>(null)
+  const [lockedFeature, setLockedFeature] = useState<string | null>(null)
   const loadedInitialRunRef = useRef("")
   const hydratedInitialFlowRef = useRef<StoredFlowState | null>(null)
   const screeningLoaderTimeoutRef = useRef<number | null>(null)
@@ -997,6 +999,11 @@ export default function AiScreeningPage() {
         const screeningPayload = await screeningJobsResponse.json()
 
         if (!active) {
+          return
+        }
+
+        if (screeningPayload?.error?.code === "FEATURE_NOT_IN_PLAN") {
+          setLockedFeature(screeningPayload.error.entitlement || "SCREENING")
           return
         }
 
@@ -2437,6 +2444,10 @@ export default function AiScreeningPage() {
     if (pipelineErrorStep === "match") {
       void handleMatchCandidates()
     }
+  }
+
+  if (lockedFeature) {
+    return <FeatureLockedNotice feature={lockedFeature} />
   }
 
   return (

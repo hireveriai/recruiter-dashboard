@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { ApiError } from "@/lib/server/errors"
 import { errorResponse } from "@/lib/server/response"
 import { normalizeEmail, updateCandidateEmail } from "@/lib/server/ai-screening/service"
@@ -16,6 +17,7 @@ type RouteContext = {
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "SCREENING")
     const { candidateId } = await context.params
     const body = (await request.json()) as {
       email?: string | null

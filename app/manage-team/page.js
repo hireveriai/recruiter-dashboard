@@ -36,6 +36,23 @@ function getOrgRoleTone(code) {
   return "bg-emerald-500/10 text-emerald-200 border-emerald-400/20";
 }
 
+const ENTITLEMENT_LABELS = {
+  AI_INTERVIEW: "AI Interview",
+  SCREENING: "Screening",
+  ASSESSMENT: "Assessment",
+  EMPLOYEE_ACTIVITIES: "Employee Activities",
+};
+
+function getPlanLabel(entitlements) {
+  if (!entitlements) {
+    return "Loading...";
+  }
+
+  const enabled = Object.keys(ENTITLEMENT_LABELS).filter((code) => entitlements[code]);
+
+  return enabled.length > 0 ? enabled.map((code) => ENTITLEMENT_LABELS[code]).join(", ") : "No active modules";
+}
+
 function getMemberRoleLabel(member) {
   if (member?.isAdmin) {
     return "Global Administrator";
@@ -519,6 +536,7 @@ export default function ManageTeamPage() {
   const availableRoles = useMemo(() => data?.availableRoles ?? [], [data]);
   const allPermissions = useMemo(() => data?.allPermissions ?? [], [data]);
   const canManageUsers = Boolean(data?.canManageUsers);
+  const entitlements = data?.entitlements ?? null;
   const summary = data?.summary ?? {
     totalMembers: 0,
     activeMembers: 0,
@@ -735,6 +753,9 @@ export default function ManageTeamPage() {
                 <p className="mt-2 text-sm font-medium text-slate-300" aria-live="polite">
                   {data?.organization || "Workspace"}
                 </p>
+                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-blue-300/80">
+                  Plan: {getPlanLabel(entitlements)}
+                </p>
               </div>
               {canManageUsers ? (
                 <button
@@ -782,7 +803,7 @@ export default function ManageTeamPage() {
             </div>
           ) : null}
 
-          <div className="hv-table-scroll mt-8 rounded-[24px] border border-slate-800 bg-slate-950/30">
+          <div className="mt-8 overflow-x-auto rounded-[24px] border border-slate-800 bg-slate-950/30">
             <div className="min-w-[1180px]">
             <div className="hidden grid-cols-[250px_190px_112px_96px_minmax(300px,1fr)_160px] items-start gap-5 border-b border-slate-800 px-6 py-4 text-xs uppercase tracking-[0.18em] text-slate-500 xl:grid">
               <div>Team Member</div>

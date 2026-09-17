@@ -1,15 +1,23 @@
 import { Prisma } from "@prisma/client"
 
 import { ApiError } from "@/lib/server/errors"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { prisma } from "@/lib/server/prisma"
 import type { RecruiterRequestContext } from "@/lib/server/auth-context"
 
 /**
- * Permission check for Employee Assessments/Challenges/Tasks routes. Exact
- * same shape as assertCanAssessment in lib/server/assessment/auth.ts (which
- * itself mirrors assertCanManageUsers in app/api/manage-team/route.ts):
- * role_permissions + recruiter_user_permission_overrides, scoped to
- * organizationId, joined through public.permissions.
+ * Permission check for Employees / Employee Assessments/Challenges/Tasks
+ * routes. Exact same shape as assertCanAssessment in
+ * lib/server/assessment/auth.ts (which itself mirrors assertCanManageUsers
+ * in app/api/manage-team/route.ts): role_permissions +
+ * recruiter_user_permission_overrides, scoped to organizationId, joined
+ * through public.permissions.
+ *
+ * Checks BOTH authorization layers: the org's EMPLOYEE_ACTIVITIES
+ * entitlement first (see lib/server/entitlements.ts), then the recruiter's
+ * own permission. Employee Activities has never been a paid module (it
+ * defaults to enabled for every org today), so this call is a no-op until an
+ * admin explicitly disables it for a specific org or it becomes sellable.
  */
 export async function assertCanEmployees(
   auth: RecruiterRequestContext,
@@ -25,6 +33,8 @@ export async function assertCanEmployees(
     | "employeeActivities.review"
     | "employeeActivities.manage",
 ) {
+  await assertEntitlement(auth, "EMPLOYEE_ACTIVITIES")
+
   const rows = await prisma.$queryRaw<{ can_access: boolean }[]>(Prisma.sql`
     select exists (
       select 1

@@ -2,6 +2,7 @@
 
 import { Prisma } from "@prisma/client"
 import { getRecruiterRequestContext, type RecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { evaluateCandidateResponse } from "@/lib/server/ai/interview-flow"
 import { errorResponse } from "@/lib/server/response"
 import { prisma } from "@/lib/server/prisma"
@@ -1015,6 +1016,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
 export async function GET(request: Request) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { searchParams } = new URL(request.url)
     const rawLimit = Number.parseInt(searchParams.get("limit") ?? "0", 10)
     const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : undefined

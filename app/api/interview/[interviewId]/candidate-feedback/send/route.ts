@@ -1,4 +1,5 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import { assertEntitlement } from "@/lib/server/entitlements"
 import { errorResponse, successResponse } from "@/lib/server/response"
 import { ApiError } from "@/lib/server/errors"
 import { sendCandidateFeedback } from "@/lib/server/services/candidate-feedback"
@@ -12,6 +13,7 @@ type RouteContext = {
 export async function POST(request: Request, context: RouteContext) {
   try {
     const auth = await getRecruiterRequestContext(request)
+    await assertEntitlement(auth, "AI_INTERVIEW")
     const { interviewId } = await context.params
     const body = await request.json().catch(() => ({}))
     const text = typeof body?.text === "string" ? body.text : ""

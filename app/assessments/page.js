@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import BackToDashboardLink from "@/components/BackToDashboardLink"
+import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "@/components/Navbar"
 import CreateAssessmentModal from "@/components/CreateAssessmentModal"
 import SendAssessmentModal from "@/components/SendAssessmentModal"
@@ -43,13 +44,23 @@ export default function AssessmentsPage() {
   const [openCreate, setOpenCreate] = useState(false)
   const [openSend, setOpenSend] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [lockedFeature, setLockedFeature] = useState(null)
 
   const loadAssessments = () => {
     setLoading(true)
-    const query = status ? `?status=${status}&pageSize=100` : "?pageSize=100"
+    const query = status
+      ? `?status=${status}&pageSize=100&participantType=CANDIDATE`
+      : "?pageSize=100&participantType=CANDIDATE"
     fetch(buildAuthUrl(`/api/assessments${query}`, searchParams), { credentials: "include" })
       .then((res) => res.json())
-      .then((data) => setAssessments(Array.isArray(data?.data?.assessments) ? data.data.assessments : []))
+      .then((data) => {
+        if (data?.error?.code === "FEATURE_NOT_IN_PLAN") {
+          setLockedFeature(data.error.entitlement || "ASSESSMENT")
+          return
+        }
+
+        setAssessments(Array.isArray(data?.data?.assessments) ? data.data.assessments : [])
+      })
       .catch(() => setAssessments([]))
       .finally(() => setLoading(false))
   }
@@ -60,6 +71,10 @@ export default function AssessmentsPage() {
   }, [status])
 
   const tabs = useMemo(() => STATUS_TABS, [])
+
+  if (lockedFeature) {
+    return <FeatureLockedNotice feature={lockedFeature} />
+  }
 
   return (
     <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
