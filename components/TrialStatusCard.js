@@ -11,26 +11,25 @@ const OFFER_LINE = "10 AI Interviews + 25 VERIS Screenings"
 
 function Stat({ label, value, depleted }) {
   return (
-    <div className={`w-[212px] shrink-0 rounded-xl border px-3 py-2.5 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
-      <p className={`whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.04em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
+    <div className={`min-w-[170px] rounded-xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
+      <p className={`whitespace-nowrap text-xs font-medium uppercase tracking-[0.12em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
         {label}
       </p>
-      <p className="mt-1.5 text-2xl font-semibold text-white">{value}</p>
+      <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
     </div>
   )
 }
 
-// `auto-fit`/minmax grids turned out to size tiles unpredictably across
-// browsers (observed stretching to ~350px instead of the declared cap, and
-// wrapping to 2+1 instead of one row). Fixed-width tiles (declared on Stat
-// itself) plus `justify-items-start` so the grid cell never stretches them,
-// with the column COUNT set explicitly to match how many tiles are visible
-// -- this is unambiguous: N visible tiles always render as N columns in one
-// row, at a fixed compact width, with no dependency on container size.
-function statGridClass(count) {
-  const cols = count <= 1 ? "grid-cols-1" : count === 2 ? "grid-cols-2" : "grid-cols-3"
-  return `mt-4 grid gap-3 justify-items-start ${cols}`
-}
+// CSS Grid's fr/minmax track sizing kept resolving unpredictably here across
+// attempts (auto-fit stretching tiles past their declared cap; fixed-width
+// grid children overflowing into the next cell once the container got
+// narrower than N * tile-width). Plain flexbox with NO explicit width on
+// Stat sidesteps all of that: default flex items size to their own content,
+// so 1, 2, or 3 tiles just sit left-to-right at their natural compact width
+// with no stretch and no overflow, which is the actual well-defined
+// behavior (my first flex attempt broke this only because it also set
+// width:100% on the child, forcing its flex-basis to the full row).
+const STAT_ROW_CLASS = "mt-4 flex flex-wrap gap-3"
 
 function Shell({ eyebrow, title, children }) {
   return (
@@ -150,7 +149,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
 
     return (
       <Shell eyebrow="Subscription Credits" title="Subscription Credits">
-        <div className={statGridClass(visibleStatCount)}>
+        <div className={STAT_ROW_CLASS}>
           {showInterview ? <Stat label="AI Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screening Credits" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessment Credits" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
@@ -202,7 +201,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
             </button>
           </div>
         ) : null}
-        <div className={statGridClass(visibleStatCount)}>
+        <div className={STAT_ROW_CLASS}>
           {showInterview ? <Stat label="AI Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screenings Remaining" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessments Remaining" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
