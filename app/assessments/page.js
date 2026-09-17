@@ -9,7 +9,7 @@ import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "@/components/Navbar"
 import CreateAssessmentModal from "@/components/CreateAssessmentModal"
 import SendAssessmentModal from "@/components/SendAssessmentModal"
-import { HiringContextStrip } from "@/components/AssessmentWorkflowGuide"
+import { AssessmentFlowGuide } from "@/components/AssessmentWorkflowGuide"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatDate } from "@/lib/client/date-format"
 
@@ -109,7 +109,7 @@ export default function AssessmentsPage() {
           </div>
         </div>
 
-        <HiringContextStrip className="mt-6" />
+        <AssessmentFlowGuide className="mt-6" />
 
         <div className="mt-6 flex flex-wrap gap-2">
           {tabs.map((tab) => (

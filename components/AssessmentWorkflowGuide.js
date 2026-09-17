@@ -187,25 +187,55 @@ export function AssessmentWorkflowPanel({
   );
 }
 
-/** Compact horizontal reminder of where Assessment sits relative to Screening/Interview - kept for the Assessments list page header. */
-export function HiringContextStrip({ className = "" }) {
+// Same 5 steps as buildSteps() above, without the per-assessment done/href/
+// cta wiring -- this is the generic "how this page works" explainer shown
+// on the Assessments list page, not tied to one assessment's own progress.
+const FLOW_STEPS = [
+  { number: 1, title: "Create Assessment", description: "Set the job, duration, passing percentage, and question mix." },
+  { number: 2, title: "Generate & Review Questions", description: "Generate with AI, then edit, add, or remove before publishing." },
+  { number: 3, title: "Publish", description: "Lock the reviewed question set so it can be sent to a candidate." },
+  { number: 4, title: "Send to Candidate", description: "Invite a candidate, independent of Screening or the interview link." },
+  { number: 5, title: "Review Results", description: "See scores, pass/fail, and integrity risk once completed." },
+];
+
+/**
+ * Horizontal counterpart to AssessmentWorkflowPanel, for the Assessments
+ * list page rather than one assessment's own detail page -- a first-time
+ * recruiter landing here sees the whole create -> send -> review sequence
+ * at a glance instead of discovering each step page by page.
+ */
+export function AssessmentFlowGuide({ className = "" }) {
   return (
     <div className={`rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 sm:p-5 ${className}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-300">Where this fits in hiring</p>
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-        <span className="rounded-full border border-violet-400/40 bg-violet-500/15 px-3 py-1 font-medium text-violet-100">
-          VERIS Assessment <span className="text-violet-300/80">(optional)</span>
-        </span>
-        <span className="text-slate-600" aria-hidden="true">→</span>
-        <span className="rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-slate-300">
-          VERIS AI Interview <span className="text-slate-500">(optional, can be sent directly)</span>
-        </span>
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-300">Assessment Flow</p>
+
+      <div className="mt-4 flex flex-col gap-0 sm:flex-row sm:items-stretch sm:gap-0">
+        {FLOW_STEPS.map((step, index) => (
+          <div key={step.number} className="flex flex-1 items-stretch">
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-2 px-1 py-2 sm:px-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-violet-400/35 bg-violet-400/10 text-[12px] font-semibold text-violet-100">
+                {step.number}
+              </div>
+              <p className="text-[13px] font-semibold leading-tight text-white">{step.title}</p>
+              <p className="text-[11px] leading-4 text-slate-400">{step.description}</p>
+            </div>
+
+            {index < FLOW_STEPS.length - 1 ? (
+              <div className="hidden w-6 shrink-0 items-center justify-center text-violet-400/40 sm:flex" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </div>
+            ) : null}
+          </div>
+        ))}
       </div>
-      <p className="mt-3 text-sm leading-6 text-slate-400">
-        Assessment is a separate, independent flow — not sequenced with VERIS Screening. Send it before an interview,
-        skip it and go straight to the interview link, or use it on its own — nothing here is a required prerequisite
-        for anything else.
+
+      <p className="mt-4 border-t border-violet-500/10 pt-3 text-[11px] leading-5 text-slate-500">
+        Independent of VERIS Screening and the AI Interview — send it before an interview, skip straight to the
+        interview link, or use it on its own.
       </p>
     </div>
   );
 }
+
