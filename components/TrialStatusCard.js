@@ -11,7 +11,7 @@ const OFFER_LINE = "10 AI Interviews + 25 VERIS Screenings"
 
 function Stat({ label, value, depleted }) {
   return (
-    <div className={`w-full max-w-[220px] rounded-xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
+    <div className={`rounded-xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
       <p className={`text-xs font-medium uppercase tracking-[0.12em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
         {label}
       </p>
@@ -19,6 +19,12 @@ function Stat({ label, value, depleted }) {
     </div>
   )
 }
+
+// Grid with a hard per-column cap (220px) instead of an even 1/N split, and
+// `auto-fit` collapses unused tracks instead of stretching them -- so 1, 2,
+// or 3 visible credit tiles all render at the same compact size rather than
+// each one growing to fill whatever fraction of the row it happens to have.
+const STAT_GRID_CLASS = "mt-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(180px,220px))]"
 
 function Shell({ eyebrow, title, children }) {
   return (
@@ -138,7 +144,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
 
     return (
       <Shell eyebrow="Subscription Credits" title="Subscription Credits">
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className={STAT_GRID_CLASS}>
           {showInterview ? <Stat label="AI Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screening Credits" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessment Credits" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
@@ -190,7 +196,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
             </button>
           </div>
         ) : null}
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className={STAT_GRID_CLASS}>
           {showInterview ? <Stat label="AI Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screenings Remaining" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessments Remaining" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}

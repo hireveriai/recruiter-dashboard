@@ -88,7 +88,7 @@ export default function AssessmentSummary({ isLoading = false }) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(180px,220px))]">
             <StatTile label="Assessments" value={summary?.totalAssessments ?? 0} />
             <StatTile label="Published" value={summary?.publishedAssessments ?? 0} />
             <StatTile label="Invites Sent" value={summary?.invitesSent ?? 0} />

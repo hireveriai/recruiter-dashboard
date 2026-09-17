@@ -295,14 +295,14 @@ function DashboardContent({ profile, overview, isLoading }) {
           ) : null}
           <TrialStatusCard credits={trialCredits} entitlements={entitlements} />
 
-          {canViewAssessments ? (
-          <Suspense fallback={null}>
-            <AssessmentSummary isLoading={false} />
-          </Suspense>
-          ) : null}
           {canViewInterviews ? (
           <Suspense fallback={null}>
             <Pipeline initialPipeline={fullOverview?.pipeline} isLoading={false} />
+          </Suspense>
+          ) : null}
+          {canViewAssessments ? (
+          <Suspense fallback={null}>
+            <AssessmentSummary isLoading={false} />
           </Suspense>
           ) : null}
           {canViewInterviews ? (
