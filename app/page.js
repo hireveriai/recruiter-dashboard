@@ -46,6 +46,11 @@ const VerisSummary = dynamic(() => import("../components/VerisSummary"), {
   loading: () => null,
 });
 
+const AssessmentSummary = dynamic(() => import("../components/AssessmentSummary"), {
+  ssr: false,
+  loading: () => null,
+});
+
 const WarRoomButton = dynamic(() => import("../components/WarRoomButton"), {
   ssr: false,
 });
@@ -149,6 +154,7 @@ function DashboardContent({ profile, overview, isLoading }) {
   const canViewCandidates = canAccessFeature(permissionProfile, "candidates", entitlements);
   const canViewInterviews = canAccessFeature(permissionProfile, "interviews", entitlements);
   const canUseAiScreening = canAccessFeature(permissionProfile, "aiScreening", entitlements);
+  const canViewAssessments = canAccessFeature(permissionProfile, "assessments", entitlements);
   const canViewWarRoom = canAccessFeature(displayProfile, "warRoom", entitlements);
   const fraudAlerts = (overview?.alerts ?? []).filter((alert) => {
     const text = `${alert?.tone ?? ""} ${alert?.type ?? ""} ${alert?.title ?? ""} ${alert?.message ?? ""}`.toLowerCase();
@@ -289,6 +295,11 @@ function DashboardContent({ profile, overview, isLoading }) {
           ) : null}
           <TrialStatusCard credits={trialCredits} entitlements={entitlements} />
 
+          {canViewAssessments ? (
+          <Suspense fallback={null}>
+            <AssessmentSummary isLoading={false} />
+          </Suspense>
+          ) : null}
           {canViewInterviews ? (
           <Suspense fallback={null}>
             <Pipeline initialPipeline={fullOverview?.pipeline} isLoading={false} />
