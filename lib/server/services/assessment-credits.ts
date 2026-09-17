@@ -6,7 +6,7 @@ import { prisma } from "@/lib/server/prisma"
 /**
  * VERIS Assessment credits — a deliberately standalone module, separate from
  * lib/server/services/trial-credits.ts (INTERVIEW/SCREENING). It reuses the
- * same tables/columns (`hireveri_user_subscriptions.assessmentCredits`,
+ * same tables/columns (`verisnova_user_subscriptions.assessmentCredits`,
  * `workspace_trial_credits.assessment_credits_remaining`) and the same
  * atomic-conditional-UPDATE concurrency pattern, but does not modify or share
  * code with the existing interview/screening credit paths, so their behavior
@@ -36,7 +36,7 @@ async function getActiveSubscriptionAssessmentCredits(
     { id: string; assessment_credits_remaining: number }[]
   >(Prisma.sql`
     select id, "assessmentCredits" as assessment_credits_remaining
-    from public.hireveri_user_subscriptions
+    from public.verisnova_user_subscriptions
     where "organizationId" = ${organizationId}::uuid
       and lower(coalesce(status, '')) = 'active'
     order by "activatedAt" desc nulls last, "updatedAt" desc nulls last
@@ -125,7 +125,7 @@ export async function deductAssessmentCredit(input: {
 
   return prisma.$transaction(async (tx) => {
     const subscriptionRows = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
-      update public.hireveri_user_subscriptions
+      update public.verisnova_user_subscriptions
       set
         "assessmentCredits" = "assessmentCredits" - ${amount},
         "updatedAt" = now()

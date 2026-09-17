@@ -445,7 +445,7 @@ async function getRoleOrThrow(roleId: number) {
       hrr.legacy_role_id as recruiter_role_id,
       hrr.name as code,
       null::text as description
-    from public.hireveri_recruiter_roles hrr
+    from public.verisnova_recruiter_roles hrr
     left join public.recruiter_role_pool rrp
       on rrp.recruiter_role_id = hrr.legacy_role_id
     where hrr.legacy_role_id = ${roleId}::smallint
@@ -660,7 +660,7 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
     await Promise.all([
       functionExists("fn_ensure_default_recruiter_profile"),
       tableExists("recruiter_profiles"),
-      tableExists("hireveri_recruiter_roles"),
+      tableExists("verisnova_recruiter_roles"),
       tableExists("recruiter_role_pool"),
       tableExists("role_permissions"),
       tableExists("permissions"),
@@ -777,7 +777,7 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
       : Prisma.sql``}
     ${hasRecruiterProfiles ? rolePoolJoin : Prisma.sql``}
     ${hasRecruiterProfiles && hasRecruiterRoles
-      ? Prisma.sql`left join public.hireveri_recruiter_roles hrr on hrr.legacy_role_id = rp.recruiter_role_id`
+      ? Prisma.sql`left join public.verisnova_recruiter_roles hrr on hrr.legacy_role_id = rp.recruiter_role_id`
       : Prisma.sql``}
     where o.organization_id = ${auth.organizationId}::uuid
     group by o.organization_name
@@ -833,7 +833,7 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
         left join public.recruiter_profiles rp
           on rp.recruiter_id = u.user_id
         ${rolePoolJoin}
-        left join public.hireveri_recruiter_roles hrr
+        left join public.verisnova_recruiter_roles hrr
           on hrr.legacy_role_id = rp.recruiter_role_id
         ${permissionCatalogJoin}
         ${rolePermissionJoin}
@@ -915,7 +915,7 @@ async function getTeamWorkspace(auth: RecruiterAuth) {
             ) filter (where perms.permission is not null),
             '[]'::jsonb
           ) as permission_details
-        from public.hireveri_recruiter_roles hrr
+        from public.verisnova_recruiter_roles hrr
         ${availableRolePoolJoin}
         left join public.role_permissions perms
           on perms.recruiter_role_id = hrr.legacy_role_id
@@ -1046,7 +1046,7 @@ async function getTeamMemberForAccessEmail(auth: RecruiterAuth, targetUserId: st
     left join public.recruiter_profiles rp
       on rp.recruiter_id = u.user_id
       and rp.organization_id = u.organization_id
-    left join public.hireveri_recruiter_roles hrr
+    left join public.verisnova_recruiter_roles hrr
       on hrr.legacy_role_id = rp.recruiter_role_id
     left join lateral (
       select

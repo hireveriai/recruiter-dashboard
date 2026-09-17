@@ -373,7 +373,7 @@ async function getActiveSubscriptionCredits(organizationId: string, client: Quer
       "totalCredits" as interview_credits_remaining,
       "screeningCredits" as screening_credits_remaining,
       null::timestamptz as expires_at
-    from public.hireveri_user_subscriptions
+    from public.verisnova_user_subscriptions
     where "organizationId" = ${organizationId}::uuid
       and lower(coalesce(status, '')) = 'active'
     order by "activatedAt" desc nulls last, "updatedAt" desc nulls last
@@ -436,7 +436,7 @@ async function deductSubscriptionCredits(input: {
   return prisma.$transaction(async (tx) => {
     const rows = input.kind === "INTERVIEW"
       ? await tx.$queryRaw<SubscriptionCreditRow[]>(Prisma.sql`
-      update public.hireveri_user_subscriptions
+      update public.verisnova_user_subscriptions
       set
         "totalCredits" = "totalCredits" - ${input.amount},
         "usedCredits" = coalesce("usedCredits", 0) + ${input.amount},
@@ -455,7 +455,7 @@ async function deductSubscriptionCredits(input: {
         null::timestamptz as expires_at
     `)
       : await tx.$queryRaw<SubscriptionCreditRow[]>(Prisma.sql`
-      update public.hireveri_user_subscriptions
+      update public.verisnova_user_subscriptions
       set
         "screeningCredits" = "screeningCredits" - ${input.amount},
         "updatedAt" = now()
@@ -590,7 +590,7 @@ async function refundOneInterviewCredit(input: {
 }) {
   if (input.invite.balance_source === "subscription" && input.invite.subscription_id) {
     const updated = await input.client.$executeRaw(Prisma.sql`
-      update public.hireveri_user_subscriptions
+      update public.verisnova_user_subscriptions
       set
         "totalCredits" = "totalCredits" + 1,
         "usedCredits" = greatest(coalesce("usedCredits", 0) - 1, 0),

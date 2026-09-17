@@ -1,7 +1,13 @@
 -- ============================================================================
 -- VerisNova rebrand: rename the nine legacy `hireveri_*` tables.
 --
--- STATUS: NOT APPLIED. Prepared 2026-08-22 for review.
+-- STATUS: Steps 1+2 APPLIED to production 2026-09-17. Row counts verified
+-- identical pre/post rename. The compatibility views were also altered with
+-- `set (security_invoker = true)` after creation — Postgres views default to
+-- definer-style execution, which was bypassing RLS on the renamed tables
+-- (all of which have RLS enabled with zero policies, i.e. deny-by-default).
+-- Step 3 (dropping the hireveri_* views) is still NOT applied — do that only
+-- once every app below is redeployed against the verisnova_* names.
 --
 -- READ THIS FIRST
 -- ---------------

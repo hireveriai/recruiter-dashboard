@@ -443,7 +443,7 @@ model Plan {
   updatedAt        DateTime @updatedAt @db.Timestamptz(6)
 
   @@index([isActive, order], map: "hireveri_plans_active_order_idx")
-  @@map("hireveri_plans")
+  @@map("verisnova_plans")
 }
 
 model Coupon {
@@ -512,7 +512,7 @@ model Payment {
   @@index([organizationId, createdAt], map: "hireveri_payments_org_created_at_idx")
   @@index([userId, createdAt], map: "hireveri_payments_user_id_created_at_idx")
   @@index([subscriptionId, createdAt], map: "hireveri_payments_subscription_id_created_at_idx")
-  @@map("hireveri_payments")
+  @@map("verisnova_payments")
 }
 
 model Subscription {
@@ -539,7 +539,7 @@ model Subscription {
 
   @@index([planId], map: "hireveri_user_subscriptions_plan_id_idx")
   @@index([status, expiresAt], map: "hireveri_user_subscriptions_status_expires_at_idx")
-  @@map("hireveri_user_subscriptions")
+  @@map("verisnova_user_subscriptions")
 }
 
 model OrganizationEntitlementOverride {

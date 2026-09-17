@@ -25,7 +25,7 @@ import { prisma } from "@/lib/server/prisma"
  *      lets an admin grant a promo entitlement or revoke a module outright,
  *      independent of billing state.
  *   2. The org's active subscription's module flags (screening_enabled /
- *      assessment_enabled / interview_enabled on hireveri_user_subscriptions),
+ *      assessment_enabled / interview_enabled on verisnova_user_subscriptions),
  *      set true whenever a plan or addon of that type is activated
  *      (lib/server/services/billing.ts verifyAndActivatePayment) and never
  *      cleared by a later purchase of a different type.
@@ -92,7 +92,7 @@ export async function ensureEntitlementSchema() {
   }
 
   await prisma.$executeRaw(Prisma.sql`
-    alter table public.hireveri_user_subscriptions
+    alter table public.verisnova_user_subscriptions
       add column if not exists screening_enabled boolean not null default false,
       add column if not exists assessment_enabled boolean not null default false,
       add column if not exists interview_enabled boolean not null default false
@@ -132,7 +132,7 @@ export async function getOrganizationEntitlements(organizationId: string): Promi
             screening_enabled,
             assessment_enabled,
             interview_enabled
-          from public.hireveri_user_subscriptions
+          from public.verisnova_user_subscriptions
           where "organizationId" = ${organizationId}::uuid
           limit 1
         `

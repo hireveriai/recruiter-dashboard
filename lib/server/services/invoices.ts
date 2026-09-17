@@ -397,11 +397,11 @@ async function getInvoiceSource(paymentId: string) {
       p."razorpayOrderId" as razorpay_order_id,
       p."razorpayPaymentId" as razorpay_payment_id,
       coalesce(p."updatedAt", p."createdAt") as payment_date
-    from public.hireveri_payments p
+    from public.verisnova_payments p
     inner join public.organizations o on o.organization_id = p."organizationId"
     inner join public.users u on u.user_id = p."userId"::uuid
-    inner join public.hireveri_plans pl on pl.id = p."planId"
-    left join public.hireveri_plans apl on apl.id = p."addonPlanId"
+    inner join public.verisnova_plans pl on pl.id = p."planId"
+    left join public.verisnova_plans apl on apl.id = p."addonPlanId"
     where p.id = ${paymentId}
       and p.status = 'success'::"PaymentStatus"
     limit 1
@@ -657,7 +657,7 @@ export async function createAndSendInvoiceForPayment(input: { paymentId: string 
 async function ensureInvoicesForOrganization(auth: RecruiterRequestContext) {
   const rows = await prisma.$queryRaw<Array<{ payment_id: string }>>(Prisma.sql`
     select p.id as payment_id
-    from public.hireveri_payments p
+    from public.verisnova_payments p
     left join public.invoices i on i.payment_id = p.id
     where p."organizationId" = ${auth.organizationId}::uuid
       and p.status = 'success'::"PaymentStatus"
@@ -777,8 +777,8 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
         s.currency,
         s."activatedAt" as activated_at,
         s."expiresAt" as expires_at
-      from public.hireveri_user_subscriptions s
-      left join public.hireveri_plans p on p.id = s."planId"
+      from public.verisnova_user_subscriptions s
+      left join public.verisnova_plans p on p.id = s."planId"
       where s."organizationId" = ${auth.organizationId}::uuid
       order by s."updatedAt" desc
       limit 10
@@ -823,9 +823,9 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
         pay."razorpayOrderId" as razorpay_order_id,
         pay."razorpayPaymentId" as razorpay_payment_id,
         pay."createdAt" as created_at
-      from public.hireveri_payments pay
-      left join public.hireveri_plans p on p.id = pay."planId"
-      left join public.hireveri_plans ap on ap.id = pay."addonPlanId"
+      from public.verisnova_payments pay
+      left join public.verisnova_plans p on p.id = pay."planId"
+      left join public.verisnova_plans ap on ap.id = pay."addonPlanId"
       left join public.invoices inv on inv.payment_id = pay.id
       where pay."organizationId" = ${auth.organizationId}::uuid
       order by pay."createdAt" desc
@@ -849,9 +849,9 @@ export async function getOrganizationBillingHistory(auth: RecruiterRequestContex
       select coalesce(sum(
         coalesce(p."screeningCredits", 0) + coalesce(ap."screeningCredits", 0)
       ), 0)::int as purchased_screening_credits
-      from public.hireveri_payments pay
-      left join public.hireveri_plans p on p.id = pay."planId"
-      left join public.hireveri_plans ap on ap.id = pay."addonPlanId"
+      from public.verisnova_payments pay
+      left join public.verisnova_plans p on p.id = pay."planId"
+      left join public.verisnova_plans ap on ap.id = pay."addonPlanId"
       where pay."organizationId" = ${auth.organizationId}::uuid
         -- status is a PaymentStatus enum: cast before comparing, or coalesce
         -- fails on the empty-string default and the whole query throws.

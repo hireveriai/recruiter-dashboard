@@ -41,6 +41,20 @@ async function applySchema() {
     await client.query(sqlFile("test/fixtures/entitlement-fixture-schema.sql"))
     await client.query(sqlFile("prisma/sql/prod/012_free_entitlement_requests.sql"))
     await client.query(sqlFile("prisma/sql/prod/013_free_entitlement_functions.sql"))
+    // Replays db/20260822_rename_hireveri_tables_to_verisnova.sql (Steps 1+2),
+    // applied to production 2026-09-17, so the fixture ends up in the same
+    // shape as production: real tables under the new verisnova_* names plus
+    // hireveri_* compatibility views. 012/013 above are historical and still
+    // reference hireveri_plans/hireveri_user_subscriptions by name, matching
+    // their real, unedited production content.
+    await client.query(`
+      alter table public.hireveri_plans rename to verisnova_plans;
+      alter table public.hireveri_user_subscriptions rename to verisnova_user_subscriptions;
+      create view public.hireveri_plans as select * from public.verisnova_plans;
+      create view public.hireveri_user_subscriptions as select * from public.verisnova_user_subscriptions;
+      alter view public.hireveri_plans set (security_invoker = true);
+      alter view public.hireveri_user_subscriptions set (security_invoker = true);
+    `)
   } finally {
     client.release()
   }
@@ -54,7 +68,7 @@ async function resetData() {
       public.trial_requests,
       public.workspace_trial_credit_events,
       public.workspace_trial_credits,
-      public.hireveri_user_subscriptions,
+      public.verisnova_user_subscriptions,
       public.candidate_identity_links,
       public.candidates,
       public.users,
@@ -436,7 +450,7 @@ suite("10 & 22. the grant path cannot be driven directly without an approval", a
 suite("11. existing paid subscription credits are untouched by the trial system", async () => {
   const organizationId = await createOrganization("Paying Corp")
   await pool.query(
-    `insert into public.hireveri_user_subscriptions
+    `insert into public.verisnova_user_subscriptions
        (id, "userId", "planId", "organizationId", "totalCredits", "screeningCredits", status, "activatedAt")
      values ('sub-1', 'user-1', 'starter-plan', $1::uuid, 50, 120, 'active', now())`,
     [organizationId]
@@ -449,7 +463,7 @@ suite("11. existing paid subscription credits are untouched by the trial system"
   })
 
   const { rows } = await pool.query(
-    `select "totalCredits", "screeningCredits", status from public.hireveri_user_subscriptions where id = 'sub-1'`
+    `select "totalCredits", "screeningCredits", status from public.verisnova_user_subscriptions where id = 'sub-1'`
   )
   assert.equal(rows[0].totalCredits, 50)
   assert.equal(rows[0].screeningCredits, 120)
@@ -499,7 +513,7 @@ suite("13. creating a practice account grants no free practice credit", async ()
   assert.equal(state.granted, false)
   assert.equal(state.freeCreditsRemaining, 0)
 
-  const { rows } = await pool.query(`select count(*)::int as count from public.hireveri_user_subscriptions`)
+  const { rows } = await pool.query(`select count(*)::int as count from public.verisnova_user_subscriptions`)
   assert.equal(rows[0].count, 0)
 })
 
@@ -514,7 +528,7 @@ suite("14 & 16. a candidate can request free practice and approval grants exactl
   assert.equal(state.freeCreditsRemaining, 1)
 
   const { rows } = await pool.query(
-    `select "totalCredits", "planId" from public.hireveri_user_subscriptions where "userId" = $1`,
+    `select "totalCredits", "planId" from public.verisnova_user_subscriptions where "userId" = $1`,
     [identityId]
   )
   assert.equal(rows.length, 1)
@@ -550,7 +564,7 @@ suite("17. approving a candidate request twice does not grant two practice inter
   assert.equal(second.granted, false)
 
   const { rows } = await pool.query(
-    `select "totalCredits" from public.hireveri_user_subscriptions where "userId" = $1`,
+    `select "totalCredits" from public.verisnova_user_subscriptions where "userId" = $1`,
     [identityId]
   )
   assert.equal(rows.length, 1)
@@ -623,7 +637,7 @@ suite("20. a candidate who already used their free practice gets no automatic se
 
   // Spend it.
   await pool.query(
-    `update public.hireveri_user_subscriptions
+    `update public.verisnova_user_subscriptions
      set "totalCredits" = 0, "usedCredits" = 1
      where id = 'free-practice-' || $1::text`,
     [identityId]
@@ -638,7 +652,7 @@ suite("20. a candidate who already used their free practice gets no automatic se
   await requestCandidatePractice({ identityId, email: "aditi@gmail.com" })
 
   const { rows } = await pool.query(
-    `select "totalCredits", "usedCredits" from public.hireveri_user_subscriptions where "userId" = $1`,
+    `select "totalCredits", "usedCredits" from public.verisnova_user_subscriptions where "userId" = $1`,
     [identityId]
   )
   assert.equal(rows.length, 1)
@@ -679,7 +693,7 @@ suite("21b. a recruiter trial does not grant candidate practice credit", async (
   })
 
   const { rows } = await pool.query(
-    `select count(*)::int as count from public.hireveri_user_subscriptions where "planId" = 'practice-free-trial'`
+    `select count(*)::int as count from public.verisnova_user_subscriptions where "planId" = 'practice-free-trial'`
   )
   assert.equal(rows[0].count, 0)
 })
@@ -754,7 +768,7 @@ suite("24b. concurrent practice starts cannot spend the single free credit twice
 
   const consume = async () => {
     const { rows } = await pool.query(
-      `update public.hireveri_user_subscriptions
+      `update public.verisnova_user_subscriptions
        set "totalCredits" = "totalCredits" - 1, "usedCredits" = coalesce("usedCredits", 0) + 1
        where id = 'free-practice-' || $1::text and "totalCredits" >= 1
        returning "totalCredits"`,

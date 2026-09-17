@@ -398,7 +398,7 @@ async function getPlanRows(client: QueryClient, whereClause = Prisma.empty) {
       features,
       "createdAt",
       "updatedAt"
-    from public.hireveri_plans
+    from public.verisnova_plans
     ${whereClause}
   `)
 }
@@ -906,7 +906,7 @@ export async function createRazorpayOrder(input: {
   }
 
   const subscriptionRows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-    insert into public.hireveri_user_subscriptions (
+    insert into public.verisnova_user_subscriptions (
       id,
       "userId",
       "organizationId",
@@ -948,7 +948,7 @@ export async function createRazorpayOrder(input: {
   }
 
   await prisma.$executeRaw(Prisma.sql`
-    insert into public.hireveri_payments (
+    insert into public.verisnova_payments (
       id,
       "userId",
       "subscriptionId",
@@ -1062,7 +1062,7 @@ async function getPaymentByOrderForAuth(input: {
       "razorpayOrderId" as razorpay_order_id,
       "razorpayPaymentId" as razorpay_payment_id,
       "subscriptionId" as subscription_id
-    from public.hireveri_payments
+    from public.verisnova_payments
     where "razorpayOrderId" = ${input.orderId}
       and "organizationId" = ${input.auth.organizationId}::uuid
       and "userId" = ${input.auth.userId}
@@ -1347,7 +1347,7 @@ export async function verifyAndActivatePayment(input: {
     }
 
     await tx.$executeRaw(Prisma.sql`
-      update public.hireveri_payments
+      update public.verisnova_payments
       set status = 'success'::"PaymentStatus",
           "paymentRef" = ${input.razorpayPaymentId},
           "razorpayPaymentId" = ${input.razorpayPaymentId},
@@ -1385,7 +1385,7 @@ export async function verifyAndActivatePayment(input: {
         expires_at: Date | null
       }>
     >(Prisma.sql`
-      update public.hireveri_user_subscriptions
+      update public.verisnova_user_subscriptions
       set
         "planId" = ${validation.plan.id},
         status = 'active',
@@ -1479,7 +1479,7 @@ export async function markPaymentTerminal(input: {
   }
 
   await prisma.$executeRaw(Prisma.sql`
-    update public.hireveri_payments
+    update public.verisnova_payments
     set status = ${input.status}::"PaymentStatus",
         "failureReason" = ${input.reason ?? null},
         "updatedAt" = now()

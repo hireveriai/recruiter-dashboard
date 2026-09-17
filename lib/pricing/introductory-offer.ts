@@ -3,13 +3,13 @@ import type { CurrencyCode } from "@/lib/pricing/currency"
 /**
  * Introductory launch pricing.
  *
- * `hireveri_plans.price_*` stays the amount actually charged. The figures here
+ * `verisnova_plans.price_*` stays the amount actually charged. The figures here
  * are the *regular* prices the plans move to once the introductory period ends
  * — they are shown struck through so a buyer can see what the price becomes,
  * not a decorative anchor. Keep them accurate: if a plan is never sold at its
  * regular price, the strikethrough stops being a truthful claim.
  *
- * To end the offer: raise `hireveri_plans.price_*` to the regular figures and
+ * To end the offer: raise `verisnova_plans.price_*` to the regular figures and
  * delete that slug from INTRODUCTORY_PRICING below. The strikethrough then
  * disappears on its own, because a regular price that is not above the charged
  * price is never displayed.
