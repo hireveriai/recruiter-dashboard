@@ -14,6 +14,11 @@ export type DashboardAssessmentSummary = {
   draftAssessments: number
   invitesSent: number
   completedAttempts: number
+  // Submitted but not yet scored -- an AssessmentAttempt only gets an
+  // AssessmentResult with `passed` set once evaluation finishes, so the gap
+  // between completedAttempts and scoredCount is what's still sitting in
+  // the review queue.
+  awaitingReview: number
   passedCount: number
   scoredCount: number
   passRate: number | null
@@ -72,6 +77,7 @@ export async function getDashboardAssessmentSummary(organizationId: string): Pro
     draftAssessments,
     invitesSent,
     completedAttempts,
+    awaitingReview: Math.max(0, completedAttempts - scoredCount),
     passedCount,
     scoredCount,
     passRate: scoredCount > 0 ? Math.round((passedCount / scoredCount) * 100) : null,

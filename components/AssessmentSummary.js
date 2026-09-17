@@ -89,9 +89,9 @@ export default function AssessmentSummary({ isLoading = false }) {
       ) : (
         <>
           <div className="grid grid-cols-2 justify-items-start gap-3 sm:grid-cols-4">
-            <StatTile label="Assessments" value={summary?.totalAssessments ?? 0} />
-            <StatTile label="Published" value={summary?.publishedAssessments ?? 0} />
             <StatTile label="Invites Sent" value={summary?.invitesSent ?? 0} />
+            <StatTile label="Completed" value={summary?.completedAttempts ?? 0} />
+            <StatTile label="Awaiting Review" value={summary?.awaitingReview ?? 0} />
             <StatTile
               label="Pass Rate"
               value={summary?.passRate === null || summary?.passRate === undefined ? "-" : `${summary.passRate}%`}
