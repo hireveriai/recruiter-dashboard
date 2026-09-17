@@ -148,7 +148,6 @@ function DashboardContent({ profile, overview, isLoading }) {
   const canSendInterview = canAccessFeature(permissionProfile, "sendInterview", entitlements);
   const canViewCandidates = canAccessFeature(permissionProfile, "candidates", entitlements);
   const canViewInterviews = canAccessFeature(permissionProfile, "interviews", entitlements);
-  const canViewReports = canAccessFeature(permissionProfile, "reports", entitlements);
   const canUseAiScreening = canAccessFeature(permissionProfile, "aiScreening", entitlements);
   const canViewWarRoom = canAccessFeature(displayProfile, "warRoom", entitlements);
   const fraudAlerts = (overview?.alerts ?? []).filter((alert) => {
@@ -280,17 +279,21 @@ function DashboardContent({ profile, overview, isLoading }) {
             </div>
           </div>
 
+          {canCreateJob || canSendInterview || canUseAiScreening ? (
           <DashboardIntelligenceBanner
             overview={fullOverview}
             profile={displayProfile}
             onCreateJob={canCreateJob ? () => window.dispatchEvent(new CustomEvent("verisnova:open-create-job")) : undefined}
             onSendInterview={canSendInterview ? () => setIsModalOpen(true) : undefined}
           />
-          <TrialStatusCard credits={trialCredits} />
+          ) : null}
+          <TrialStatusCard credits={trialCredits} entitlements={entitlements} />
 
+          {canViewInterviews ? (
           <Suspense fallback={null}>
             <Pipeline initialPipeline={fullOverview?.pipeline} isLoading={false} />
           </Suspense>
+          ) : null}
           {canViewInterviews ? (
           <Suspense fallback={null}>
             <PendingInterviews
@@ -301,7 +304,7 @@ function DashboardContent({ profile, overview, isLoading }) {
             />
           </Suspense>
           ) : null}
-          {canViewInterviews || canViewReports ? (
+          {canViewInterviews ? (
           <Suspense fallback={null}>
             <RecordedInterviews
               initialRecordedInterviews={isPartialOverview ? undefined : fullOverview?.recordedInterviews}
@@ -311,12 +314,12 @@ function DashboardContent({ profile, overview, isLoading }) {
             />
           </Suspense>
           ) : null}
-          {canViewCandidates ? (
+          {canViewCandidates && (canViewInterviews || canUseAiScreening) ? (
           <Suspense fallback={null}>
             <CandidateList initialCandidates={fullOverview?.candidates} isLoading={false} />
           </Suspense>
           ) : null}
-          {canUseAiScreening || canViewReports ? (
+          {canUseAiScreening ? (
           <Suspense fallback={null}>
             <VerisSummary
               initialSummaries={isPartialOverview ? undefined : fullOverview?.veris}

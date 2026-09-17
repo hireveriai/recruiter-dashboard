@@ -156,6 +156,12 @@ export default function Sidebar({ initialProfile = null, overview = null }) {
   const displayProfileError = initialProfile ? "" : profileError
   const canCreateJob = canAccessFeature(displayUser, "createJob", displayUser?.entitlements)
   const canSendInterview = canAccessFeature(displayUser, "sendInterview", displayUser?.entitlements)
+  const canUseAiScreening = canAccessFeature(displayUser, "aiScreening", displayUser?.entitlements)
+  // The Hiring Workflow panel walks Create Job -> Screening -> Send Link ->
+  // AI Interview -> Review Reports -> Hiring Decision -- entirely an
+  // AI-Interview/Screening concept, irrelevant for an org that only has
+  // VERIS Assessment.
+  const showHiringWorkflow = canCreateJob || canSendInterview || canUseAiScreening
 
   const initials = useMemo(
     () =>
@@ -212,7 +218,9 @@ export default function Sidebar({ initialProfile = null, overview = null }) {
           </div>
         ) : null}
 
-        <HiringWorkflow overview={workflowOverview} profile={displayUser} onAction={handleAction} />
+        {showHiringWorkflow ? (
+          <HiringWorkflow overview={workflowOverview} profile={displayUser} onAction={handleAction} />
+        ) : null}
       </aside>
 
       {canCreateJob ? <CreateJobModal open={openCreateJob} setOpen={setOpenCreateJob} /> : null}

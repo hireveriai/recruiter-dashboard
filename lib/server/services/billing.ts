@@ -1408,7 +1408,7 @@ export async function verifyAndActivatePayment(input: {
         -- active customer is never cut short by buying more.
         "expiresAt" =
           greatest(coalesce("expiresAt", now()), now())
-          + make_interval(months => ${CREDIT_VALIDITY_MONTHS}),
+          + make_interval(months => ${CREDIT_VALIDITY_MONTHS}::int),
         "updatedAt" = now()
       where id = ${lockedPayment.subscription_id}
       returning

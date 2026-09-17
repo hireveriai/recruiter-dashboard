@@ -41,7 +41,17 @@ function Shell({ eyebrow, title, children }) {
  * remaining" — those credits do not exist yet, and the backend will reject any
  * attempt to spend them.
  */
-export default function TrialStatusCard({ credits }) {
+function gridColsClass(count) {
+  if (count <= 1) return "sm:grid-cols-1"
+  if (count === 2) return "sm:grid-cols-2"
+  return "sm:grid-cols-3"
+}
+
+export default function TrialStatusCard({ credits, entitlements = null }) {
+  const showInterview = entitlements ? Boolean(entitlements.AI_INTERVIEW) : true
+  const showScreening = entitlements ? Boolean(entitlements.SCREENING) : true
+  const showAssessment = entitlements ? Boolean(entitlements.ASSESSMENT) : true
+  const visibleStatCount = [showInterview, showScreening, showAssessment].filter(Boolean).length
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [trialState, setTrialState] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -124,16 +134,20 @@ export default function TrialStatusCard({ credits }) {
 
   // ---- Paid workspace: unchanged behaviour ---------------------------------
   if (isSubscription) {
+    if (visibleStatCount === 0) {
+      return null
+    }
+
     const interviewCredits = Math.max(0, Number(credits?.interviewCreditsRemaining ?? 0))
     const screeningCredits = Math.max(0, Number(credits?.screeningCreditsRemaining ?? 0))
     const assessmentCredits = Math.max(0, Number(credits?.assessmentCreditsRemaining ?? 0))
 
     return (
       <Shell eyebrow="Subscription Credits" title="Subscription Credits">
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <Stat label="AI Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} />
-          <Stat label="VERIS Screening Credits" value={screeningCredits} depleted={screeningCredits === 0} />
-          <Stat label="VERIS Assessment Credits" value={assessmentCredits} depleted={assessmentCredits === 0} />
+        <div className={`mt-4 grid gap-3 ${gridColsClass(visibleStatCount)}`}>
+          {showInterview ? <Stat label="AI Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
+          {showScreening ? <Stat label="VERIS Screening Credits" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
+          {showAssessment ? <Stat label="VERIS Assessment Credits" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
         </div>
       </Shell>
     )
@@ -182,10 +196,10 @@ export default function TrialStatusCard({ credits }) {
             </button>
           </div>
         ) : null}
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <Stat label="AI Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} />
-          <Stat label="VERIS Screenings Remaining" value={screeningCredits} depleted={screeningCredits === 0} />
-          <Stat label="VERIS Assessments Remaining" value={assessmentCredits} depleted={assessmentCredits === 0} />
+        <div className={`mt-4 grid gap-3 ${gridColsClass(visibleStatCount)}`}>
+          {showInterview ? <Stat label="AI Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
+          {showScreening ? <Stat label="VERIS Screenings Remaining" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
+          {showAssessment ? <Stat label="VERIS Assessments Remaining" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
         </div>
         {trialState?.expiresAt ? (
           <p className="mt-3 text-xs text-slate-400">
