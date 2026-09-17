@@ -804,8 +804,8 @@ export default function ManageTeamPage() {
           ) : null}
 
           <div className="mt-8 overflow-x-auto rounded-[24px] border border-slate-800 bg-slate-950/30">
-            <div className="min-w-[1180px]">
-            <div className="hidden grid-cols-[250px_190px_112px_96px_minmax(300px,1fr)_160px] items-start gap-5 border-b border-slate-800 px-6 py-4 text-xs uppercase tracking-[0.18em] text-slate-500 xl:grid">
+            <div className="xl:min-w-[1080px]">
+            <div className="hidden grid-cols-[220px_170px_100px_88px_minmax(240px,1fr)_150px] items-start gap-4 border-b border-slate-800 px-6 py-4 text-xs uppercase tracking-[0.18em] text-slate-500 xl:grid">
               <div>Team Member</div>
               <div>Organization Role</div>
               <div>Status</div>
@@ -820,7 +820,7 @@ export default function ManageTeamPage() {
               team.map((member) => (
                 <div
                   key={member.userId}
-                  className="grid min-w-0 grid-cols-1 items-start gap-5 border-b border-slate-900 px-4 py-5 last:border-b-0 sm:px-6 lg:grid-cols-2 xl:grid-cols-[250px_190px_112px_96px_minmax(300px,1fr)_160px]"
+                  className="grid min-w-0 grid-cols-1 items-start gap-4 border-b border-slate-900 px-4 py-5 last:border-b-0 sm:px-6 lg:grid-cols-2 xl:grid-cols-[220px_170px_100px_88px_minmax(240px,1fr)_150px]"
                 >
                   <div className="min-w-0 self-start">
                     <div className="flex items-center gap-2">
