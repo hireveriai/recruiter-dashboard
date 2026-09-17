@@ -11,7 +11,7 @@ const OFFER_LINE = "10 AI Interviews + 25 VERIS Screenings"
 
 function Stat({ label, value, depleted }) {
   return (
-    <div className={`rounded-xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
+    <div className={`w-full max-w-[220px] rounded-xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
       <p className={`text-xs font-medium uppercase tracking-[0.12em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
         {label}
       </p>
@@ -41,12 +41,6 @@ function Shell({ eyebrow, title, children }) {
  * remaining" — those credits do not exist yet, and the backend will reject any
  * attempt to spend them.
  */
-function gridColsClass(count) {
-  if (count <= 1) return "sm:grid-cols-1"
-  if (count === 2) return "sm:grid-cols-2"
-  return "sm:grid-cols-3"
-}
-
 export default function TrialStatusCard({ credits, entitlements = null }) {
   const showInterview = entitlements ? Boolean(entitlements.AI_INTERVIEW) : true
   const showScreening = entitlements ? Boolean(entitlements.SCREENING) : true
@@ -144,7 +138,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
 
     return (
       <Shell eyebrow="Subscription Credits" title="Subscription Credits">
-        <div className={`mt-4 grid gap-3 ${gridColsClass(visibleStatCount)}`}>
+        <div className="mt-4 flex flex-wrap gap-3">
           {showInterview ? <Stat label="AI Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screening Credits" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessment Credits" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
@@ -196,7 +190,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
             </button>
           </div>
         ) : null}
-        <div className={`mt-4 grid gap-3 ${gridColsClass(visibleStatCount)}`}>
+        <div className="mt-4 flex flex-wrap gap-3">
           {showInterview ? <Stat label="AI Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screenings Remaining" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessments Remaining" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
