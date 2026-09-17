@@ -368,6 +368,7 @@ function WorkflowStepCard({ step, status, onAction, profile }) {
   const canUseStep =
     (step.id === "create-job" && canAccessFeature(profile, "createJob", entitlements)) ||
     (step.id === "veris-screening" && canAccessFeature(profile, "aiScreening", entitlements)) ||
+    (step.id === "veris-assessment" && canAccessFeature(profile, "assessments", entitlements)) ||
     (step.id === "send-link" && canAccessFeature(profile, "sendInterview", entitlements)) ||
     (step.id === "ai-interview" && canAccessFeature(profile, "interviews", entitlements)) ||
     (step.id === "review-reports" && canAccessFeature(profile, "reports", entitlements)) ||
