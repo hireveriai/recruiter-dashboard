@@ -12,7 +12,7 @@ const OFFER_LINE = "10 AI Interviews + 25 VERIS Screenings"
 function Stat({ label, value, depleted }) {
   return (
     <div className={`rounded-xl border px-4 py-3 ${depleted ? "border-amber-400/25 bg-amber-500/10" : "border-slate-700 bg-slate-950/35"}`}>
-      <p className={`text-xs font-medium uppercase tracking-[0.12em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
+      <p className={`whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.06em] ${depleted ? "text-amber-200/75" : "text-slate-400"}`}>
         {label}
       </p>
       <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
@@ -20,11 +20,13 @@ function Stat({ label, value, depleted }) {
   )
 }
 
-// Grid with a hard per-column cap (220px) instead of an even 1/N split, and
+// Grid with a hard per-column cap instead of an even 1/N split, and
 // `auto-fit` collapses unused tracks instead of stretching them -- so 1, 2,
 // or 3 visible credit tiles all render at the same compact size rather than
 // each one growing to fill whatever fraction of the row it happens to have.
-const STAT_GRID_CLASS = "mt-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(180px,220px))]"
+// 236px (not 220px) is the narrowest width "VERIS ASSESSMENT CREDITS" -- the
+// longest label -- fits on one line at the reduced tracking above.
+const STAT_GRID_CLASS = "mt-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,236px))]"
 
 function Shell({ eyebrow, title, children }) {
   return (
