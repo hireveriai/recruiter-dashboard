@@ -1,6 +1,6 @@
 "use client";
 
-import { BrainCircuit } from "lucide-react";
+import { Bell, BrainCircuit } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
@@ -667,6 +667,8 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                 <button
                   type="button"
                   onClick={() => setAlertsOpen((value) => !value)}
+                  aria-label="Alerts"
+                  title="Alerts"
                   className={[
                     "hv-nav-link group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] font-medium tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
                     alertsOpen
@@ -674,7 +676,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                       : "border-transparent text-slate-300/90 hover:border-slate-700 hover:bg-slate-900/70 hover:text-white",
                   ].join(" ")}
                 >
-                  Alerts
+                  <Bell className="h-4 w-4" strokeWidth={1.8} />
                   {unreadAlerts.length > 0 ? (
                     <span className="relative inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-sky-300/30 bg-sky-500/15 px-1 text-[10px] font-semibold leading-none text-sky-50">
                       {unreadAlerts.length}
