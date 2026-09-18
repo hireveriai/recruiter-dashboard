@@ -85,6 +85,16 @@ export async function GET(
 
     const answerByQuestionId = new Map(attempt.answers.map((a) => [a.questionId, a]))
 
+    // code_similarity signals are recorded per-question (only when elevated
+    // or above — see assessment/lib/server/finalize-results.ts), keyed by
+    // questionId in the signal value so they can be attached to the right
+    // question card here.
+    const codeSimilarityByQuestionId = new Map(
+      attempt.signals
+        .filter((s) => s.type === "code_similarity" && s.value && typeof s.value === "object")
+        .map((s) => [(s.value as Record<string, unknown>).questionId, s.value])
+    )
+
     const questionBreakdown = allQuestions.map((question) => {
       const answer = answerByQuestionId.get(question.id)
       const isObjective = question.questionType === "SINGLE_CHOICE" || question.questionType === "MULTI_SELECT"
@@ -106,6 +116,8 @@ export async function GET(
         answerId: answer?.id ?? null,
         candidateAnswer: answer?.answer ?? null,
         answeredAt: answer?.answeredAt ?? null,
+        codeSimilarity:
+          question.questionType === "CODING" ? codeSimilarityByQuestionId.get(question.id) ?? null : null,
         evaluation: answer?.evaluation
           ? {
               // AI evaluation — untouched by manager review.
@@ -131,6 +143,10 @@ export async function GET(
       summary && typeof summary === "object" && "aiAssistanceRisk" in summary
         ? (summary as Record<string, unknown>).aiAssistanceRisk
         : null
+    const codeSimilarity =
+      summary && typeof summary === "object" && "codeSimilarity" in summary
+        ? (summary as Record<string, unknown>).codeSimilarity
+        : null
 
     return successResponse({
       attempt: {
@@ -154,6 +170,7 @@ export async function GET(
       invite: { sentAt: attempt.invite.sentAt, completedAt: attempt.invite.completedAt },
       riskLevel,
       aiAssistanceRisk,
+      codeSimilarity,
       signals: attempt.signals.map((s) => ({ id: s.id, type: s.type, value: s.value, createdAt: s.createdAt })),
       questions: questionBreakdown,
     })

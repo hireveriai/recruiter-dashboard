@@ -63,6 +63,18 @@ const SIGNAL_TYPE_LABELS = {
   ip_changed: "IP address changed",
   ai_assistance_risk: "Potential AI assistance signal",
   suspicious_activity: "Suspicious activity",
+  code_similarity: "Potential code similarity",
+}
+
+// Same LOW/ELEVATED/REVIEW_RECOMMENDED vocabulary as "Potential AI Assistance"
+// above — a review cue, never a verdict. Common algorithms or expected
+// implementation patterns can naturally produce similar code.
+function formatCodeSimilarityLevel(level) {
+  return formatAiAssistanceLevel(level)
+}
+
+function codeSimilarityTone(level) {
+  return aiAssistanceTone(level)
 }
 
 function formatSignalType(type) {
@@ -183,6 +195,26 @@ export default function AssessmentAttemptDetailPage() {
           </div>
         ) : null}
 
+        {detail.codeSimilarity ? (
+          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-slate-500">Code Similarity / Potential Reuse</p>
+              <span
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${codeSimilarityTone(detail.codeSimilarity.level)}`}
+              >
+                {formatCodeSimilarityLevel(detail.codeSimilarity.level)}
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-slate-300">
+              Highest similarity to another candidate's submission for the same question: {Number(detail.codeSimilarity.score)}%
+            </p>
+            <p className="mt-3 text-xs text-slate-500">
+              Similarity is a review signal, not proof of copying - common algorithms or expected implementation
+              patterns can naturally produce similar code. See the flagged question below for detail.
+            </p>
+          </div>
+        ) : null}
+
         <h2 className="mt-8 text-lg font-semibold text-white">Question Breakdown</h2>
         <div className="mt-3 space-y-4">
           {detail.questions.map((question, index) => {
@@ -223,10 +255,27 @@ export default function AssessmentAttemptDetailPage() {
                   </ul>
                 ) : (
                   <div className="mt-3 space-y-2">
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-300">
-                      <p className="mb-1 text-xs uppercase tracking-[0.18em] text-slate-500">Candidate Answer</p>
-                      <p>{question.candidateAnswer?.text ?? "No answer submitted"}</p>
-                    </div>
+                    {question.questionType === "CODING" ? (
+                      <>
+                        {question.codeSimilarity ? (
+                          <div
+                            className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] ${codeSimilarityTone(question.codeSimilarity.level)}`}
+                          >
+                            <span>Code Similarity: {formatCodeSimilarityLevel(question.codeSimilarity.level)}</span>
+                            <span>{Number(question.codeSimilarity.score)}% match</span>
+                          </div>
+                        ) : null}
+                        <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-300">
+                          <p className="mb-1 text-xs normal-case uppercase tracking-[0.18em] text-slate-500">Candidate Code</p>
+                          <code>{question.candidateAnswer?.code ?? "No code submitted"}</code>
+                        </pre>
+                      </>
+                    ) : (
+                      <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-300">
+                        <p className="mb-1 text-xs uppercase tracking-[0.18em] text-slate-500">Candidate Answer</p>
+                        <p>{question.candidateAnswer?.text ?? "No answer submitted"}</p>
+                      </div>
+                    )}
                     {question.evaluation?.feedback ? (
                       <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-3 text-sm text-violet-100">
                         <p className="mb-1 text-xs uppercase tracking-[0.18em] text-violet-300">AI Feedback</p>
