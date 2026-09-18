@@ -8,6 +8,7 @@ import {
   getTrialRequestForAdmin,
   rejectTrialRequest,
 } from "@/lib/server/services/trial-requests"
+import { emitTrialApprovedEmail } from "@/lib/server/lifecycle-email-events"
 import { sendTrialDecisionEmail } from "@/lib/services/email.service"
 
 export const runtime = "nodejs"
@@ -34,20 +35,30 @@ export async function POST(
         : await rejectTrialRequest({ requestId, actor: admin.email, reason: payload.reason })
 
     // `granted` is true only when this call actually issued the credits, so a
-    // second click sends no second email and adds no second grant.
+    // second click sends no second email and adds no second grant (this is
+    // additionally guarded inside emitTrialApprovedEmail's own idempotency
+    // claim, keyed by requestId).
     if (result.granted || payload.decision === "REJECT") {
       const row = await getTrialRequestForAdmin(result.requestId).catch(() => null)
 
       if (row?.contactEmail) {
-        void sendTrialDecisionEmail({
-          kind: row.requestType === "RECRUITER_TRIAL" ? "RECRUITER" : "CANDIDATE",
-          decision: payload.decision,
-          to: row.contactEmail,
-          companyName: row.companyName,
-          requestId: result.requestId,
-        }).catch((error) => {
-          console.warn("Trial decision notification failed", error)
-        })
+        if (payload.decision === "APPROVE" && row.requestType === "RECRUITER_TRIAL" && row.organizationId) {
+          void emitTrialApprovedEmail({
+            organizationId: row.organizationId,
+            requestId: result.requestId,
+            to: row.contactEmail,
+          })
+        } else {
+          void sendTrialDecisionEmail({
+            kind: row.requestType === "RECRUITER_TRIAL" ? "RECRUITER" : "CANDIDATE",
+            decision: payload.decision,
+            to: row.contactEmail,
+            companyName: row.companyName,
+            requestId: result.requestId,
+          }).catch((error) => {
+            console.warn("Trial decision notification failed", error)
+          })
+        }
       }
     }
 

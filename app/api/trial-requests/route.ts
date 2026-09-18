@@ -9,7 +9,7 @@ import {
   getRecruiterTrialState,
   requestRecruiterTrial,
 } from "@/lib/server/services/trial-requests"
-import { sendTrialRequestEmails } from "@/lib/services/email.service"
+import { emitTrialApprovedEmail, emitTrialRequestedEmail } from "@/lib/server/lifecycle-email-events"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -70,17 +70,25 @@ export async function POST(request: Request) {
       },
     })
 
-    // Notifications must never fail the request itself.
-    void sendTrialRequestEmails({
-      kind: "RECRUITER",
-      status: state.status,
-      to: profile.email,
-      name: profile.name,
-      companyName: profile.organization,
-      requestId: state.requestId,
-    }).catch((error) => {
-      console.warn("Trial request notification failed", error)
-    })
+    // Notifications must never fail the request itself. A company that
+    // auto-validates gets the "trial approved" email directly - the
+    // "request received" email would be both misleading (the trial is
+    // already active) and a second, unwanted email so soon after signup.
+    if (state.status === "APPROVED") {
+      void emitTrialApprovedEmail({
+        organizationId: auth.organizationId,
+        requestId: state.requestId,
+        to: profile.email,
+        name: profile.name,
+      })
+    } else {
+      void emitTrialRequestedEmail({
+        organizationId: auth.organizationId,
+        requestId: state.requestId,
+        to: profile.email,
+        name: profile.name,
+      })
+    }
 
     return applyDeviceCookie(noStore(successResponse(state)), origin)
   } catch (error) {

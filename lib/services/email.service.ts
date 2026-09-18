@@ -1390,3 +1390,284 @@ export async function sendTrialDecisionEmail(params: TrialDecisionEmailParams) {
     ),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Recruiter lifecycle emails: trial request received / trial approved /
+// subscription, bundle and add-on activated.
+//
+// These are deliberately separate from sendTrialRequestEmails/
+// sendTrialDecisionEmail above (which remain unchanged for backward
+// compatibility) - they take pre-resolved display strings only, never fetch
+// entitlement or credit data themselves. The caller (a dispatcher in
+// lib/server/lifecycle-email-events.ts) is the single place that resolves
+// "what does this org actually have" from the real entitlement/billing
+// source of truth, so this file never hardcodes or duplicates that logic.
+// ---------------------------------------------------------------------------
+
+function founderSignatureHtml() {
+  return `
+    <p style="margin:22px 0 0;color:#334155;font-size:15px;line-height:1.7;">Best regards,</p>
+    <p style="margin:0;color:#0f172a;font-size:15px;line-height:1.6;font-weight:700;">Jatin Singh</p>
+    <p style="margin:0;color:#475569;font-size:13px;line-height:1.6;">Founder &amp; CEO, VerisNova</p>
+    <p style="margin:0;color:#475569;font-size:13px;line-height:1.6;">Verixans Technologies Pvt. Ltd.</p>
+    <p style="margin:4px 0 0;font-size:13px;"><a href="https://www.verisnova.com" style="color:#2563eb;text-decoration:none;">www.verisnova.com</a></p>
+  `;
+}
+
+function founderSignatureText() {
+  return [
+    "Best regards,",
+    "Jatin Singh",
+    "Founder & CEO, VerisNova",
+    "Verixans Technologies Pvt. Ltd.",
+    "www.verisnova.com",
+  ].join("\n");
+}
+
+function getRecruiterDashboardBaseUrl() {
+  return (
+    process.env.RECRUITER_APP_URL ||
+    process.env.NEXT_PUBLIC_RECRUITER_APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://recruiter.verisnova.com"
+  ).replace(/\/$/, "");
+}
+
+function entitlementBulletsHtml(lines: string[]) {
+  if (lines.length === 0) return "";
+
+  return `
+    <ul style="margin:0 0 22px;padding-left:20px;color:#334155;font-size:15px;line-height:1.9;">
+      ${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+    </ul>
+  `;
+}
+
+function joinNaturally(items: string[]) {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+type TrialRequestReceivedEmailParams = {
+  to: string;
+  firstName?: string | null;
+  /** e.g. ["10 AI Interview Sessions", "25 VERIS Screening Reviews"] */
+  entitlementLines: string[];
+};
+
+export async function sendTrialRequestReceivedEmail(params: TrialRequestReceivedEmailParams) {
+  const name = normalizeText(params.firstName, "there");
+  const safeName = escapeHtml(name);
+  const offerPhrase = joinNaturally(params.entitlementLines) || "your requested trial features";
+  const heading = "Free Trial Request Received";
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to: params.to,
+    subject: heading,
+    text: [
+      `Hi ${name},`,
+      "",
+      `We received your request for ${offerPhrase}.`,
+      "",
+      "We're verifying your company details now. Requests are usually reviewed within 24 hours, and we'll email you as soon as your trial is active.",
+      "",
+      founderSignatureText(),
+    ].join("\n"),
+    html: trialShellHtml(
+      heading,
+      `
+      <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">Hi ${safeName},</p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        We received your request for <strong style="color:#0f172a;">${escapeHtml(offerPhrase)}</strong>.
+      </p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        We&rsquo;re verifying your company details now. Requests are usually reviewed within 24 hours, and we&rsquo;ll email you as soon as your trial is active.
+      </p>
+      ${founderSignatureHtml()}
+    `
+    ),
+  });
+}
+
+type TrialApprovedEmailParams = {
+  to: string;
+  firstName?: string | null;
+  /** e.g. ["10 AI Interview Sessions", "25 VERIS Screening Reviews"] */
+  entitlementLines: string[];
+};
+
+export async function sendTrialApprovedEmail(params: TrialApprovedEmailParams) {
+  const name = normalizeText(params.firstName, "there");
+  const safeName = escapeHtml(name);
+  const dashboardUrl = `${getRecruiterDashboardBaseUrl()}/dashboard`;
+  const heading = "Your VerisNova Recruiter Trial Has Been Approved";
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to: params.to,
+    subject: heading,
+    text: [
+      `Hi ${name},`,
+      "",
+      "Great news!",
+      "Your VerisNova Recruiter Trial has been approved and is now active.",
+      "",
+      "Your trial includes:",
+      ...params.entitlementLines.map((line) => `- ${line}`),
+      "",
+      "You can now start exploring VerisNova and use the features included in your trial.",
+      `Go to Your VerisNova Dashboard: ${dashboardUrl}`,
+      "",
+      "We're excited to have you on VerisNova. If you have any questions or need help getting started, our team is here to help.",
+      "",
+      founderSignatureText(),
+    ].join("\n"),
+    html: trialShellHtml(
+      heading,
+      `
+      <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">Hi ${safeName},</p>
+      <p style="margin:0 0 4px;color:#334155;font-size:15px;line-height:1.7;">Great news! &#127881;</p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        Your VerisNova Recruiter Trial has been approved and is now active.
+      </p>
+      <p style="margin:0 0 8px;color:#0f172a;font-size:15px;font-weight:700;">Your trial includes</p>
+      ${entitlementBulletsHtml(params.entitlementLines)}
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        You can now start exploring VerisNova and use the features included in your trial.
+      </p>
+      <p style="margin:0 0 6px;color:#0f172a;font-size:15px;font-weight:700;">Ready to get started?</p>
+      ${actionButtonHtml(dashboardUrl, "Go to Your VerisNova Dashboard")}
+      <p style="margin:22px 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        We&rsquo;re excited to have you on VerisNova. If you have any questions or need help getting started, our team is here to help.
+      </p>
+      ${founderSignatureHtml()}
+    `
+    ),
+  });
+}
+
+type PurchaseActivatedEmailParams = {
+  to: string;
+  firstName?: string | null;
+  entitlementLines: string[];
+};
+
+async function sendPurchaseActivatedEmail(input: {
+  to: string;
+  firstName?: string | null;
+  entitlementLines: string[];
+  subject: string;
+  greetingLine: string;
+  includesLabel: string;
+}) {
+  const name = normalizeText(input.firstName, "there");
+  const safeName = escapeHtml(name);
+  const dashboardUrl = `${getRecruiterDashboardBaseUrl()}/dashboard`;
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to: input.to,
+    subject: input.subject,
+    text: [
+      `Hi ${name},`,
+      "",
+      input.greetingLine,
+      "",
+      `${input.includesLabel}:`,
+      ...input.entitlementLines.map((line) => `- ${line}`),
+      "",
+      "You can now access the features included in your plan from your VerisNova Recruiter Dashboard.",
+      `Go to Your VerisNova Dashboard: ${dashboardUrl}`,
+      "",
+      "We're excited to have you on VerisNova and look forward to helping you make faster, more structured talent decisions.",
+      "If you have any questions or need help getting started, our team is here to help.",
+      "",
+      founderSignatureText(),
+    ].join("\n"),
+    html: trialShellHtml(
+      input.subject,
+      `
+      <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">Hi ${safeName},</p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">${escapeHtml(input.greetingLine)}</p>
+      <p style="margin:0 0 8px;color:#0f172a;font-size:15px;font-weight:700;">${escapeHtml(input.includesLabel)}</p>
+      ${entitlementBulletsHtml(input.entitlementLines)}
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        You can now access the features included in your plan from your VerisNova Recruiter Dashboard.
+      </p>
+      <p style="margin:0 0 6px;color:#0f172a;font-size:15px;font-weight:700;">Ready to get started?</p>
+      ${actionButtonHtml(dashboardUrl, "Go to Your VerisNova Dashboard")}
+      <p style="margin:22px 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        We&rsquo;re excited to have you on VerisNova and look forward to helping you make faster, more structured talent decisions. If you have any questions or need help getting started, our team is here to help.
+      </p>
+      ${founderSignatureHtml()}
+    `
+    ),
+  });
+}
+
+export async function sendSubscriptionActivatedEmail(params: PurchaseActivatedEmailParams) {
+  return sendPurchaseActivatedEmail({
+    ...params,
+    subject: "Welcome to VerisNova — Your Subscription Is Active",
+    greetingLine:
+      "Welcome to VerisNova! Your VerisNova subscription is now active, and you can start using your purchased features right away.",
+    includesLabel: "Your subscription includes",
+  });
+}
+
+export async function sendBundleActivatedEmail(params: PurchaseActivatedEmailParams) {
+  return sendPurchaseActivatedEmail({
+    ...params,
+    subject: "Your VerisNova Bundle Is Active",
+    greetingLine:
+      "Welcome to VerisNova! Your VerisNova bundle is now active, and you can start using your bundled features right away.",
+    includesLabel: "Your bundle includes",
+  });
+}
+
+type AddonActivatedEmailParams = {
+  to: string;
+  firstName?: string | null;
+  /** e.g. ["VERIS Assessment"] or ["25 additional VERIS Screening Reviews"] */
+  addonNames: string[];
+};
+
+export async function sendAddonActivatedEmail(params: AddonActivatedEmailParams) {
+  const name = normalizeText(params.firstName, "there");
+  const safeName = escapeHtml(name);
+  const addonPhrase = joinNaturally(params.addonNames) || "new add-on";
+  const dashboardUrl = `${getRecruiterDashboardBaseUrl()}/dashboard`;
+  const heading = "Your VerisNova Add-on Is Now Active";
+
+  return sendWithRetry({
+    from: getEmailFrom(),
+    to: params.to,
+    subject: heading,
+    text: [
+      `Hi ${name},`,
+      "",
+      `Your ${addonPhrase} has been successfully activated on your VerisNova account.`,
+      "You can now access the newly added capability from your Recruiter Dashboard.",
+      `Go to Your VerisNova Dashboard: ${dashboardUrl}`,
+      "",
+      founderSignatureText(),
+    ].join("\n"),
+    html: trialShellHtml(
+      heading,
+      `
+      <p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.7;">Hi ${safeName},</p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        Your <strong style="color:#0f172a;">${escapeHtml(addonPhrase)}</strong> has been successfully activated on your VerisNova account.
+      </p>
+      <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+        You can now access the newly added capability from your Recruiter Dashboard.
+      </p>
+      ${actionButtonHtml(dashboardUrl, "Go to Your VerisNova Dashboard")}
+      ${founderSignatureHtml()}
+    `
+    ),
+  });
+}

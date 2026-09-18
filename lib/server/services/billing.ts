@@ -9,6 +9,7 @@ import { prisma } from "@/lib/server/prisma"
 import { FALLBACK_CURRENCY, normalizeCurrency, type CurrencyCode } from "@/lib/server/pricing/currency"
 import { createAndSendInvoiceForPayment } from "@/lib/server/services/invoices"
 import { ensureEntitlementSchema } from "@/lib/server/entitlements"
+import { emitPurchaseActivatedEmail, type PurchaseActivationKind } from "@/lib/server/lifecycle-email-events"
 
 const PLAN_SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,80}$/
 const RAZORPAY_MINIMUM_AMOUNT_PAISE = 100
@@ -1370,6 +1371,29 @@ export async function verifyAndActivatePayment(input: {
       validation.plan.planType === "SCREENING" ||
       validation.plan.planType === "BUNDLE" ||
       validation.addonPlan?.planType === "SCREENING"
+
+    // Snapshot the org's entitlement flags BEFORE this purchase updates them,
+    // so the lifecycle email dispatched after the transaction can tell a
+    // first-time activation (Subscription/Bundle Active) apart from an
+    // existing customer buying a new module (Add-on Active).
+    const preActivationRows = await tx.$queryRaw<
+      Array<{
+        interview_enabled: boolean
+        screening_enabled: boolean
+        assessment_enabled: boolean
+      }>
+    >(Prisma.sql`
+      select interview_enabled, screening_enabled, assessment_enabled
+      from public.verisnova_user_subscriptions
+      where id = ${lockedPayment.subscription_id}
+      for update
+    `)
+    const pre = preActivationRows[0]
+    const hadAnyEntitlementBefore = Boolean(pre?.interview_enabled || pre?.screening_enabled || pre?.assessment_enabled)
+    const newlyGrantedInterview = grantsInterview && !pre?.interview_enabled
+    const newlyGrantedScreening = grantsScreening && !pre?.screening_enabled
+    const newlyGrantedAssessment = grantsAssessment && !pre?.assessment_enabled
+
     const subscriptionRows = await tx.$queryRaw<
       Array<{
         id: string
@@ -1447,10 +1471,72 @@ export async function verifyAndActivatePayment(input: {
             expiresAt: subscription.expires_at,
           }
         : null,
+      lifecycleEmail: {
+        hadAnyEntitlementBefore,
+        grantsInterview,
+        grantsScreening,
+        grantsAssessment,
+        newlyGrantedInterview,
+        newlyGrantedScreening,
+        newlyGrantedAssessment,
+        activatedPlan,
+        organizationId: subscription?.organization_id ?? lockedPayment.organization_id,
+      },
     }
   })
 
   if (!activationResult.alreadyVerified) {
+    const { lifecycleEmail } = activationResult
+
+    if (lifecycleEmail) {
+      // Every module this purchase's plan actually includes, not just the
+      // ones that flipped an org from "doesn't have it" to "has it" - an
+      // existing Screening customer buying more Screening credits still gets
+      // an email, phrased as "additional" credits rather than a first grant
+      // (see entitlement-summary.ts's `additional` flag).
+      const entitlementEntries: Array<{
+        code: "AI_INTERVIEW" | "SCREENING" | "ASSESSMENT"
+        credits?: number | null
+        additional?: boolean
+      }> = []
+      if (lifecycleEmail.grantsInterview) {
+        entitlementEntries.push({
+          code: "AI_INTERVIEW",
+          credits: lifecycleEmail.activatedPlan.interviewSessions,
+          additional: !lifecycleEmail.newlyGrantedInterview,
+        })
+      }
+      if (lifecycleEmail.grantsScreening) {
+        entitlementEntries.push({
+          code: "SCREENING",
+          credits: lifecycleEmail.activatedPlan.screeningReviews,
+          additional: !lifecycleEmail.newlyGrantedScreening,
+        })
+      }
+      if (lifecycleEmail.grantsAssessment) {
+        entitlementEntries.push({
+          code: "ASSESSMENT",
+          credits: lifecycleEmail.activatedPlan.assessmentCredits,
+          additional: !lifecycleEmail.newlyGrantedAssessment,
+        })
+      }
+
+      const kind: PurchaseActivationKind = lifecycleEmail.hadAnyEntitlementBefore
+        ? "ADDON"
+        : activationResult.plan?.planType === "BUNDLE"
+          ? "BUNDLE"
+          : "SUBSCRIPTION"
+
+      // Fire-and-forget: a mail provider outage must never fail a payment
+      // that has already been captured and activated.
+      void emitPurchaseActivatedEmail({
+        kind,
+        organizationId: lifecycleEmail.organizationId,
+        paymentId: activationResult.paymentId,
+        entitlementEntries,
+      })
+    }
+
     try {
       const invoice = await createAndSendInvoiceForPayment({
         paymentId: activationResult.paymentId,
