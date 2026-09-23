@@ -59,7 +59,11 @@ export type InterviewQuestion = {
   }
   is_dynamic?: boolean
   allow_followups?: boolean
-  question_type?: InterviewQuestionType
+  /**
+   * "open_ended" is what the role-agnostic questionnaire generator stores for
+   * non-behavioural questions; it carries no technical assumption.
+   */
+  question_type?: InterviewQuestionType | "open_ended"
   classifier_confidence?: number
   recruiter_override?: boolean
   rendering_mode?: string

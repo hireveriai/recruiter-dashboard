@@ -8,10 +8,15 @@ import {
   classifySkillType,
   deriveSkillsFromText,
   getFallbackSkillsForRoleFamily,
-  inferRoleIntelligence,
   presentSkillName,
   sanitizeSkillList,
+  type RoleFamily,
 } from "@/lib/server/ai/skills"
+import {
+  buildEmergencyQuestionText,
+  isTechnicalRoleFamily,
+  resolveEmergencyRoleFamily,
+} from "@/lib/server/interview/emergency-questions"
 import { ApiError } from "@/lib/server/errors"
 import { getInterviewAppUrl } from "@/lib/server/interview-url"
 import { prisma } from "@/lib/server/prisma"
@@ -134,17 +139,16 @@ function normalizeSkill(value: string | null | undefined) {
   return String(value ?? "").replace(/\s+/g, " ").trim()
 }
 
-function getEmergencySkillPool(context: InterviewContextRow) {
+function getEmergencySkillPool(context: InterviewContextRow, family: RoleFamily) {
   const roleInput = {
     jobTitle: context.job_title ?? undefined,
     jobDescription: context.job_description ?? undefined,
     coreSkills: context.core_skills ?? [],
   }
-  const role = inferRoleIntelligence(roleInput)
   const skills = [
     ...sanitizeSkillList(context.core_skills ?? [], roleInput),
     ...deriveSkillsFromText(context.job_description ?? undefined),
-    ...getFallbackSkillsForRoleFamily(role.family),
+    ...getFallbackSkillsForRoleFamily(family),
   ]
     .map(normalizeSkill)
     .filter(Boolean)
@@ -152,28 +156,8 @@ function getEmergencySkillPool(context: InterviewContextRow) {
   return Array.from(new Set(skills.map((skill) => skill.toLowerCase())))
 }
 
-function buildEmergencyQuestion(skill: string, index: number, family: string) {
-  const displaySkill = presentSkillName(skill)
-  const technical = family === "technical"
-  const technicalTemplates = [
-    `How would you diagnose a failure involving ${displaySkill} under production pressure?`,
-    `Walk me through a difficult ${displaySkill} decision and how you validated it.`,
-    `How do you test ${displaySkill} changes before releasing them?`,
-    `What trade-offs guide your approach to ${displaySkill} at scale?`,
-    `How would you improve the reliability of ${displaySkill} after a recurring incident?`,
-  ]
-  const businessTemplates = [
-    `Walk me through a time you handled ${displaySkill} with competing deadlines.`,
-    `How do you maintain accuracy when managing ${displaySkill} across multiple cases?`,
-    `What would you do when a sensitive ${displaySkill} issue requires escalation?`,
-    `How do you coordinate stakeholders when ${displaySkill} priorities conflict?`,
-    `What checks do you use to keep ${displaySkill} records and outcomes accurate?`,
-    `How would you improve an inefficient ${displaySkill} process without disrupting service?`,
-    `Which measures would you use to evaluate the quality of ${displaySkill}?`,
-  ]
-  const templates = technical ? technicalTemplates : businessTemplates
-
-  return templates[index % templates.length]
+function buildEmergencyQuestion(skill: string, index: number, family: RoleFamily) {
+  return buildEmergencyQuestionText({ skill: presentSkillName(skill), index, family })
 }
 
 function buildEmergencyInterviewQuestions(
@@ -187,12 +171,16 @@ function buildEmergencyInterviewQuestions(
     MIN_QUESTION_COUNT,
     Math.min(15, Number(fallbackQuestionCount))
   )
-  const skills = getEmergencySkillPool(context)
-  const role = inferRoleIntelligence({
-    jobTitle: context.job_title ?? undefined,
-    jobDescription: context.job_description ?? undefined,
-    coreSkills: context.core_skills ?? [],
-  })
+  // Title first, then JD and skills: see resolveEmergencyRoleFamily.
+  const role = {
+    family: resolveEmergencyRoleFamily({
+      jobTitle: context.job_title,
+      jobDescription: context.job_description,
+      coreSkills: context.core_skills,
+    }),
+  }
+  const technicalRole = isTechnicalRoleFamily(role.family)
+  const skills = getEmergencySkillPool(context, role.family)
 
   const questions: InterviewQuestion[] = []
 
@@ -212,7 +200,13 @@ function buildEmergencyInterviewQuestions(
       },
       is_dynamic: true,
       allow_followups: true,
-      question_type: index === targetCount - 1 ? InterviewQuestionType.BEHAVIORAL : InterviewQuestionType.TECHNICAL_DISCUSSION,
+      // Non-technical roles store "open_ended", as the main questionnaire
+      // generator does, so nothing downstream reads a technical type into it.
+      question_type: index === targetCount - 1
+        ? InterviewQuestionType.BEHAVIORAL
+        : technicalRole
+          ? InterviewQuestionType.TECHNICAL_DISCUSSION
+          : "open_ended",
       classifier_confidence: 0.72,
       recruiter_override: false,
       rendering_mode: index === targetCount - 1 ? "behavioral" : "discussion",
