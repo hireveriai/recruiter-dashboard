@@ -46,9 +46,16 @@ export type CreateLiveInterviewInput = {
   scheduledStartAt: Date
   scheduledTimezone: string | null
   durationMinutes: number
-  interviewers: Array<{ userId: string; panelRole: PanelRole }>
+  /** Team members by userId, or anyone by email (external panelists). */
+  interviewers: Array<InterviewerInput>
   sendInvitations: boolean
 }
+
+export type InterviewerInput =
+  | { userId: string; email?: undefined; name?: undefined; panelRole: PanelRole }
+  | { userId?: undefined; email: string; name: string | null; panelRole: PanelRole }
+
+const EMAIL_PATTERN = /^[^s@]+@[^s@]+.[^s@]+$/
 
 function badRequest(message: string): never {
   throw new ApiError(400, "INVALID_LIVE_INTERVIEW", message)
@@ -89,15 +96,25 @@ export function parseCreateLiveInterviewInput(body: unknown, now = new Date()): 
   if (interviewerList.length > MAX_INTERVIEWERS) badRequest(`At most ${MAX_INTERVIEWERS} interviewers are allowed.`)
 
   const seen = new Set<string>()
-  const interviewers = interviewerList.map((entry) => {
+  const interviewers = interviewerList.map((entry): InterviewerInput => {
     const item = (entry && typeof entry === "object" ? entry : {}) as Record<string, unknown>
-    const userId = String(item.userId ?? "").trim().toLowerCase()
-    if (!UUID_PATTERN.test(userId)) badRequest("Each interviewer must be a valid team member.")
-    if (seen.has(userId)) badRequest("An interviewer was added more than once.")
-    seen.add(userId)
     const panelRole = String(item.panelRole ?? "INTERVIEWER").toUpperCase() as PanelRole
     if (!PANEL_ROLES.includes(panelRole)) badRequest("Unknown panel role.")
-    return { userId, panelRole }
+
+    const rawUserId = String(item.userId ?? "").trim().toLowerCase()
+    if (rawUserId) {
+      if (!UUID_PATTERN.test(rawUserId)) badRequest("Each interviewer must be a valid team member.")
+      if (seen.has(`u:${rawUserId}`)) badRequest("An interviewer was added more than once.")
+      seen.add(`u:${rawUserId}`)
+      return { userId: rawUserId, panelRole }
+    }
+
+    const email = String(item.email ?? "").trim().toLowerCase()
+    if (!EMAIL_PATTERN.test(email) || email.length > 254) badRequest("Enter a valid email for each panel member.")
+    if (seen.has(`e:${email}`)) badRequest("An interviewer was added more than once.")
+    seen.add(`e:${email}`)
+    const name = String(item.name ?? "").trim().slice(0, 120) || null
+    return { email, name, panelRole }
   })
 
   return {
@@ -204,23 +221,47 @@ export async function createLiveInterview(params: {
   if (!candidate) throw new ApiError(404, "CANDIDATE_NOT_FOUND", "Candidate not found.")
   if (!candidate.email?.trim()) throw new ApiError(400, "CANDIDATE_EMAIL_REQUIRED", "Candidate needs an email address.")
 
-  const userIds = input.interviewers.map((entry) => entry.userId)
-  const interviewerRows = await prisma.$queryRaw<InterviewerRow[]>(Prisma.sql`
+  // Active team members of this org (to validate userIds and to link emails
+  // that belong to a team member back to their account).
+  const teamRows = await prisma.$queryRaw<InterviewerRow[]>(Prisma.sql`
     select user_id::text, full_name, email from public.users
     where organization_id = ${organizationId}::uuid
-      and user_id in (${Prisma.join(userIds.map((id) => Prisma.sql`${id}::uuid`))})
       and coalesce(is_active, true) = true
       and team_removed_at is null
   `)
-  const interviewerById = new Map(interviewerRows.map((row) => [row.user_id.toLowerCase(), row]))
-  for (const id of userIds) {
-    const row = interviewerById.get(id)
-    if (!row) throw new ApiError(400, "INTERVIEWER_NOT_IN_ORG", "Every interviewer must be an active member of your team.")
-    if (!row.email?.trim()) throw new ApiError(400, "INTERVIEWER_EMAIL_REQUIRED", "Every interviewer needs an email address.")
+  const teamById = new Map(teamRows.map((row) => [row.user_id.toLowerCase(), row]))
+  const teamByEmail = new Map(teamRows.filter((r) => r.email).map((row) => [row.email!.trim().toLowerCase(), row]))
+
+  const panel: Array<{ userId: string | null; name: string; email: string; panelRole: PanelRole }> = []
+  for (const entry of input.interviewers) {
+    if (entry.userId !== undefined) {
+      const row = teamById.get(entry.userId)
+      if (!row) throw new ApiError(400, "INTERVIEWER_NOT_IN_ORG", "Every selected team member must be an active member of your team.")
+      if (!row.email?.trim()) throw new ApiError(400, "INTERVIEWER_EMAIL_REQUIRED", "Every interviewer needs an email address.")
+      panel.push({ userId: row.user_id, name: row.full_name?.trim() || "Interviewer", email: row.email.trim(), panelRole: entry.panelRole })
+    } else {
+      const member = teamByEmail.get(entry.email)
+      panel.push({
+        userId: member?.user_id ?? null,
+        name: entry.name || member?.full_name?.trim() || entry.email.split("@")[0],
+        email: entry.email,
+        panelRole: entry.panelRole,
+      })
+    }
+  }
+  const seenEmails = new Set<string>()
+  const seenUsers = new Set<string>()
+  for (const p of panel) {
+    const email = p.email.toLowerCase()
     // A candidate can never also sit on their own panel.
-    if (row.email.trim().toLowerCase() === candidate.email.trim().toLowerCase()) {
+    if (email === candidate.email.trim().toLowerCase()) {
       throw new ApiError(400, "CANDIDATE_CANNOT_INTERVIEW", "The candidate cannot also be an interviewer.")
     }
+    if (seenEmails.has(email) || (p.userId && seenUsers.has(p.userId))) {
+      throw new ApiError(400, "INVALID_LIVE_INTERVIEW", "An interviewer was added more than once.")
+    }
+    seenEmails.add(email)
+    if (p.userId) seenUsers.add(p.userId)
   }
 
   await deps.assertCredits(organizationId)
@@ -249,14 +290,13 @@ export async function createLiveInterview(params: {
         (${organizationId}::uuid, ${interviewId}::uuid, 'CANDIDATE', ${input.candidateId}::uuid,
          ${candidate.full_name?.trim() || "Candidate"}, ${candidate.email!.trim()}, ${generateLivekitIdentity()})
     `)
-    for (const entry of input.interviewers) {
-      const row = interviewerById.get(entry.userId)!
+    for (const p of panel) {
       await tx.$executeRaw(Prisma.sql`
         insert into public.interview_participants
           (organization_id, interview_id, role, panel_role, user_id, display_name, email, livekit_identity)
         values
-          (${organizationId}::uuid, ${interviewId}::uuid, 'INTERVIEWER', ${entry.panelRole}, ${entry.userId}::uuid,
-           ${row.full_name?.trim() || "Interviewer"}, ${row.email!.trim()}, ${generateLivekitIdentity()})
+          (${organizationId}::uuid, ${interviewId}::uuid, 'INTERVIEWER', ${p.panelRole}, ${p.userId}::uuid,
+           ${p.name}, ${p.email}, ${generateLivekitIdentity()})
       `)
     }
     return interviewId

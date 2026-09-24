@@ -308,6 +308,65 @@ suite("AI read paths exclude LIVE interviews", async () => {
   assert.ok(total[0].n > 0, "LIVE rows exist but were filtered")
 })
 
+suite("panel members can be added by email (external) or from the team; the candidate never", async () => {
+  sentEmails.length = 0
+  const { interviewId } = await svc.createLiveInterview({
+    organizationId: ORG_A,
+    userId: hiringManager,
+    input: input({
+      interviewers: [
+        { email: "outside.expert@partner.test", name: "Olivia Outside", panelRole: "PANEL_MEMBER" },
+        { email: "noname@partner.test", name: null, panelRole: "INTERVIEWER" },
+        // A typed email that belongs to a team member is linked to their account.
+        { email: "panel@acme.test", name: null, panelRole: "INTERVIEWER" },
+        { userId: hiringManager, panelRole: "HIRING_MANAGER" },
+      ],
+    }),
+    deps,
+  })
+  const rows = await q<{ email: string; user_id: string | null; display_name: string; panel_role: string }>(
+    `select email, user_id::text, display_name, panel_role from public.interview_participants where interview_id = $1 and role = 'INTERVIEWER' order by email`,
+    [interviewId]
+  )
+  assert.deepEqual(rows, [
+    { email: "hm@acme.test", user_id: hiringManager, display_name: "hm@acme.test", panel_role: "HIRING_MANAGER" },
+    { email: "noname@partner.test", user_id: null, display_name: "noname", panel_role: "INTERVIEWER" },
+    { email: "outside.expert@partner.test", user_id: null, display_name: "Olivia Outside", panel_role: "PANEL_MEMBER" },
+    { email: "panel@acme.test", user_id: panelist, display_name: "panel@acme.test", panel_role: "INTERVIEWER" },
+  ])
+  assert.ok(sentEmails.some((m) => m.to === "outside.expert@partner.test" && m.audience === "INTERVIEWER"))
+
+  // Validation and duplicates.
+  const bad = (interviewers: unknown[]) => () => svc.parseCreateLiveInterviewInput({ ...input(), scheduledStartAt: new Date(Date.now() + 3600_000).toISOString(), interviewers })
+  assert.throws(bad([{ email: "not-an-email" }]), /valid email/)
+  assert.throws(bad([{ email: "a@b.test" }, { email: "A@B.test" }]), /more than once/)
+  await assert.rejects(
+    svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ interviewers: [{ email: "panel@acme.test", name: null, panelRole: "INTERVIEWER" }, { userId: panelist, panelRole: "INTERVIEWER" }] }), deps }),
+    /more than once/
+  )
+  // The candidate's own email, typed as a panel member.
+  await assert.rejects(
+    svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ interviewers: [{ email: "CASEY@example.com", name: null, panelRole: "INTERVIEWER" }] }), deps }),
+    { code: "CANDIDATE_CANNOT_INTERVIEW" }
+  )
+  // ...and the database enforces it even if code is bypassed.
+  await assert.rejects(
+    q(`insert into public.interview_participants (organization_id, interview_id, role, panel_role, display_name, email, livekit_identity)
+       values ($1, $2, 'INTERVIEWER', 'INTERVIEWER', 'x', 'casey@example.com', 'p_candidateaspanel0001')`, [ORG_A, interviewId]),
+    /LIVE_PARTICIPANT_CANDIDATE_AS_INTERVIEWER/
+  )
+  await assert.rejects(
+    q(`insert into public.interview_participants (organization_id, interview_id, role, panel_role, display_name, email, livekit_identity)
+       values ($1, $2, 'INTERVIEWER', 'INTERVIEWER', 'x', 'OUTSIDE.expert@partner.test', 'p_duplicateemail000001')`, [ORG_A, interviewId]),
+    /ux_interview_participants_interviewer_email/
+  )
+  // An email-only interviewer's email can't be swapped afterwards.
+  await assert.rejects(
+    q(`update public.interview_participants set email = 'other@partner.test' where interview_id = $1 and email = 'noname@partner.test'`, [interviewId]),
+    /LIVE_PARTICIPANT_IMMUTABLE/
+  )
+})
+
 suite("revoke and cancel actively remove people from the LiveKit room, best-effort and idempotent", async () => {
   const calls: string[] = []
   const control = (mode: "ok" | "gone" | "boom") => ({

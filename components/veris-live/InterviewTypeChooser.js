@@ -39,7 +39,7 @@ export default function InterviewTypeChooser({ onCancel, onContinue }) {
       aria-modal="true"
       aria-labelledby="send-interview-type-title"
     >
-      <div className="relative w-full max-w-xl rounded-[28px] border border-slate-800 bg-slate-900 p-5 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)] sm:p-6">
+      <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-[28px] border border-slate-800 bg-slate-900 p-5 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)] sm:p-6">
         <h2 id="send-interview-type-title" className="text-2xl font-semibold tracking-tight text-white">
           Send Interview Link
         </h2>

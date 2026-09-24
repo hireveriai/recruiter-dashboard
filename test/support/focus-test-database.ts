@@ -31,7 +31,7 @@ export type FocusTestDatabase = {
 }
 
 /** Baseline plus migrations for VERIS Live (023) on top of the focus stack. */
-export const VERIS_LIVE_SQL_FILES = ["test/fixtures/veris-live-baseline.sql", "prisma/sql/dev/023_veris_live.sql"]
+export const VERIS_LIVE_SQL_FILES = ["test/fixtures/veris-live-baseline.sql", "prisma/sql/dev/023_veris_live.sql", "prisma/sql/dev/024_veris_live_external_interviewers.sql"]
 
 export async function createFocusTestDatabase(extraSqlFiles: string[] = []): Promise<FocusTestDatabase | null> {
   const adminUrl = process.env.TEST_DATABASE_URL
