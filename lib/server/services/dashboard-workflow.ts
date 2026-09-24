@@ -4,6 +4,7 @@ import { deriveDashboardState } from "@/lib/dashboard/dashboard-state-engine"
 import { prisma } from "@/lib/server/prisma"
 import { getDashboardPipelineData } from "@/lib/server/services/dashboard-pipeline"
 import { jobPositionsSupportIsActive } from "@/lib/server/services/jobs"
+import { aiInterviewsOnly } from "@/lib/server/veris-live/ai-scope"
 
 export type DashboardWorkflowSnapshot = {
   pipeline: {
@@ -167,6 +168,7 @@ async function getInterviewWorkflowMetrics(organizationId: string) {
         and rd.candidate_id = i.candidate_id
         and rd.interview_id = i.interview_id
       where i.organization_id = ${organizationId}::uuid
+        and ${aiInterviewsOnly("i")}
     )
     select
       count(*) filter (

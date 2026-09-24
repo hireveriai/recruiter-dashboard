@@ -1390,3 +1390,89 @@ export async function sendTrialDecisionEmail(params: TrialDecisionEmailParams) {
     ),
   });
 }
+
+type SendLiveInterviewInvitationEmailParams = {
+  to: string;
+  name: string;
+  link: string;
+  audience: "CANDIDATE" | "INTERVIEWER";
+  companyName?: string | null;
+  roleTitle?: string | null;
+  candidateName?: string | null;
+  durationMinutes?: number | null;
+  scheduledStartUtc: string | Date;
+  organizationTimezone?: string | null;
+};
+
+/**
+ * VERIS Live Interview invitation. The link carries a single-use-per-person
+ * secret, so it only ever travels in this email; it is never logged or
+ * returned to the recruiter UI.
+ */
+export async function sendLiveInterviewInvitationEmail({
+  to,
+  name,
+  link,
+  audience,
+  companyName,
+  roleTitle,
+  candidateName,
+  durationMinutes,
+  scheduledStartUtc,
+  organizationTimezone,
+}: SendLiveInterviewInvitationEmailParams) {
+  const displayName = normalizeText(name, audience === "CANDIDATE" ? "Candidate" : "there");
+  const displayCompany = normalizeText(companyName, "Hiring Team");
+  const displayRole = normalizeText(roleTitle, "the open role");
+  const displayCandidate = normalizeText(candidateName, "the candidate");
+  const whenLabel = formatOrgDateTime(scheduledStartUtc, organizationTimezone ?? undefined);
+  const durationLabel = durationMinutes ? `${durationMinutes} minutes` : "As scheduled";
+
+  const intro =
+    audience === "CANDIDATE"
+      ? `${displayCompany} has invited you to a VERIS Live Interview for the role of ${displayRole}. This is a live video interview with your interviewer or interview panel.`
+      : `You have been added as an interviewer for a VERIS Live Interview with ${displayCandidate} for ${displayRole}.`;
+  const subject =
+    audience === "CANDIDATE"
+      ? `VERIS Live Interview: ${displayRole} at ${displayCompany}`
+      : `Interviewer invitation: ${displayCandidate}, ${displayRole}`;
+  const note =
+    audience === "CANDIDATE"
+      ? "This link is personal to you. Please do not share it. Join from a quiet place with a working camera and microphone."
+      : "This link is personal to you and signs you in as yourself. Please do not forward it.";
+
+  return sendWithRetry({
+    from: getInterviewEmailFrom(),
+    to,
+    subject,
+    text: [
+      `Hi ${displayName},`,
+      "",
+      intro,
+      "",
+      `When: ${whenLabel}`,
+      `Duration: ${durationLabel}`,
+      "",
+      `Join: ${link}`,
+      "",
+      note,
+      "",
+      "powered by VerisNova",
+    ].join("\n"),
+    html: `
+      <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0f172a;">
+        <p style="font-size:15px;line-height:22px;">Hi ${escapeHtml(displayName)},</p>
+        <p style="font-size:15px;line-height:22px;">${escapeHtml(intro)}</p>
+        <table role="presentation" style="width:100%;border-collapse:collapse;margin:12px 0;">
+          <tr><td style="padding:8px 0;border-top:1px solid #e5e7eb;font-size:13px;color:#64748b;">When</td>
+              <td style="padding:8px 0;border-top:1px solid #e5e7eb;font-size:14px;font-weight:700;">${escapeHtml(whenLabel)}</td></tr>
+          <tr><td style="padding:8px 0;border-top:1px solid #e5e7eb;font-size:13px;color:#64748b;">Duration</td>
+              <td style="padding:8px 0;border-top:1px solid #e5e7eb;font-size:14px;font-weight:700;">${escapeHtml(durationLabel)}</td></tr>
+        </table>
+        <p style="margin:20px 0;"><a href="${escapeHtml(link)}" style="display:inline-block;background:#0f172a;color:#ffffff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;">Join VERIS Live Interview</a></p>
+        <p style="font-size:13px;line-height:20px;color:#64748b;">${escapeHtml(note)}</p>
+        <p style="font-size:12px;color:#94a3b8;">powered by VerisNova</p>
+      </div>
+    `,
+  });
+}

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/server/prisma"
 import { deriveInterviewStatus, isInviteUsable } from "@/lib/server/services/interview-status"
 import { ensureInterviewRecoverySchema } from "@/lib/server/services/interview-recovery"
 import { finalizeStaleInterviewAttempts } from "@/lib/server/services/interview-stale-finalizer"
+import { aiInterviewsOnly } from "@/lib/server/veris-live/ai-scope"
 
 type DashboardPipelineOptions = {
   organizationId: string
@@ -303,6 +304,7 @@ export async function getDashboardPipelineData(
         and rd.candidate_id = i.candidate_id
         and rd.interview_id = i.interview_id
       where i.organization_id = ${options.organizationId}::uuid
+        and ${aiInterviewsOnly("i")}
     ),
     classified as (
       select

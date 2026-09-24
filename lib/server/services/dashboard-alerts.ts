@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 
 import { prisma } from "@/lib/server/prisma"
+import { aiInterviewsOnly } from "@/lib/server/veris-live/ai-scope"
 
 export type DashboardAlert = {
   id: string
@@ -232,6 +233,7 @@ export async function getDashboardAlerts(organizationId: string, limit?: number 
       left join public.candidates c on c.candidate_id = i.candidate_id
       left join public.job_positions jp on jp.job_id = i.job_id
       where i.organization_id = ${organizationId}::uuid
+        and ${aiInterviewsOnly("i")}
     )
     select *
     from alert_source

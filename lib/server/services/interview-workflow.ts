@@ -28,6 +28,7 @@ import {
   verifyInterviewQuestionsPersisted,
 } from "@/lib/server/services/interview-questions"
 import { sendInterviewEmail } from "@/lib/services/email.service"
+import { aiInterviewsOnly } from "@/lib/server/veris-live/ai-scope"
 
 const CREATE_LINK_AI_TIMEOUT_MS = Number(process.env.INTERVIEW_QUESTION_TIMEOUT_MS ?? 45000)
 const MIN_QUESTION_COUNT = 5
@@ -116,6 +117,7 @@ async function getPriorCandidateJobQuestions(context: InterviewContextRow) {
     from public.interview_questions iq
     join public.interviews prior on prior.interview_id = iq.interview_id
     where prior.organization_id = ${context.organization_id}::uuid
+      and ${aiInterviewsOnly("prior")}
       and prior.candidate_id = ${context.candidate_id}::uuid
       and prior.job_id = ${context.job_id}::uuid
       and prior.interview_id <> ${context.interview_id}::uuid

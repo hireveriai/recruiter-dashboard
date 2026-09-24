@@ -13,6 +13,7 @@ import {
   jobPositionsSupportQuestionnaireConfig,
 } from "@/lib/server/services/jobs"
 import { getReportsOverview } from "@/lib/server/services/reports.service"
+import { aiInterviewsOnly } from "@/lib/server/veris-live/ai-scope"
 
 type ScreenLimit = number | "all"
 
@@ -174,6 +175,7 @@ export async function getJobsScreenData(auth: RecruiterRequestContext, options: 
     from public.job_positions jp
     left join public.interviews i
       on i.job_id = jp.job_id
+      and ${aiInterviewsOnly("i")}
     where jp.organization_id = ${auth.organizationId}::uuid
       ${hasIsActive && !includeInactive ? Prisma.sql`and jp.is_active = true` : Prisma.empty}
     group by

@@ -9,6 +9,8 @@ import { buildAuthUrl } from "@/lib/client/auth-query"
 import { copyText } from "@/lib/client/copy-to-clipboard"
 import { formatDateTime } from "@/lib/client/date-format"
 import UpgradeLimitDialog from "@/components/UpgradeLimitDialog"
+import InterviewTypeChooser from "@/components/veris-live/InterviewTypeChooser"
+import LiveInterviewModal from "@/components/veris-live/LiveInterviewModal"
 
 const DASHBOARD_CACHE_KEY = "verisnova-overview"
 const DASHBOARD_INVALIDATED_EVENT = "verisnova:dashboard-data-invalidated"
@@ -180,7 +182,60 @@ function normalizeActiveJobs(payload) {
   )
 }
 
-export default function SendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
+// VERIS Live entry point. With the feature flag off (or its status not yet
+// known) this renders the VERIS AI Interview modal exactly as before.
+let verisLiveStatusPromise = null
+
+function loadVerisLiveEnabled(searchParams) {
+  if (!verisLiveStatusPromise) {
+    verisLiveStatusPromise = fetch(buildAuthUrl("/api/veris-live/status", searchParams), { credentials: "include" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => body?.data?.enabled === true)
+      .catch(() => false)
+  }
+  return verisLiveStatusPromise
+}
+
+export default function SendInterviewModal(props) {
+  const searchParams = useAuthSearchParams()
+  const [liveEnabled, setLiveEnabled] = useState(false)
+  const [interviewType, setInterviewType] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    loadVerisLiveEnabled(searchParams).then((enabled) => {
+      if (active) setLiveEnabled(enabled)
+    })
+    return () => {
+      active = false
+    }
+  }, [searchParams])
+
+  // Reopening always starts from the type chooser.
+  const [wasOpen, setWasOpen] = useState(props.isOpen)
+  if (wasOpen !== props.isOpen) {
+    setWasOpen(props.isOpen)
+    if (!props.isOpen) setInterviewType(null)
+  }
+
+  if (!liveEnabled) return <AiSendInterviewModal {...props} />
+  if (!props.isOpen) return null
+
+  const close = () => {
+    setInterviewType(null)
+    props.onClose?.()
+  }
+
+  if (interviewType === null) {
+    return <InterviewTypeChooser onCancel={close} onContinue={setInterviewType} />
+  }
+  if (interviewType === "LIVE") {
+    return <LiveInterviewModal onClose={close} onBack={() => setInterviewType(null)} />
+  }
+  return <AiSendInterviewModal {...props} onClose={close} />
+}
+
+function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
   const searchParams = useAuthSearchParams()
   const primaryFileInputRef = useRef(null)
   const changeFileInputRef = useRef(null)

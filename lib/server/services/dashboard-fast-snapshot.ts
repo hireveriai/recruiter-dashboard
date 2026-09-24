@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 
 import { prisma } from "@/lib/server/prisma"
+import { aiInterviewsOnly } from "@/lib/server/veris-live/ai-scope"
 
 type FastCandidateRow = {
   candidate_id: string
@@ -161,6 +162,7 @@ export async function getFastDashboardCandidates(organizationId: string, limit: 
       from public.interviews i
       where i.candidate_id = c.candidate_id
         and i.organization_id = c.organization_id
+        and ${aiInterviewsOnly("i")}
       order by i.created_at desc
       limit 1
     ) i on true

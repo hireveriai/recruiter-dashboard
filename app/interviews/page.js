@@ -15,6 +15,7 @@ import BackToDashboardLink from "../../components/BackToDashboardLink"
 import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "../../components/Navbar"
 import SendInterviewModal from "../../components/SendInterviewModal"
+import LiveInterviewsPanel from "../../components/veris-live/LiveInterviewsPanel"
 import { CandidateActionModal } from "../../components/dashboard/CandidateActionModal"
 import { CandidateFeedbackModal } from "../../components/dashboard/CandidateFeedbackModal"
 import { DecisionPill } from "../../components/dashboard/DecisionPill"
@@ -1526,6 +1527,8 @@ export default function InterviewsPage() {
             </table>
           </div>
         </section>
+
+        <LiveInterviewsPanel />
       </main>
 
       <CandidateActionModal

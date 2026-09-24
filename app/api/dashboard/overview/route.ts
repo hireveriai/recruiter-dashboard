@@ -22,6 +22,7 @@ import {
 } from "@/lib/server/services/trial-credits"
 import { getAssessmentCreditSnapshot } from "@/lib/server/services/assessment-credits"
 import { prisma } from "@/lib/server/prisma"
+import { aiInterviewsOnly } from "@/lib/server/veris-live/ai-scope"
 
 type TrialCreditSnapshotWithAssessment = TrialCreditSnapshot & { assessmentCreditsRemaining: number }
 
@@ -232,6 +233,7 @@ async function getQuickWorkflowMetrics(organizationId: string): Promise<Overview
         limit 1
       ) ia on true
       where i.organization_id = ${organizationId}::uuid
+        and ${aiInterviewsOnly("i")}
     )
     select
       job_counts.jobs,
