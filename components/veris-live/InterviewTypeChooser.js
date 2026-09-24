@@ -39,11 +39,11 @@ export default function InterviewTypeChooser({ onCancel, onContinue }) {
       aria-modal="true"
       aria-labelledby="send-interview-type-title"
     >
-      <div className="relative w-full max-w-xl rounded-[28px] border border-slate-200 bg-white p-5 text-slate-900 shadow-xl sm:p-6">
-        <h2 id="send-interview-type-title" className="text-2xl font-semibold tracking-tight text-slate-900">
+      <div className="relative w-full max-w-xl rounded-[28px] border border-slate-800 bg-slate-900 p-5 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)] sm:p-6">
+        <h2 id="send-interview-type-title" className="text-2xl font-semibold tracking-tight text-white">
           Send Interview Link
         </h2>
-        <p className="mt-1 text-sm text-slate-500">Choose Interview Type</p>
+        <p className="mt-1 text-sm text-slate-400">Choose Interview Type</p>
 
         <div role="radiogroup" aria-labelledby="send-interview-type-title" className="mt-5 grid gap-3">
           {OPTIONS.map((option) => {
@@ -52,7 +52,7 @@ export default function InterviewTypeChooser({ onCancel, onContinue }) {
               <label
                 key={option.value}
                 className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition ${
-                  active ? "border-cyan-300 bg-cyan-50" : "border-slate-300 bg-white shadow-sm hover:border-slate-500"
+                  active ? "border-cyan-400/40 bg-cyan-400/10" : "border-slate-700 bg-slate-900/80 hover:border-slate-500"
                 }`}
               >
                 <input
@@ -61,19 +61,19 @@ export default function InterviewTypeChooser({ onCancel, onContinue }) {
                   value={option.value}
                   checked={active}
                   onChange={() => setSelected(option.value)}
-                  className="mt-1 h-4 w-4 accent-cyan-600"
+                  className="mt-1 h-4 w-4 accent-cyan-400"
                 />
                 <span
                   className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                    active ? "bg-cyan-50 text-cyan-700" : "bg-slate-100 text-slate-700"
+                    active ? "bg-cyan-400/10 text-cyan-300" : "bg-slate-800/60 text-slate-300"
                   }`}
                 >
                   {option.icon}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-base font-semibold text-slate-900">{option.title}</span>
-                  <span className="mt-0.5 block text-sm text-slate-700">{option.description}</span>
-                  <span className="mt-1 block text-xs italic text-slate-500">{option.supporting}</span>
+                  <span className="block text-base font-semibold text-white">{option.title}</span>
+                  <span className="mt-0.5 block text-sm text-slate-300">{option.description}</span>
+                  <span className="mt-1 block text-xs italic text-slate-400">{option.supporting}</span>
                 </span>
               </label>
             )
@@ -84,14 +84,14 @@ export default function InterviewTypeChooser({ onCancel, onContinue }) {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-800 hover:border-slate-500"
+            className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onContinue(selected)}
-            className="rounded-xl bg-[#2563eb] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+            className="hv-solid-action rounded-xl bg-[#2563eb] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
           >
             Continue
           </button>

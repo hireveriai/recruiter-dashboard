@@ -7,7 +7,7 @@ import { buildAuthUrl } from "@/lib/client/auth-query"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 const PANEL_ROLE_LABELS = { HIRING_MANAGER: "Hiring manager", INTERVIEWER: "Interviewer", PANEL_MEMBER: "Panel member" }
-const FIELD = "mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900"
+const FIELD = "mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-white"
 
 function defaultStart() {
   const date = new Date(Date.now() + 24 * 60 * 60 * 1000)
@@ -124,21 +124,21 @@ export default function LiveInterviewModal({ onClose, onBack }) {
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-5 text-slate-900 shadow-xl sm:p-6">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="relative w-full max-w-2xl rounded-[28px] border border-slate-800 bg-slate-900 p-5 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)] sm:p-6">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">VERIS Live Interview</h2>
-            <p className="mt-1 text-sm text-slate-500">Schedule a live video interview with your interviewer or panel.</p>
+            <p className="mt-1 text-sm text-slate-400">Schedule a live video interview with your interviewer or panel.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:text-slate-900">
+          <button type="button" onClick={onClose} className="rounded-full border border-slate-700 px-3 py-1 text-sm text-slate-300 hover:text-white">
             Close
           </button>
         </div>
 
         {done ? (
           <div className="mt-5 space-y-4">
-            <p className="text-base font-semibold text-emerald-700">Interview scheduled.</p>
-            <p className="text-sm text-slate-700">
+            <p className="text-base font-semibold text-emerald-300">Interview scheduled.</p>
+            <p className="text-sm text-slate-300">
               {done.invitations
                 ? `${done.invitations.sent} invitation(s) sent${
                     done.invitations.failed ? `, ${done.invitations.failed} failed. Resend from the Interviews page.` : "."
@@ -146,7 +146,7 @@ export default function LiveInterviewModal({ onClose, onBack }) {
                 : "Invitations were not sent yet."}
             </p>
             <div className="flex justify-end">
-              <button type="button" onClick={onClose} className="rounded-xl bg-[#2563eb] px-5 py-2 text-sm font-semibold text-white">
+              <button type="button" onClick={onClose} className="hv-solid-action rounded-xl bg-[#2563eb] px-5 py-2 text-sm font-semibold text-white">
                 Done
               </button>
             </div>
@@ -154,7 +154,7 @@ export default function LiveInterviewModal({ onClose, onBack }) {
         ) : (
           <form onSubmit={submit} className="mt-5 space-y-4">
             <label className="block text-sm">
-              <span className="text-slate-700">Job</span>
+              <span className="text-slate-300">Job</span>
               <select value={jobId} onChange={(e) => setJobId(e.target.value)} className={FIELD}>
                 <option value="">Select a job</option>
                 {jobs.map((job) => {
@@ -170,53 +170,53 @@ export default function LiveInterviewModal({ onClose, onBack }) {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="text-slate-700">Candidate name</span>
+                <span className="text-slate-300">Candidate name</span>
                 <input value={name} onChange={(e) => setName(e.target.value)} className={FIELD} />
               </label>
               <label className="block text-sm">
-                <span className="text-slate-700">Candidate email</span>
+                <span className="text-slate-300">Candidate email</span>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={FIELD} />
               </label>
             </div>
             <label className="block text-sm">
-              <span className="text-slate-700">Resume (PDF or DOCX)</span>
+              <span className="text-slate-300">Resume (PDF or DOCX)</span>
               <input
                 type="file"
                 accept=".pdf,.docx"
                 onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
-                className="mt-1 block w-full text-sm text-slate-700"
+                className="mt-1 block w-full text-sm text-slate-300"
               />
             </label>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="text-slate-700">Start ({timezone})</span>
+                <span className="text-slate-300">Start ({timezone})</span>
                 <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} className={FIELD} />
               </label>
               <label className="block text-sm">
-                <span className="text-slate-700">Duration (minutes)</span>
+                <span className="text-slate-300">Duration (minutes)</span>
                 <input type="number" min={10} max={240} value={duration} onChange={(e) => setDuration(e.target.value)} className={FIELD} />
               </label>
             </div>
 
             <fieldset className="text-sm">
-              <legend className="text-slate-700">Interview panel</legend>
+              <legend className="text-slate-300">Interview panel</legend>
               <div className="mt-2 max-h-56 space-y-2 overflow-y-auto">
-                {team.length === 0 ? <p className="text-slate-500">No team members available.</p> : null}
+                {team.length === 0 ? <p className="text-slate-400">No team members available.</p> : null}
                 {team.map((member) => {
                   const entry = panel.find((p) => p.userId === member.userId)
                   return (
-                    <div key={member.userId} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2">
+                    <div key={member.userId} className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
                       <input
                         type="checkbox"
                         checked={Boolean(entry)}
                         onChange={() => togglePanelMember(member.userId)}
-                        className="h-4 w-4 accent-cyan-600"
+                        className="h-4 w-4 accent-cyan-400"
                         aria-label={`Add ${member.name || member.email}`}
                       />
                       <span className="min-w-0 flex-1 truncate">
                         {member.name || member.email}
-                        <span className="ml-2 text-xs text-slate-500">{member.email}</span>
+                        <span className="ml-2 text-xs text-slate-400">{member.email}</span>
                       </span>
                       {entry ? (
                         <select
@@ -224,7 +224,7 @@ export default function LiveInterviewModal({ onClose, onBack }) {
                           onChange={(e) =>
                             setPanel((cur) => cur.map((p) => (p.userId === member.userId ? { ...p, panelRole: e.target.value } : p)))
                           }
-                          className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs"
+                          className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs"
                         >
                           {Object.entries(PANEL_ROLE_LABELS).map(([value, label]) => (
                             <option key={value} value={value}>
@@ -239,17 +239,17 @@ export default function LiveInterviewModal({ onClose, onBack }) {
               </div>
             </fieldset>
 
-            <p className="text-xs text-slate-500">Uses 1 interview credit. Each participant receives a personal, expiring link by email.</p>
-            {error ? <p className="text-sm text-rose-700">{error}</p> : null}
+            <p className="text-xs text-slate-400">Uses 1 interview credit. Each participant receives a personal, expiring link by email.</p>
+            {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
             <div className="flex justify-between gap-3">
-              <button type="button" onClick={onBack} className="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-800">
+              <button type="button" onClick={onBack} className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200">
                 Back
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="rounded-xl bg-[#2563eb] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="hv-solid-action rounded-xl bg-[#2563eb] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {submitting ? "Scheduling…" : "Schedule & send invitations"}
               </button>

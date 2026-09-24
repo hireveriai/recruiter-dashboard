@@ -109,20 +109,20 @@ export default function LiveInterviewsPanel() {
   if (enabled === false) return null
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm 2xl:mt-8">
-      <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 2xl:mt-8">
+      <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">VERIS Live Interviews</h2>
-          <p className="mt-1 text-sm text-slate-500">Live video interviews with your interviewer or panel.</p>
+          <h2 className="text-lg font-semibold text-white">VERIS Live Interviews</h2>
+          <p className="mt-1 text-sm text-slate-400">Live video interviews with your interviewer or panel.</p>
         </div>
-        <div role="tablist" className="flex gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
+        <div role="tablist" className="flex gap-1 rounded-xl border border-slate-800 bg-slate-800/60 p-1">
           {TABS.map((item) => (
             <button
               key={item.key}
               role="tab"
               aria-selected={tab === item.key}
               onClick={() => setTab(item.key)}
-              className={`rounded-lg px-3 py-1.5 text-sm ${tab === item.key ? "bg-cyan-50 text-cyan-700" : "text-slate-500 hover:text-slate-900"}`}
+              className={`rounded-lg px-3 py-1.5 text-sm ${tab === item.key ? "bg-cyan-400/10 text-cyan-300" : "text-slate-400 hover:text-white"}`}
             >
               {item.label}
             </button>
@@ -130,37 +130,37 @@ export default function LiveInterviewsPanel() {
         </div>
       </div>
 
-      <div className="divide-y divide-slate-200">
-        {loading && rows.length === 0 ? <p className="px-5 py-6 text-sm text-slate-500">Loading…</p> : null}
-        {!loading && rows.length === 0 ? <p className="px-5 py-6 text-sm text-slate-500">No live interviews here yet.</p> : null}
+      <div className="divide-y divide-slate-800">
+        {loading && rows.length === 0 ? <p className="px-5 py-6 text-sm text-slate-400">Loading…</p> : null}
+        {!loading && rows.length === 0 ? <p className="px-5 py-6 text-sm text-slate-400">No live interviews here yet.</p> : null}
         {rows.map((row) => (
           <div key={row.interviewId} className="px-5 py-4">
             <button type="button" onClick={() => openDetail(row.interviewId)} className="flex w-full flex-wrap items-center gap-x-6 gap-y-1 text-left">
-              <span className="min-w-[180px] font-medium text-slate-900">{row.candidateName || "Candidate"}</span>
-              <span className="text-sm text-slate-500">{row.jobTitle || "-"}</span>
-              <span className="text-sm text-slate-500">{formatWhen(row.scheduledStartAt)}</span>
-              <span className="text-sm text-slate-500">{row.durationMinutes ? `${row.durationMinutes} min` : ""}</span>
-              <span className="text-sm text-slate-500">{row.interviewerCount} interviewer(s)</span>
-              <span className="ml-auto rounded-full border border-slate-300 px-2.5 py-0.5 text-xs text-slate-700">
+              <span className="min-w-[180px] font-medium text-white">{row.candidateName || "Candidate"}</span>
+              <span className="text-sm text-slate-400">{row.jobTitle || "-"}</span>
+              <span className="text-sm text-slate-400">{formatWhen(row.scheduledStartAt)}</span>
+              <span className="text-sm text-slate-400">{row.durationMinutes ? `${row.durationMinutes} min` : ""}</span>
+              <span className="text-sm text-slate-400">{row.interviewerCount} interviewer(s)</span>
+              <span className="ml-auto rounded-full border border-slate-700 px-2.5 py-0.5 text-xs text-slate-300">
                 {STATUS_LABELS[row.liveStatus] || row.liveStatus}
               </span>
             </button>
 
             {expanded === row.interviewId ? (
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-100 p-4 text-sm">
-                {!detail ? <p className="text-slate-500">Loading…</p> : null}
-                {detail?.error ? <p className="text-rose-700">Could not load details.</p> : null}
+              <div className="mt-3 rounded-xl border border-slate-800 bg-slate-800/60 p-4 text-sm">
+                {!detail ? <p className="text-slate-400">Loading…</p> : null}
+                {detail?.error ? <p className="text-rose-300">Could not load details.</p> : null}
                 {detail && !detail.error ? (
                   <>
                     <ul className="space-y-2">
                       {detail.participants.map((p) => (
                         <li key={p.participantId} className="flex flex-wrap items-center gap-3">
-                          <span className="w-28 text-xs uppercase tracking-wide text-slate-500">
+                          <span className="w-28 text-xs uppercase tracking-wide text-slate-400">
                             {p.role === "CANDIDATE" ? "Candidate" : (p.panelRole || "Interviewer").replace("_", " ").toLowerCase()}
                           </span>
-                          <span className="text-slate-900">{p.displayName}</span>
-                          <span className="text-slate-500">{p.email}</span>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-white">{p.displayName}</span>
+                          <span className="text-slate-400">{p.email}</span>
+                          <span className="text-xs text-slate-400">
                             {p.inviteStatus.toLowerCase()} · {p.joinStatus.replace("_", " ").toLowerCase()}
                           </span>
                           {["SCHEDULED", "INVITATIONS_SENT", "IN_PROGRESS"].includes(detail.liveStatus) ? (
@@ -168,7 +168,7 @@ export default function LiveInterviewsPanel() {
                               {detail.liveStatus !== "IN_PROGRESS" ? (
                               <button
                                 type="button"
-                                className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-800"
+                                className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200"
                                 onClick={() =>
                                   act(`/api/live-interviews/${row.interviewId}/invitations`, {
                                     method: "POST",
@@ -182,7 +182,7 @@ export default function LiveInterviewsPanel() {
                               {p.inviteStatus !== "REVOKED" ? (
                                 <button
                                   type="button"
-                                  className="rounded-lg border border-rose-300 px-2 py-1 text-xs text-rose-700"
+                                  className="rounded-lg border border-rose-400/40 px-2 py-1 text-xs text-rose-300"
                                   onClick={() => {
                                     if (detail.liveStatus === "IN_PROGRESS" && !window.confirm(`Remove ${p.displayName} from the live interview now?`)) return
                                     act(`/api/live-interviews/${row.interviewId}/invitations`, {
@@ -203,7 +203,7 @@ export default function LiveInterviewsPanel() {
                       <div className="mt-4 flex justify-end">
                         <Link
                           href={buildAuthUrl(`/live-interviews/${row.interviewId}`, searchParams)}
-                          className="rounded-lg border border-cyan-300 px-3 py-1.5 text-xs text-cyan-700"
+                          className="rounded-lg border border-cyan-400/40 px-3 py-1.5 text-xs text-cyan-300"
                         >
                           View report
                         </Link>
@@ -213,7 +213,7 @@ export default function LiveInterviewsPanel() {
                       <div className="mt-4 flex justify-end">
                         <button
                           type="button"
-                          className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs text-rose-700"
+                          className="rounded-lg border border-rose-400/40 px-3 py-1.5 text-xs text-rose-300"
                           onClick={() => {
                             if (window.confirm("Cancel this live interview? All invitation links will stop working.")) {
                               act(`/api/live-interviews/${row.interviewId}/cancel`, { method: "POST" }, "Interview cancelled")
