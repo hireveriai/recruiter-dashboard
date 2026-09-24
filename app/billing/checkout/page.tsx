@@ -135,8 +135,8 @@ const GOOD_TO_KNOW_ITEMS = [
 type ProductKey = "INTERVIEW" | "ASSESSMENT" | "SCREENING" | "BUNDLE"
 
 const PRODUCT_DEFS: Array<{ key: ProductKey; label: string; tagline: string }> = [
-  { key: "BUNDLE", label: "Hiring Suite", tagline: "All three capabilities" },
-  { key: "INTERVIEW", label: "VERIS AI Interview", tagline: "AI-powered structured interviews" },
+  { key: "BUNDLE", label: "Hiring Suite", tagline: "Screening, Assessment & Interviews" },
+  { key: "INTERVIEW", label: "VERIS AI & Live Interview", tagline: "AI-led or human-led interviews" },
   { key: "ASSESSMENT", label: "VERIS Assessment", tagline: "Scored candidate assessments" },
   { key: "SCREENING", label: "VERIS Screening", tagline: "Resume-to-role evaluation" },
 ]
@@ -1048,8 +1048,8 @@ export default function BillingCheckoutPage() {
       <section className="relative mx-auto mt-6 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7">
         <p className="text-lg font-semibold tracking-tight text-slate-100">Choose your VerisNova plan</p>
         <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
-          Get the complete Hiring Suite or choose the capability you need. AI Interview, Assessment, and Screening
-          are available independently.
+          Get the complete Hiring Suite or choose the capability you need. AI &amp; Live Interview, Assessment, and
+          Screening are available independently.
         </p>
 
         {/* Product selector - four premium tabs, not a form. Switching tabs
@@ -1087,9 +1087,9 @@ export default function BillingCheckoutPage() {
         {activeProduct === "BUNDLE" ? (
           <div className="mt-5">
             <p className="text-base font-semibold text-slate-100">Hiring Suite</p>
-            <p className="mt-0.5 text-sm text-blue-200">All three capabilities. One plan.</p>
+            <p className="mt-0.5 text-sm text-blue-200">Screening, Assessment, AI and Live Interviews. One plan.</p>
             <p className="mt-2 max-w-xl text-xs leading-5 text-slate-400">
-              All three capabilities in one plan. Each capability is also available independently.
+              Every VerisNova evaluation capability in one plan. Each is also available independently.
             </p>
           </div>
         ) : null}
@@ -1128,7 +1128,7 @@ export default function BillingCheckoutPage() {
               onClick={() => setShowComparison(true)}
               className="font-semibold text-blue-300 underline-offset-2 hover:underline"
             >
-              Compare VERIS AI Interview plans
+              Compare VERIS AI &amp; Live Interview plans
             </button>{" "}
             below - it includes a &ldquo;With VERIS Screening&rdquo; option.
           </p>
@@ -1241,7 +1241,19 @@ function ProductComparisonTable({ plans }: { plans: Plan[] }) {
 
   const candidateEvaluationRows: ComparisonRowDef[] = [
     {
-      label: "AI Interview",
+      label: "VERIS AI Interview",
+      values: {
+        BUNDLE: hasAny("BUNDLE", (p) => p.interviewSessions) ? "yes" : "no",
+        INTERVIEW: hasAny("INTERVIEW", (p) => p.interviewSessions) ? "yes" : "no",
+        ASSESSMENT: "no",
+        SCREENING: "no",
+      },
+    },
+    {
+      // Live is gated on the same AI_INTERVIEW entitlement and draws on the
+      // same interview sessions (lib/server/veris-live/route-guard.ts,
+      // lib/server/services/live-interviews.ts), so it follows the same row.
+      label: "VERIS Live Interview",
       values: {
         BUNDLE: hasAny("BUNDLE", (p) => p.interviewSessions) ? "yes" : "no",
         INTERVIEW: hasAny("INTERVIEW", (p) => p.interviewSessions) ? "yes" : "no",
@@ -1369,7 +1381,7 @@ function ProductComparisonTable({ plans }: { plans: Plan[] }) {
       </table>
       {hasAddonRow ? (
         <p className="mt-3 text-[11px] leading-5 text-slate-500">
-          * VERIS Screening can be added to an AI Interview plan as an optional add-on.
+          * VERIS Screening can be added to a VERIS AI &amp; Live Interview plan as an optional add-on.
         </p>
       ) : null}
     </div>
