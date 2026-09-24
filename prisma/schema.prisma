@@ -49,6 +49,7 @@ model JobPosition {
   interviewDurationMinutes Int                 @default(30) @map("interview_duration_minutes")
   interviewMode         String                 @default("INDIVIDUALIZED") @map("interview_mode")
   resumeQuestionsEnabled Boolean               @default(true) @map("resume_questions_enabled")
+  focusPlans            InterviewFocusPlan[]
   companySkillBaselines CompanySkillBaseline[]
   interviewConfigs      InterviewConfig[]
   interviews            Interview[]
@@ -93,6 +94,10 @@ model JobQuestionnaireVersion {
   createdAt                DateTime                    @default(now()) @db.Timestamptz(6) @map("created_at")
   finalizedBy              String?                     @db.Uuid @map("finalized_by")
   finalizedAt              DateTime?                   @db.Timestamptz(6) @map("finalized_at")
+  /// The exact focus plan version that generated this questionnaire; NULL
+  /// for questionnaires generated without a focus plan.
+  focusPlanId              String?                     @db.Uuid @map("focus_plan_id")
+  focusPlan                InterviewFocusPlan?         @relation(fields: [focusPlanId], references: [planId], onDelete: SetNull)
   questionnaire            JobQuestionnaire            @relation("questionnaire_versions", fields: [questionnaireId], references: [questionnaireId], onDelete: Cascade)
   activeFor                JobQuestionnaire[]          @relation("questionnaire_active_version")
   questions                JobQuestionnaireQuestion[]
@@ -113,6 +118,8 @@ model JobQuestionnaireQuestion {
   questionType            String?                 @map("question_type")
   sourceType              String                  @default("job") @map("source_type")
   competencyLabel         String?                 @map("competency_label")
+  /// Primary focus area (interview_focus_areas.area_key) this question covers.
+  focusAreaKey            String?                 @map("focus_area_key")
   targetSkillId           String?                 @db.Uuid @map("target_skill_id")
   difficultyLevel         Int                     @default(3) @map("difficulty_level")
   phaseHint               String                  @default("core") @map("phase_hint")
@@ -128,6 +135,54 @@ model JobQuestionnaireQuestion {
   @@index([questionnaireVersionId, questionOrder])
   @@index([organizationId])
   @@map("job_questionnaire_questions")
+}
+
+/// Versioned Interview Focus plan for a job + interview stage. Drives which
+/// competencies generated questions COVER; it is not a scoring weight.
+/// DRAFT is editable; ACTIVE and SUPERSEDED are immutable (enforced by a
+/// database trigger). Role-agnostic.
+model InterviewFocusPlan {
+  planId             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("plan_id")
+  organizationId     String                    @db.Uuid @map("organization_id")
+  jobId              String                    @db.Uuid @map("job_id")
+  stageKey           String                    @default("primary") @map("stage_key")
+  versionNumber      Int                       @map("version_number")
+  status             String                    @default("DRAFT")
+  origin             String                    @default("VERIS_RECOMMENDED")
+  resumeEmphasis     String                    @default("STANDARD") @map("resume_emphasis")
+  recommendationMeta Json                      @default("{}") @map("recommendation_meta")
+  createdBy          String?                   @db.Uuid @map("created_by")
+  createdAt          DateTime                  @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt          DateTime                  @default(now()) @db.Timestamptz(6) @map("updated_at")
+  job                JobPosition               @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+  areas              InterviewFocusArea[]
+  questionnaireVersions JobQuestionnaireVersion[]
+
+  @@unique([jobId, stageKey, versionNumber])
+  @@index([organizationId])
+  @@map("interview_focus_plans")
+}
+
+/// One competency inside a focus plan version.
+model InterviewFocusArea {
+  areaId         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("area_id")
+  planId         String             @db.Uuid @map("plan_id")
+  organizationId String             @db.Uuid @map("organization_id")
+  areaKey        String             @map("area_key")
+  label          String
+  description    String?
+  isCustom       Boolean            @default(false) @map("is_custom")
+  sortOrder      Int                @map("sort_order")
+  coverageWeight Int                @map("coverage_weight")
+  /// Reserved; unused in this phase. Coverage is not scoring.
+  scoringWeight  Int?               @map("scoring_weight")
+  createdAt      DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
+  plan           InterviewFocusPlan @relation(fields: [planId], references: [planId], onDelete: Cascade)
+
+  @@unique([planId, areaKey])
+  @@index([planId, sortOrder])
+  @@index([organizationId])
+  @@map("interview_focus_areas")
 }
 
 model ExperienceLevelPool {

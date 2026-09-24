@@ -27,6 +27,12 @@ import {
   generationLimitReachedError,
   type GenerationLimitInfo,
 } from "@/lib/server/ai-generation-limit"
+import { getJobQuestionnaireContext } from "@/lib/server/services/job-context"
+import {
+  interviewFocusTablesSupported,
+  resolveGenerationFocus,
+  type GenerationFocus,
+} from "@/lib/server/services/interview-focus"
 
 export type InterviewMode = "STANDARD" | "INDIVIDUALIZED"
 
@@ -54,48 +60,26 @@ export type QuestionnaireVersionRow = {
   target_question_count: number | null
   interview_duration_minutes: number | null
   generation_attempts: number
+  /** Focus plan that generated this version; only selected once migration 022 exists. */
+  focus_plan_id?: string | null
 }
 
-type JobContextRow = {
-  job_id: string
-  organization_id: string
-  job_title: string | null
-  job_description: string | null
-  core_skills: string[] | null
-  experience_level_id: number | null
-  experience_level_label: string | null
-  interview_duration_minutes: number | null
-  interview_mode: string
-  resume_questions_enabled: boolean
+/**
+ * The focus provenance columns only exist after migration 022, so every read
+ * or write of them is guarded by the schema probe (the capability-probe
+ * pattern used across this codebase). Without them, SQL is exactly as before.
+ */
+async function focusColumnsSelect() {
+  return (await interviewFocusTablesSupported())
+    ? Prisma.sql`, v.focus_plan_id::text as focus_plan_id`
+    : Prisma.empty
 }
 
-export async function getJobQuestionnaireContext(organizationId: string, jobId: string) {
-  const rows = await prisma.$queryRaw<JobContextRow[]>(Prisma.sql`
-    select
-      jp.job_id::text,
-      jp.organization_id::text,
-      jp.job_title,
-      jp.job_description,
-      jp.core_skills,
-      jp.experience_level_id,
-      elp.label as experience_level_label,
-      jp.interview_duration_minutes,
-      jp.interview_mode,
-      jp.resume_questions_enabled
-    from public.job_positions jp
-    left join public.experience_level_pool elp
-      on elp.experience_level_id = jp.experience_level_id
-    where jp.job_id = ${jobId}::uuid
-      and jp.organization_id = ${organizationId}::uuid
-    limit 1
-  `)
+const FOCUS_AREA_KEY_PATTERN = /^[a-z][a-z0-9_]{1,63}$/
 
-  if (!rows[0]) {
-    throw new ApiError(404, "JOB_NOT_FOUND", "Job not found for this organization")
-  }
-
-  return rows[0]
-}
+// Moved to job-context.ts (shared with Interview Focus); re-exported so
+// existing imports keep working.
+export { getJobQuestionnaireContext } from "@/lib/server/services/job-context"
 
 export function resolveInterviewMode(value: unknown): InterviewMode {
   return String(value ?? "").toUpperCase() === "STANDARD" ? "STANDARD" : "INDIVIDUALIZED"
@@ -125,6 +109,7 @@ async function insertVersionQuestions(
   }
 ) {
   for (const [index, question] of params.questions.entries()) {
+    const withFocus = Boolean(question.focusAreaKey)
     await tx.$executeRaw(Prisma.sql`
       insert into public.job_questionnaire_questions (
         questionnaire_version_id,
@@ -138,6 +123,7 @@ async function insertVersionQuestions(
         phase_hint,
         evaluation_criteria,
         origin
+        ${withFocus ? Prisma.sql`, focus_area_key` : Prisma.empty}
       )
       values (
         ${params.versionId}::uuid,
@@ -151,8 +137,38 @@ async function insertVersionQuestions(
         ${question.phaseHint},
         ${question.evaluationCriteria},
         'AI'
+        ${withFocus ? Prisma.sql`, ${question.focusAreaKey}` : Prisma.empty}
       )
     `)
+  }
+}
+
+/** Generator inputs for a focus plan; empty for the legacy path. */
+export function focusGenerationInput(focus: GenerationFocus | null) {
+  if (!focus) return {}
+  return {
+    focusAreas: focus.areas.map((area) => ({
+      areaKey: area.areaKey,
+      label: area.label,
+      description: area.description,
+      sortOrder: area.sortOrder,
+      coverageWeight: area.coverageWeight,
+    })),
+    resumeEmphasis: focus.resumeEmphasis,
+  }
+}
+
+/** Audit record of how a focus plan shaped a generation; empty for legacy. */
+export function focusGenerationMeta(
+  focus: GenerationFocus | null,
+  generation: { focusAllocation: Array<{ areaKey: string; questions: number }> | null }
+) {
+  if (!focus) return {}
+  return {
+    focusPlanId: focus.planId,
+    focusPlanVersion: focus.versionNumber,
+    resumeEmphasis: focus.resumeEmphasis,
+    focusAllocation: generation.focusAllocation?.map((area) => ({ areaKey: area.areaKey, questions: area.questions })) ?? null,
   }
 }
 
@@ -180,6 +196,18 @@ export async function ensureFinalizedQuestionnaireVersion(params: {
 
   const job = await getJobQuestionnaireContext(params.organizationId, params.jobId)
 
+  // Interview Focus (null = legacy path: flag off, schema missing, or error).
+  const focus = await resolveGenerationFocus({
+    organizationId: params.organizationId,
+    jobId: params.jobId,
+    createIfMissing: true,
+    createdBy: params.createdBy,
+  })
+
+  const focusReturning = (await interviewFocusTablesSupported())
+    ? Prisma.sql`, focus_plan_id::text as focus_plan_id`
+    : Prisma.empty
+
   // Generate OUTSIDE the transaction: an OpenAI round trip must never hold a
   // database transaction (or its advisory lock) open.
   const generation = await generateStructuredQuestionnaire({
@@ -189,6 +217,7 @@ export async function ensureFinalizedQuestionnaireVersion(params: {
     experienceLevel: job.experience_level_label,
     durationMinutes: job.interview_duration_minutes,
     resumeQuestionsEnabled: job.resume_questions_enabled,
+    ...focusGenerationInput(focus),
   })
 
   const result = await prisma.$transaction(async (tx) => {
@@ -222,6 +251,7 @@ export async function ensureFinalizedQuestionnaireVersion(params: {
         created_by,
         finalized_by,
         finalized_at
+        ${focus ? Prisma.sql`, focus_plan_id` : Prisma.empty}
       )
       select
         ${questionnaireId}::uuid,
@@ -237,11 +267,13 @@ export async function ensureFinalizedQuestionnaireVersion(params: {
           openAiCalls: generation.openAiCalls,
           usedFallback: generation.usedFallback,
           autoFinalized: true,
+          ...focusGenerationMeta(focus, generation),
         })}::jsonb,
         1,
         ${params.createdBy ?? null}::uuid,
         ${params.createdBy ?? null}::uuid,
         now()
+        ${focus ? Prisma.sql`, ${focus.planId}::uuid` : Prisma.empty}
       from public.job_questionnaire_versions
       where questionnaire_id = ${questionnaireId}::uuid
       returning
@@ -254,6 +286,7 @@ export async function ensureFinalizedQuestionnaireVersion(params: {
         target_question_count,
         interview_duration_minutes,
         generation_attempts
+        ${focusReturning}
     `)
 
     const version = versionRows[0]
@@ -331,6 +364,7 @@ export async function appendInterviewQuestions(params: {
             source: question.sourceType === "resume" ? "candidate_background" : "generated",
             authored_source_type: question.sourceType,
             evaluation_criteria: question.evaluationCriteria,
+            ...(question.focusAreaKey ? { focus_area_key: question.focusAreaKey } : {}),
           })}::jsonb,
           true,
           ${question.phaseHint},
@@ -365,6 +399,7 @@ async function selectFinalizedVersion(
       v.target_question_count,
       v.interview_duration_minutes,
       v.generation_attempts
+      ${await focusColumnsSelect()}
     from public.job_questionnaire_versions v
     join public.job_questionnaires q
       on q.questionnaire_id = v.questionnaire_id
@@ -401,6 +436,8 @@ export type EditableQuestion = {
   phaseHint: string
   questionType: string | null
   origin: string
+  /** Primary Interview Focus area; kept through recruiter edits. */
+  focusAreaKey?: string | null
 }
 
 const EDITABLE_SOURCE_TYPES = new Set(["job", "experience", "behavioral", "resume"])
@@ -427,6 +464,10 @@ function sanitizeEditableQuestion(question: EditableQuestion) {
     phaseHint: EDITABLE_PHASES.has(question.phaseHint) ? question.phaseHint : "core",
     questionType: question.questionType?.trim() || (question.sourceType === "behavioral" ? "behavioral" : "open_ended"),
     origin: question.origin === "RECRUITER" ? "RECRUITER" : "AI",
+    focusAreaKey:
+      typeof question.focusAreaKey === "string" && FOCUS_AREA_KEY_PATTERN.test(question.focusAreaKey)
+        ? question.focusAreaKey
+        : null,
   }
 }
 
@@ -446,6 +487,7 @@ async function selectDraftVersion(
       v.target_question_count,
       v.interview_duration_minutes,
       v.generation_attempts
+      ${await focusColumnsSelect()}
     from public.job_questionnaire_versions v
     join public.job_questionnaires q on q.questionnaire_id = v.questionnaire_id
     where q.job_id = ${jobId}::uuid
@@ -459,6 +501,10 @@ async function selectDraftVersion(
 }
 
 export async function getVersionQuestions(organizationId: string, versionId: string) {
+  const focusKeyColumn = (await interviewFocusTablesSupported())
+    ? Prisma.sql`, focus_area_key`
+    : Prisma.sql`, null::text as focus_area_key`
+
   return prisma.$queryRaw<
     Array<{
       questionnaire_question_id: string
@@ -471,6 +517,7 @@ export async function getVersionQuestions(organizationId: string, versionId: str
       difficulty_level: number
       phase_hint: string
       origin: string
+      focus_area_key: string | null
     }>
   >(Prisma.sql`
     select
@@ -484,6 +531,7 @@ export async function getVersionQuestions(organizationId: string, versionId: str
       difficulty_level,
       phase_hint,
       origin
+      ${focusKeyColumn}
     from public.job_questionnaire_questions
     where questionnaire_version_id = ${versionId}::uuid
       and organization_id = ${organizationId}::uuid
@@ -626,12 +674,18 @@ export async function releaseInterviewGenerationAttempt(versionId: string) {
  * Always writes into a DRAFT. If the recruiter was viewing a FINALIZED version,
  * a new DRAFT is forked from their submitted content, leaving the finalized one
  * and every interview referencing it untouched.
+ *
+ * focusPlanId: the Interview Focus plan version the content came from.
+ * Omitted, a new draft inherits the finalized version's plan (a manual edit
+ * keeps its provenance) and an existing draft keeps its own. Pass it when the
+ * content was generated from a plan; null records "no plan".
  */
 export async function saveQuestionnaireDraft(params: {
   organizationId: string
   jobId: string
   questions: EditableQuestion[]
   createdBy?: string | null
+  focusPlanId?: string | null
 }) {
   if (params.questions.length === 0) {
     throw new ApiError(400, "QUESTIONNAIRE_EMPTY", "A questionnaire needs at least one question")
@@ -641,6 +695,7 @@ export async function saveQuestionnaireDraft(params: {
   }
 
   const sanitized = params.questions.map(sanitizeEditableQuestion)
+  const focusSupported = await interviewFocusTablesSupported()
 
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw(
@@ -651,10 +706,19 @@ export async function saveQuestionnaireDraft(params: {
 
     if (!draft) {
       const questionnaireId = await ensureQuestionnaireRow(tx, params.organizationId, params.jobId)
+      const focusPlanValue =
+        params.focusPlanId !== undefined
+          ? Prisma.sql`${params.focusPlanId}::uuid`
+          : Prisma.sql`(
+              select fv.focus_plan_id from public.job_questionnaire_versions fv
+              where fv.questionnaire_id = ${questionnaireId}::uuid and fv.status = 'FINALIZED'
+              order by fv.version_number desc limit 1
+            )`
       const rows = await tx.$queryRaw<QuestionnaireVersionRow[]>(Prisma.sql`
         insert into public.job_questionnaire_versions (
           questionnaire_id, organization_id, version_number, status, generated_by,
           interview_mode, created_by
+          ${focusSupported ? Prisma.sql`, focus_plan_id` : Prisma.empty}
         )
         select
           ${questionnaireId}::uuid,
@@ -667,6 +731,7 @@ export async function saveQuestionnaireDraft(params: {
             'STANDARD'
           ),
           ${params.createdBy ?? null}::uuid
+          ${focusSupported ? Prisma.sql`, ${focusPlanValue}` : Prisma.empty}
         from public.job_questionnaire_versions
         where questionnaire_id = ${questionnaireId}::uuid
         returning
@@ -675,6 +740,13 @@ export async function saveQuestionnaireDraft(params: {
           interview_duration_minutes, generation_attempts
       `)
       draft = rows[0]
+    } else if (focusSupported && params.focusPlanId !== undefined) {
+      await tx.$executeRaw(Prisma.sql`
+        update public.job_questionnaire_versions
+        set focus_plan_id = ${params.focusPlanId}::uuid
+        where questionnaire_version_id = ${draft.questionnaire_version_id}::uuid
+          and status = 'DRAFT'
+      `)
     }
 
     await tx.$executeRaw(Prisma.sql`
@@ -683,11 +755,13 @@ export async function saveQuestionnaireDraft(params: {
     `)
 
     for (const [index, question] of sanitized.entries()) {
+      const withFocus = focusSupported && Boolean(question.focusAreaKey)
       await tx.$executeRaw(Prisma.sql`
         insert into public.job_questionnaire_questions (
           questionnaire_version_id, organization_id, question_order, question_text,
           question_type, source_type, competency_label, difficulty_level,
           phase_hint, evaluation_criteria, origin
+          ${withFocus ? Prisma.sql`, focus_area_key` : Prisma.empty}
         )
         values (
           ${draft.questionnaire_version_id}::uuid,
@@ -701,6 +775,7 @@ export async function saveQuestionnaireDraft(params: {
           ${question.phaseHint},
           ${question.evaluationCriteria},
           ${question.origin}
+          ${withFocus ? Prisma.sql`, ${question.focusAreaKey}` : Prisma.empty}
         )
       `)
     }
@@ -798,6 +873,17 @@ export async function snapshotVersionToInterview(params: {
   interviewId: string
   versionId: string
 }) {
+  // Focus provenance rides in reference_context (no interview_questions
+  // schema change). jsonb_strip_nulls keeps the JSON identical for questions
+  // generated without a plan.
+  const focusContext = (await interviewFocusTablesSupported())
+    ? Prisma.sql` || jsonb_strip_nulls(jsonb_build_object(
+          'focus_area_key', q.focus_area_key,
+          'focus_plan_id', (select v.focus_plan_id::text from public.job_questionnaire_versions v
+                            where v.questionnaire_version_id = q.questionnaire_version_id)
+        ))`
+    : Prisma.empty
+
   return prisma.$transaction(async (tx) => {
     const inserted = await tx.$executeRaw(Prisma.sql`
       insert into public.interview_questions (
@@ -826,7 +912,7 @@ export async function snapshotVersionToInterview(params: {
           'authored_source_type', q.source_type,
           'evaluation_criteria', q.evaluation_criteria,
           'questionnaire_version_id', ${params.versionId}
-        ),
+        )${focusContext},
         true,
         q.phase_hint,
         q.difficulty_level,

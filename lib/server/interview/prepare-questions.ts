@@ -28,10 +28,16 @@ import { resolveInterviewQuestionPlan } from "@/lib/server/interview/question-pl
 import {
   appendInterviewQuestions,
   ensureFinalizedQuestionnaireVersion,
+  focusGenerationInput,
   getJobQuestionnaireContext,
   resolveInterviewMode,
   snapshotVersionToInterview,
 } from "@/lib/server/services/job-questionnaire"
+import {
+  getGenerationFocusForPlan,
+  resolveGenerationFocus,
+  type GenerationFocus,
+} from "@/lib/server/services/interview-focus"
 
 export type PrepareQuestionsResult = {
   mode: "STANDARD" | "INDIVIDUALIZED"
@@ -114,16 +120,13 @@ export async function prepareInterviewQuestionSet(params: {
 }): Promise<PrepareQuestionsResult> {
   const job = await getJobQuestionnaireContext(params.organizationId, params.jobId)
   const mode = resolveInterviewMode(job.interview_mode)
-  const plan = resolveInterviewQuestionPlan({
-    durationMinutes: job.interview_duration_minutes,
-    experienceLevel: job.experience_level_label,
-    resumeQuestionsEnabled: job.resume_questions_enabled,
-  })
 
   let openAiCalls = 0
   let questionnaireVersionId: string | null = null
   let structuredQuestionCount = 0
   let generatedQuestionnaire = false
+  // The Interview Focus behind this interview's questions (null = legacy).
+  let focus: GenerationFocus | null = null
 
   if (mode === "STANDARD") {
     const { version, generated, openAiCalls: generationCalls } =
@@ -136,6 +139,9 @@ export async function prepareInterviewQuestionSet(params: {
     openAiCalls += generationCalls
     generatedQuestionnaire = generated
     questionnaireVersionId = version.questionnaire_version_id
+    // Resume questions follow the same plan version the shared core was built
+    // from, so the structured/resume split stays consistent.
+    focus = await getGenerationFocusForPlan(params.organizationId, version.focus_plan_id)
 
     structuredQuestionCount = await snapshotVersionToInterview({
       organizationId: params.organizationId,
@@ -152,6 +158,13 @@ export async function prepareInterviewQuestionSet(params: {
       interviewId: params.interviewId,
     })
 
+    focus = await resolveGenerationFocus({
+      organizationId: params.organizationId,
+      jobId: params.jobId,
+      createIfMissing: true,
+      createdBy: params.createdBy,
+    })
+
     if (reused > 0) {
       structuredQuestionCount = reused
       generatedQuestionnaire = false
@@ -164,6 +177,7 @@ export async function prepareInterviewQuestionSet(params: {
         durationMinutes: job.interview_duration_minutes,
         resumeQuestionsEnabled: job.resume_questions_enabled,
         excludeQuestions: params.excludeQuestions,
+        ...focusGenerationInput(focus),
       })
 
       openAiCalls += generation.openAiCalls
@@ -177,7 +191,15 @@ export async function prepareInterviewQuestionSet(params: {
     }
   }
 
-  // Candidate-specific resume questions - preserved in BOTH modes.
+  // Candidate-specific resume questions - preserved in BOTH modes. Resume
+  // emphasis (from the focus plan) sets how many; without a plan the count
+  // is exactly the previous one.
+  const plan = resolveInterviewQuestionPlan({
+    durationMinutes: job.interview_duration_minutes,
+    experienceLevel: job.experience_level_label,
+    resumeQuestionsEnabled: job.resume_questions_enabled,
+    resumeEmphasis: focus?.resumeEmphasis ?? null,
+  })
   let resumeQuestionCount = 0
 
   if (job.resume_questions_enabled && plan.resumeQuestionCount > 0) {
@@ -188,6 +210,7 @@ export async function prepareInterviewQuestionSet(params: {
       candidateBackground: params.candidateBackground,
       questionCount: plan.resumeQuestionCount,
       excludeQuestions: params.excludeQuestions,
+      ...(focus ? { focusAreas: focusGenerationInput(focus).focusAreas } : {}),
     })
 
     openAiCalls += resume.openAiCalls

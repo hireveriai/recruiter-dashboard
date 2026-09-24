@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Laptop, MonitorSmartphone, Smartphone } from "lucide-react";
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params";
 
+import InterviewFocusSummary from "@/components/interview-focus/InterviewFocusSummary";
 import { showActionFeedback } from "@/lib/client/action-feedback";
 import { buildAuthUrl } from "@/lib/client/auth-query";
 
@@ -503,6 +504,8 @@ export default function CreateJobModal({
                   Every interview link created for this job inherits this duration.
                 </p>
               </div>
+
+              <InterviewFocusSummary jobId={jobIdForQuestions} searchParams={searchParams} />
 
               <div className="md:col-span-2 rounded-[24px] border border-slate-800 bg-slate-950/40 p-5">
                 <p className="text-sm font-semibold text-white">Interview Mode</p>

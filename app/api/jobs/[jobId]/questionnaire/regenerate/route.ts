@@ -13,8 +13,11 @@ import {
   releaseInterviewGenerationAttempt,
   reserveInterviewGenerationAttempt,
   saveQuestionnaireDraft,
+  focusGenerationInput,
   type EditableQuestion,
 } from "@/lib/server/services/job-questionnaire"
+import { resolveGenerationFocus } from "@/lib/server/services/interview-focus"
+import { toEditableQuestion } from "@/lib/server/services/interview-focus-questionnaire"
 
 export const runtime = "nodejs"
 export const maxDuration = 120
@@ -65,6 +68,13 @@ export async function POST(request: Request, context: Params) {
     })
 
     const existing = current.questions
+    // Regenerate with the job's ACTIVE Interview Focus (null = legacy path).
+    const focus = await resolveGenerationFocus({
+      organizationId: auth.organizationId,
+      jobId,
+      createIfMissing: true,
+      createdBy: auth.userId,
+    })
 
     try {
       if (scope === "all") {
@@ -76,22 +86,15 @@ export async function POST(request: Request, context: Params) {
           durationMinutes: job.interview_duration_minutes,
           resumeQuestionsEnabled: job.resume_questions_enabled,
           excludeQuestions: existing.map((q) => q.question_text),
+          ...focusGenerationInput(focus),
         })
 
         const saved = await saveQuestionnaireDraft({
           organizationId: auth.organizationId,
           jobId,
           createdBy: auth.userId,
-          questions: generated.questions.map<EditableQuestion>((q) => ({
-            questionText: q.questionText,
-            sourceType: q.sourceType,
-            competencyLabel: q.competencyLabel,
-            evaluationCriteria: q.evaluationCriteria,
-            difficultyLevel: q.difficultyLevel,
-            phaseHint: q.phaseHint,
-            questionType: q.questionType,
-            origin: "AI",
-          })),
+          questions: generated.questions.map<EditableQuestion>(toEditableQuestion),
+          ...(focus ? { focusPlanId: focus.planId } : {}),
         })
 
         const result = {
@@ -128,13 +131,20 @@ export async function POST(request: Request, context: Params) {
         durationMinutes: job.interview_duration_minutes,
         resumeQuestionsEnabled: job.resume_questions_enabled,
         excludeQuestions: existing.map((q) => q.question_text),
+        ...focusGenerationInput(focus),
       })
 
       const keep = new Set(
         existing.filter((_, i) => i !== targetIndex).map((q) => q.question_text.toLowerCase())
       )
+      // Prefer a replacement that covers the same focus area.
+      const targetFocusKey = existing[targetIndex].focus_area_key ?? null
       const replacement =
-        generated.questions.find((q) => !keep.has(q.questionText.toLowerCase())) ?? generated.questions[0]
+        (targetFocusKey
+          ? generated.questions.find((q) => !keep.has(q.questionText.toLowerCase()) && q.focusAreaKey === targetFocusKey)
+          : undefined) ??
+        generated.questions.find((q) => !keep.has(q.questionText.toLowerCase())) ??
+        generated.questions[0]
 
       if (!replacement) {
         throw new ApiError(502, "REGENERATION_FAILED", "Could not generate a replacement question")
@@ -142,16 +152,7 @@ export async function POST(request: Request, context: Params) {
 
       const questions: EditableQuestion[] = existing.map((q, index) =>
         index === targetIndex
-          ? {
-              questionText: replacement.questionText,
-              sourceType: replacement.sourceType,
-              competencyLabel: replacement.competencyLabel,
-              evaluationCriteria: replacement.evaluationCriteria,
-              difficultyLevel: replacement.difficultyLevel,
-              phaseHint: replacement.phaseHint,
-              questionType: replacement.questionType,
-              origin: "AI",
-            }
+          ? toEditableQuestion(replacement)
           : {
               questionnaireQuestionId: q.questionnaire_question_id,
               questionText: q.question_text,
@@ -162,6 +163,7 @@ export async function POST(request: Request, context: Params) {
               phaseHint: q.phase_hint,
               questionType: q.question_type,
               origin: q.origin,
+              focusAreaKey: q.focus_area_key,
             }
       )
 

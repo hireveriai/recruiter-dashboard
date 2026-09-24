@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import InterviewFocusEditor from "@/components/interview-focus/InterviewFocusEditor";
 import { buildAuthUrl } from "@/lib/client/auth-query";
 
 const SOURCE_LABELS = {
@@ -57,6 +58,7 @@ export default function QuestionnaireReviewPage() {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
   const [version, setVersion] = useState(null);
+  const [focusPlan, setFocusPlan] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [dirty, setDirty] = useState(false);
   const dragIndex = useRef(null);
@@ -81,6 +83,7 @@ export default function QuestionnaireReviewPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Could not load the questionnaire");
       setVersion(data.data.version);
+      setFocusPlan(data.data.focusPlan ?? null);
       setQuestions(withKeys(data.data.questions));
       setDirty(false);
     } catch (e) {
@@ -279,6 +282,14 @@ export default function QuestionnaireReviewPage() {
           >
             v{version?.versionNumber} · {isFinalized ? "Finalized" : "Draft"}
           </span>
+          {focusPlan ? (
+            <span
+              title="The Interview Focus plan version these questions were generated from"
+              className="rounded-full bg-violet-500/10 px-3 py-1 text-xs text-violet-300"
+            >
+              Focus v{focusPlan.versionNumber}
+            </span>
+          ) : null}
           {dirty ? (
             <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
               Unsaved changes
@@ -307,6 +318,15 @@ export default function QuestionnaireReviewPage() {
           continue editing the questions manually or add your own questions.
         </p>
       ) : null}
+
+      {/* Renders nothing unless Interview Focus is enabled for this organization. */}
+      <InterviewFocusEditor
+        jobId={jobId}
+        searchParams={searchParams}
+        notify={notify}
+        onApplied={load}
+        questionEditsPending={dirty}
+      />
 
       <div className="mt-6 flex flex-wrap gap-3">
         <button
@@ -433,6 +453,12 @@ export default function QuestionnaireReviewPage() {
                       </option>
                     ))}
                   </select>
+
+                  {q.focusAreaKey && focusPlan ? (
+                    <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200">
+                      {focusPlan.areas?.find((area) => area.areaKey === q.focusAreaKey)?.label ?? q.focusAreaKey}
+                    </span>
+                  ) : null}
 
                   <span className="rounded-full bg-slate-800/70 px-2.5 py-1 text-[10px] uppercase tracking-wide text-slate-400">
                     {q.origin === "RECRUITER" ? "Yours" : "AI"}

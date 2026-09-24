@@ -9,6 +9,24 @@ const projectRoot = path.resolve(fileURLToPath(import.meta.url), "..", "..")
 const CANDIDATE_SUFFIXES = ["", ".ts", ".tsx", ".mts", ".js", ".mjs", "/index.ts", "/index.js"]
 
 export async function resolve(specifier, context, next) {
+  // Extensionless relative imports between project TypeScript files (e.g.
+  // `import { prisma } from "./prisma"`) resolve under the Next bundler but
+  // not under plain Node ESM.
+  if (
+    (specifier.startsWith("./") || specifier.startsWith("../")) &&
+    !path.extname(specifier) &&
+    context.parentURL?.startsWith("file:") &&
+    !context.parentURL.includes("/node_modules/")
+  ) {
+    const base = path.resolve(path.dirname(fileURLToPath(context.parentURL)), specifier)
+    for (const suffix of CANDIDATE_SUFFIXES) {
+      const candidate = `${base}${suffix}`
+      if (suffix !== "" && existsSync(candidate)) {
+        return { url: pathToFileURL(candidate).href, shortCircuit: true }
+      }
+    }
+  }
+
   if (!specifier.startsWith("@/")) {
     return next(specifier, context)
   }

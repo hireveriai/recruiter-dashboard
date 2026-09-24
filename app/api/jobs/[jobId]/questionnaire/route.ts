@@ -10,6 +10,7 @@ import {
   saveQuestionnaireDraft,
   type EditableQuestion,
 } from "@/lib/server/services/job-questionnaire"
+import { getFocusPlanById, isInterviewFocusAvailable } from "@/lib/server/services/interview-focus"
 
 export const runtime = "nodejs"
 export const maxDuration = 120
@@ -29,7 +30,22 @@ export async function GET(request: Request, context: Params) {
       createdBy: auth.userId,
     })
 
+    // Which Interview Focus plan version produced this questionnaire, if any.
+    const focusPlan =
+      result.version.focus_plan_id && (await isInterviewFocusAvailable(auth.organizationId))
+        ? await getFocusPlanById(auth.organizationId, result.version.focus_plan_id)
+        : null
+
     return successResponse({
+      focusPlan: focusPlan
+        ? {
+            planId: focusPlan.planId,
+            versionNumber: focusPlan.versionNumber,
+            status: focusPlan.status,
+            origin: focusPlan.origin,
+            areas: focusPlan.areas.map((area) => ({ areaKey: area.areaKey, label: area.label })),
+          }
+        : null,
       version: {
         questionnaireVersionId: result.version.questionnaire_version_id,
         versionNumber: result.version.version_number,
@@ -49,6 +65,7 @@ export async function GET(request: Request, context: Params) {
         difficultyLevel: q.difficulty_level,
         phaseHint: q.phase_hint,
         origin: q.origin,
+        focusAreaKey: q.focus_area_key,
       })),
     })
   } catch (error) {
@@ -84,6 +101,7 @@ export async function PUT(request: Request, context: Params) {
       phaseHint: String(raw.phaseHint ?? "core"),
       questionType: (raw.questionType as string) ?? null,
       origin: String(raw.origin ?? "AI"),
+      focusAreaKey: typeof raw.focusAreaKey === "string" ? raw.focusAreaKey : null,
     }))
 
     const result = await saveQuestionnaireDraft({

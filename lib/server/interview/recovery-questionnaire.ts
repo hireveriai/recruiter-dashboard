@@ -27,7 +27,8 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/server/prisma"
 import { getInterviewExposure } from "@/lib/server/interview/question-exposure"
 import { generateStructuredQuestionnaire } from "@/lib/server/interview/questionnaire-generator"
-import { appendInterviewQuestions } from "@/lib/server/services/job-questionnaire"
+import { appendInterviewQuestions, focusGenerationInput } from "@/lib/server/services/job-questionnaire"
+import { resolveGenerationFocus } from "@/lib/server/services/interview-focus"
 
 const RECOVERY_SOURCE = "recovery_alternate"
 
@@ -133,6 +134,12 @@ export async function prepareRecoveryQuestionnaire(params: {
   }
 
   try {
+    // Same focus coverage as the job's ACTIVE plan; never creates a plan here.
+    const focus = await resolveGenerationFocus({
+      organizationId: params.organizationId,
+      jobId: context.job_id,
+      createIfMissing: false,
+    })
     const generated = await generateStructuredQuestionnaire({
       jobTitle: context.job_title,
       jobDescription: context.job_description,
@@ -143,6 +150,7 @@ export async function prepareRecoveryQuestionnaire(params: {
       // Same job, same competencies, same duration and level - only the
       // situations differ, because these must not be repeated.
       excludeQuestions: exposure.exposedTexts,
+      ...focusGenerationInput(focus),
     })
 
     if (generated.questions.length === 0) {

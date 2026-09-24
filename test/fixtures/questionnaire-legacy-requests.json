@@ -1,0 +1,370 @@
+[
+  {
+    "operation": "interview_questionnaire",
+    "body": {
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "messages": [
+        {
+          "role": "system",
+          "content": "You design structured interview questionnaires for hiring teams.\nYou work across every industry, profession and job function: healthcare, education, logistics, hospitality, finance, trades, public sector, retail, manufacturing, creative, technology and any other field.\n\nCRITICAL: Infer everything about the role from the supplied job data alone.\nNever assume the role is technical. Never introduce vocabulary from a field the job data does not mention.\nUse the terminology a practitioner of THIS role would actually use.\n\nQUESTION RULES\n- Each question assesses exactly one competency.\n- 8 to 22 words. Plain, spoken language a candidate hears clearly.\n- Ground each question in a realistic situation someone in this role would face.\n- Vary the situation: time pressure, competing priorities, ambiguity, limited information, a mistake to put right, a difficult person, a quality or safety concern.\n- Ask about what the candidate personally did or would do.\n- Never quote or paraphrase the job description or the candidate's documents.\n- Never reference a resume, CV, application or the job advert.\n- No compound questions. One question mark at most.\n\nDIFFICULTY\n- Junior: direct execution, following process, recognising when to ask for help.\n- Mid: trade-offs, competing demands, working with incomplete information.\n- Senior: judgement under ambiguity, ownership, influencing others, systemic improvement.\n\nQUESTION SOURCES\n- \"job\": tests a requirement, skill or responsibility of the role.\n- \"experience\": tests depth of relevant prior practice at the expected level.\n- \"behavioral\": tests judgement, collaboration, ownership or handling of conflict.\n\nEVALUATION CRITERIA\nFor each question give one sentence describing what a strong answer demonstrates.\nDescribe observable evidence, not a score. Keep it specific to the question.\n\nReturn JSON only, matching the provided schema."
+        },
+        {
+          "role": "user",
+          "content": "Produce exactly 7 questions.\nUse exactly 4 with source_type \"job\", 1 with source_type \"experience\", and 2 with source_type \"behavioral\".\n{\n  \"role_title\": \"Senior Sales Manager\",\n  \"job_description\": \"Lead a regional team selling logistics services.\",\n  \"required_skills_and_responsibilities\": [\n    \"Negotiation\",\n    \"Pipeline management\"\n  ],\n  \"experience_level\": \"Senior\",\n  \"seniority_band\": \"senior\",\n  \"interview_duration_minutes\": 30,\n  \"total_questions_required\": 7,\n  \"questions_by_source\": {\n    \"job\": 4,\n    \"experience\": 1,\n    \"behavioral\": 2\n  }\n}"
+        }
+      ],
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "interview_questionnaire",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "questions"
+            ],
+            "properties": {
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "question_text",
+                    "source_type",
+                    "competency_label",
+                    "difficulty_level",
+                    "phase_hint",
+                    "evaluation_criteria"
+                  ],
+                  "properties": {
+                    "question_text": {
+                      "type": "string"
+                    },
+                    "source_type": {
+                      "type": "string",
+                      "enum": [
+                        "job",
+                        "experience",
+                        "behavioral"
+                      ]
+                    },
+                    "competency_label": {
+                      "type": "string"
+                    },
+                    "difficulty_level": {
+                      "type": "integer"
+                    },
+                    "phase_hint": {
+                      "type": "string",
+                      "enum": [
+                        "warmup",
+                        "core",
+                        "probe"
+                      ]
+                    },
+                    "evaluation_criteria": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "operation": "interview_questionnaire",
+    "body": {
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "messages": [
+        {
+          "role": "system",
+          "content": "You design structured interview questionnaires for hiring teams.\nYou work across every industry, profession and job function: healthcare, education, logistics, hospitality, finance, trades, public sector, retail, manufacturing, creative, technology and any other field.\n\nCRITICAL: Infer everything about the role from the supplied job data alone.\nNever assume the role is technical. Never introduce vocabulary from a field the job data does not mention.\nUse the terminology a practitioner of THIS role would actually use.\n\nQUESTION RULES\n- Each question assesses exactly one competency.\n- 8 to 22 words. Plain, spoken language a candidate hears clearly.\n- Ground each question in a realistic situation someone in this role would face.\n- Vary the situation: time pressure, competing priorities, ambiguity, limited information, a mistake to put right, a difficult person, a quality or safety concern.\n- Ask about what the candidate personally did or would do.\n- Never quote or paraphrase the job description or the candidate's documents.\n- Never reference a resume, CV, application or the job advert.\n- No compound questions. One question mark at most.\n\nDIFFICULTY\n- Junior: direct execution, following process, recognising when to ask for help.\n- Mid: trade-offs, competing demands, working with incomplete information.\n- Senior: judgement under ambiguity, ownership, influencing others, systemic improvement.\n\nQUESTION SOURCES\n- \"job\": tests a requirement, skill or responsibility of the role.\n- \"experience\": tests depth of relevant prior practice at the expected level.\n- \"behavioral\": tests judgement, collaboration, ownership or handling of conflict.\n\nEVALUATION CRITERIA\nFor each question give one sentence describing what a strong answer demonstrates.\nDescribe observable evidence, not a score. Keep it specific to the question.\n\nReturn JSON only, matching the provided schema."
+        },
+        {
+          "role": "user",
+          "content": "Produce exactly 10 questions.\nUse exactly 5 with source_type \"job\", 1 with source_type \"experience\", and 4 with source_type \"behavioral\".\n{\n  \"role_title\": \"Senior Sales Manager\",\n  \"job_description\": \"Lead a regional team selling logistics services.\",\n  \"required_skills_and_responsibilities\": [\n    \"Negotiation\",\n    \"Pipeline management\"\n  ],\n  \"experience_level\": \"Senior\",\n  \"seniority_band\": \"senior\",\n  \"interview_duration_minutes\": 45,\n  \"total_questions_required\": 10,\n  \"questions_by_source\": {\n    \"job\": 5,\n    \"experience\": 1,\n    \"behavioral\": 4\n  }\n}"
+        }
+      ],
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "interview_questionnaire",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "questions"
+            ],
+            "properties": {
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "question_text",
+                    "source_type",
+                    "competency_label",
+                    "difficulty_level",
+                    "phase_hint",
+                    "evaluation_criteria"
+                  ],
+                  "properties": {
+                    "question_text": {
+                      "type": "string"
+                    },
+                    "source_type": {
+                      "type": "string",
+                      "enum": [
+                        "job",
+                        "experience",
+                        "behavioral"
+                      ]
+                    },
+                    "competency_label": {
+                      "type": "string"
+                    },
+                    "difficulty_level": {
+                      "type": "integer"
+                    },
+                    "phase_hint": {
+                      "type": "string",
+                      "enum": [
+                        "warmup",
+                        "core",
+                        "probe"
+                      ]
+                    },
+                    "evaluation_criteria": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "operation": "interview_questionnaire",
+    "body": {
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "messages": [
+        {
+          "role": "system",
+          "content": "You design structured interview questionnaires for hiring teams.\nYou work across every industry, profession and job function: healthcare, education, logistics, hospitality, finance, trades, public sector, retail, manufacturing, creative, technology and any other field.\n\nCRITICAL: Infer everything about the role from the supplied job data alone.\nNever assume the role is technical. Never introduce vocabulary from a field the job data does not mention.\nUse the terminology a practitioner of THIS role would actually use.\n\nQUESTION RULES\n- Each question assesses exactly one competency.\n- 8 to 22 words. Plain, spoken language a candidate hears clearly.\n- Ground each question in a realistic situation someone in this role would face.\n- Vary the situation: time pressure, competing priorities, ambiguity, limited information, a mistake to put right, a difficult person, a quality or safety concern.\n- Ask about what the candidate personally did or would do.\n- Never quote or paraphrase the job description or the candidate's documents.\n- Never reference a resume, CV, application or the job advert.\n- No compound questions. One question mark at most.\n\nDIFFICULTY\n- Junior: direct execution, following process, recognising when to ask for help.\n- Mid: trade-offs, competing demands, working with incomplete information.\n- Senior: judgement under ambiguity, ownership, influencing others, systemic improvement.\n\nQUESTION SOURCES\n- \"job\": tests a requirement, skill or responsibility of the role.\n- \"experience\": tests depth of relevant prior practice at the expected level.\n- \"behavioral\": tests judgement, collaboration, ownership or handling of conflict.\n\nEVALUATION CRITERIA\nFor each question give one sentence describing what a strong answer demonstrates.\nDescribe observable evidence, not a score. Keep it specific to the question.\n\nReturn JSON only, matching the provided schema."
+        },
+        {
+          "role": "user",
+          "content": "Produce exactly 13 questions.\nUse exactly 7 with source_type \"job\", 2 with source_type \"experience\", and 4 with source_type \"behavioral\".\n{\n  \"role_title\": \"Senior Sales Manager\",\n  \"job_description\": \"Lead a regional team selling logistics services.\",\n  \"required_skills_and_responsibilities\": [\n    \"Negotiation\",\n    \"Pipeline management\"\n  ],\n  \"experience_level\": \"Senior\",\n  \"seniority_band\": \"senior\",\n  \"interview_duration_minutes\": 60,\n  \"total_questions_required\": 13,\n  \"questions_by_source\": {\n    \"job\": 7,\n    \"experience\": 2,\n    \"behavioral\": 4\n  }\n}"
+        }
+      ],
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "interview_questionnaire",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "questions"
+            ],
+            "properties": {
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "question_text",
+                    "source_type",
+                    "competency_label",
+                    "difficulty_level",
+                    "phase_hint",
+                    "evaluation_criteria"
+                  ],
+                  "properties": {
+                    "question_text": {
+                      "type": "string"
+                    },
+                    "source_type": {
+                      "type": "string",
+                      "enum": [
+                        "job",
+                        "experience",
+                        "behavioral"
+                      ]
+                    },
+                    "competency_label": {
+                      "type": "string"
+                    },
+                    "difficulty_level": {
+                      "type": "integer"
+                    },
+                    "phase_hint": {
+                      "type": "string",
+                      "enum": [
+                        "warmup",
+                        "core",
+                        "probe"
+                      ]
+                    },
+                    "evaluation_criteria": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "operation": "interview_questionnaire",
+    "body": {
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "messages": [
+        {
+          "role": "system",
+          "content": "You design structured interview questionnaires for hiring teams.\nYou work across every industry, profession and job function: healthcare, education, logistics, hospitality, finance, trades, public sector, retail, manufacturing, creative, technology and any other field.\n\nCRITICAL: Infer everything about the role from the supplied job data alone.\nNever assume the role is technical. Never introduce vocabulary from a field the job data does not mention.\nUse the terminology a practitioner of THIS role would actually use.\n\nQUESTION RULES\n- Each question assesses exactly one competency.\n- 8 to 22 words. Plain, spoken language a candidate hears clearly.\n- Ground each question in a realistic situation someone in this role would face.\n- Vary the situation: time pressure, competing priorities, ambiguity, limited information, a mistake to put right, a difficult person, a quality or safety concern.\n- Ask about what the candidate personally did or would do.\n- Never quote or paraphrase the job description or the candidate's documents.\n- Never reference a resume, CV, application or the job advert.\n- No compound questions. One question mark at most.\n\nDIFFICULTY\n- Junior: direct execution, following process, recognising when to ask for help.\n- Mid: trade-offs, competing demands, working with incomplete information.\n- Senior: judgement under ambiguity, ownership, influencing others, systemic improvement.\n\nQUESTION SOURCES\n- \"job\": tests a requirement, skill or responsibility of the role.\n- \"experience\": tests depth of relevant prior practice at the expected level.\n- \"behavioral\": tests judgement, collaboration, ownership or handling of conflict.\n\nEVALUATION CRITERIA\nFor each question give one sentence describing what a strong answer demonstrates.\nDescribe observable evidence, not a score. Keep it specific to the question.\n\nReturn JSON only, matching the provided schema."
+        },
+        {
+          "role": "user",
+          "content": "Produce exactly 8 questions.\nUse exactly 4 with source_type \"job\", 2 with source_type \"experience\", and 2 with source_type \"behavioral\".\nThe candidate has already been asked the questions listed in must_not_repeat_or_paraphrase. Cover the same competencies with genuinely different situations.\n{\n  \"role_title\": \"Teacher\",\n  \"job_description\": \"Teach mathematics\",\n  \"required_skills_and_responsibilities\": [\n    \"Lesson planning\"\n  ],\n  \"experience_level\": \"Mid\",\n  \"seniority_band\": \"mid\",\n  \"interview_duration_minutes\": 30,\n  \"total_questions_required\": 8,\n  \"questions_by_source\": {\n    \"job\": 4,\n    \"experience\": 2,\n    \"behavioral\": 2\n  },\n  \"must_not_repeat_or_paraphrase\": [\n    \"How do you plan a lesson?\"\n  ]\n}"
+        }
+      ],
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "interview_questionnaire",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "questions"
+            ],
+            "properties": {
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "question_text",
+                    "source_type",
+                    "competency_label",
+                    "difficulty_level",
+                    "phase_hint",
+                    "evaluation_criteria"
+                  ],
+                  "properties": {
+                    "question_text": {
+                      "type": "string"
+                    },
+                    "source_type": {
+                      "type": "string",
+                      "enum": [
+                        "job",
+                        "experience",
+                        "behavioral"
+                      ]
+                    },
+                    "competency_label": {
+                      "type": "string"
+                    },
+                    "difficulty_level": {
+                      "type": "integer"
+                    },
+                    "phase_hint": {
+                      "type": "string",
+                      "enum": [
+                        "warmup",
+                        "core",
+                        "probe"
+                      ]
+                    },
+                    "evaluation_criteria": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "operation": "resume_questions",
+    "body": {
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "messages": [
+        {
+          "role": "system",
+          "content": "You write interview questions about a candidate's own prior experience.\nYou work across every industry and profession. Take all subject matter from the supplied material and never assume the role is technical.\n\nRULES\n- Each question probes something the candidate has actually done.\n- 8 to 22 words, plain spoken language, one competency each.\n- Never quote the candidate's document or mention a resume, CV or application.\n- Never open with phrases like 'You highlighted' or 'Your background includes'.\n- Ask about decisions, ownership, difficulty and outcomes rather than duties.\n- Only cover background that is relevant to the target role.\n\nFor each question give one sentence describing what a strong answer demonstrates.\nReturn JSON only, matching the provided schema."
+        },
+        {
+          "role": "user",
+          "content": "Produce exactly 2 question(s).\n{\n  \"role_title\": \"Teacher\",\n  \"role_summary\": \"Teach mathematics\",\n  \"experience_level\": \"Mid\",\n  \"candidate_background\": \"Mathematics teacher for six years, led the department intervention programme.\"\n}"
+        }
+      ],
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "resume_questions",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "questions"
+            ],
+            "properties": {
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "question_text",
+                    "competency_label",
+                    "evaluation_criteria"
+                  ],
+                  "properties": {
+                    "question_text": {
+                      "type": "string"
+                    },
+                    "competency_label": {
+                      "type": "string"
+                    },
+                    "evaluation_criteria": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

@@ -195,22 +195,74 @@ export function resolveQuestionDistribution(input: {
 }
 
 /**
+ * How much of the interview draws on the candidate's own background, set by
+ * an Interview Focus plan. Absent or STANDARD means the existing seniority
+ * distribution, unchanged.
+ */
+export type ResumeEmphasisLevel = "OFF" | "LIGHT" | "STANDARD" | "HEAVY"
+
+const HEAVY_RESUME_SHARE = 0.3
+const MAX_HEAVY_RESUME_QUESTIONS = 4
+
+/**
+ * Re-weights a distribution to a fixed number of resume questions. The total
+ * never changes (duration still decides it); the non-resume questions keep the
+ * seniority weights, apportioned by largest remainder so they always sum back.
+ */
+function withResumeCount(
+  total: number,
+  seniority: SeniorityBand,
+  resumeCount: number
+): InterviewQuestionDistribution {
+  const resume = Math.max(0, Math.min(resumeCount, Math.max(0, total - 1)))
+  const core = total - resume
+  const weights = DISTRIBUTION_WEIGHTS[seniority]
+  const sources: Array<Exclude<InterviewQuestionSource, "resume">> = ["job", "experience", "behavioral"]
+  const weightSum = sources.reduce((sum, source) => sum + weights[source], 0)
+  const exact = sources.map((source) => ({ source, value: (core * weights[source]) / weightSum }))
+  const counts: InterviewQuestionDistribution = { job: 0, experience: 0, behavioral: 0, resume }
+
+  for (const entry of exact) counts[entry.source] = Math.floor(entry.value)
+  let assigned = sources.reduce((sum, source) => sum + counts[source], 0)
+  const byRemainder = [...exact].sort(
+    (a, b) => b.value - Math.floor(b.value) - (a.value - Math.floor(a.value)) || sources.indexOf(a.source) - sources.indexOf(b.source)
+  )
+  for (let i = 0; assigned < core; i = (i + 1) % byRemainder.length) {
+    counts[byRemainder[i].source] += 1
+    assigned += 1
+  }
+
+  return counts
+}
+
+/**
  * The one call every other part of the platform should use.
  */
 export function resolveInterviewQuestionPlan(input: {
   durationMinutes?: unknown
   experienceLevel?: unknown
   resumeQuestionsEnabled?: boolean
+  resumeEmphasis?: ResumeEmphasisLevel | null
 }): InterviewQuestionPlan {
   const durationMinutes = normalizeDurationMinutes(input.durationMinutes)
   const seniority = resolveSeniorityBand(input.experienceLevel)
-  const resumeQuestionsEnabled = input.resumeQuestionsEnabled !== false
+  const resumeQuestionsEnabled = input.resumeQuestionsEnabled !== false && input.resumeEmphasis !== "OFF"
   const budget = resolveQuestionBudget(durationMinutes)
-  const distribution = resolveQuestionDistribution({
+  let distribution = resolveQuestionDistribution({
     totalQuestions: budget.totalQuestions,
     seniority,
     resumeQuestionsEnabled,
   })
+
+  if (resumeQuestionsEnabled && input.resumeEmphasis === "LIGHT") {
+    distribution = withResumeCount(budget.totalQuestions, seniority, 1)
+  } else if (resumeQuestionsEnabled && input.resumeEmphasis === "HEAVY") {
+    const heavy = Math.min(
+      MAX_HEAVY_RESUME_QUESTIONS,
+      Math.max(distribution.resume + 1, Math.ceil(budget.totalQuestions * HEAVY_RESUME_SHARE))
+    )
+    distribution = withResumeCount(budget.totalQuestions, seniority, heavy)
+  }
 
   return {
     ...budget,

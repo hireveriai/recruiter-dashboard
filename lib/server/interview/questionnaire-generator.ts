@@ -23,10 +23,12 @@
 
 import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { validateQuestionStrict } from "@/lib/server/ai/question-validator"
+import { allocateFocusSlots, fitAreasToDuration } from "@/lib/server/interview-focus/focus-rules"
 import {
   resolveInterviewQuestionPlan,
   type InterviewQuestionPlan,
   type InterviewQuestionSource,
+  type ResumeEmphasisLevel,
 } from "@/lib/server/interview/question-plan"
 
 export const QUESTIONNAIRE_MODEL = process.env.OPENAI_QUESTION_MODEL || "gpt-4o-mini"
@@ -42,7 +44,21 @@ export type GeneratedQuestion = {
   difficultyLevel: number
   phaseHint: string
   evaluationCriteria: string
+  /** Primary Interview Focus area; only set when generated from a focus plan. */
+  focusAreaKey?: string | null
 }
+
+/** A competency from an Interview Focus plan, as the generator needs it. */
+export type GenerationFocusArea = {
+  areaKey: string
+  label: string
+  description: string | null
+  sortOrder: number
+  coverageWeight: number
+}
+
+/** Question-coverage target for one focus area (not a scoring weight). */
+export type FocusAllocation = GenerationFocusArea & { questions: number }
 
 export type QuestionnaireGenerationInput = {
   jobTitle?: string | null
@@ -56,6 +72,12 @@ export type QuestionnaireGenerationInput = {
    * questionnaires, where the replacement set must avoid what was already asked.
    */
   excludeQuestions?: string[]
+  /**
+   * Interview Focus areas. When absent or empty the generator behaves exactly
+   * as it did before Interview Focus existed (same prompt, same schema).
+   */
+  focusAreas?: GenerationFocusArea[] | null
+  resumeEmphasis?: ResumeEmphasisLevel | null
 }
 
 export type QuestionnaireGenerationResult = {
@@ -64,6 +86,8 @@ export type QuestionnaireGenerationResult = {
   model: string
   openAiCalls: number
   usedFallback: boolean
+  /** Per-area question targets, when generated from a focus plan. */
+  focusAllocation: FocusAllocation[] | null
 }
 
 export class QuestionnaireGenerationError extends Error {
@@ -178,7 +202,55 @@ function buildSystemPrompt() {
   ].join("\n")
 }
 
-function buildUserPrompt(input: QuestionnaireGenerationInput, plan: InterviewQuestionPlan) {
+/**
+ * Deterministic per-area question targets over the structured core. Focus
+ * weights are coverage targets only. A plan saved for a longer interview is
+ * trimmed to the current duration limit without modifying the stored plan.
+ */
+export function resolveFocusAllocation(
+  areas: GenerationFocusArea[] | null | undefined,
+  plan: InterviewQuestionPlan
+): FocusAllocation[] | null {
+  if (!areas || areas.length === 0) return null
+  const fitted = fitAreasToDuration(areas, plan.durationMinutes)
+  const slots = allocateFocusSlots(fitted, plan.structuredQuestionCount)
+  return fitted.map((area, index) => ({ ...area, questions: slots[index] }))
+}
+
+function buildFocusResponseSchema(areaKeys: string[]) {
+  const item = RESPONSE_SCHEMA.properties.questions.items
+  return {
+    ...RESPONSE_SCHEMA,
+    properties: {
+      questions: {
+        ...RESPONSE_SCHEMA.properties.questions,
+        items: {
+          ...item,
+          required: [...item.required, "focus_area_key"],
+          properties: {
+            ...item.properties,
+            focus_area_key: { type: "string", enum: areaKeys },
+          },
+        },
+      },
+    },
+  }
+}
+
+const FOCUS_SYSTEM_SECTION = [
+  "",
+  "FOCUS AREAS",
+  "- Each question must primarily assess exactly one of the supplied focus areas; set focus_area_key to that area's key.",
+  "- Focus areas say WHAT is assessed. source_type says WHERE the question is anchored (a job requirement, prior experience, or judgement). Satisfy both allocations.",
+  "- Express every focus area in the terms of THIS role. A focus area is never a reason to introduce vocabulary from another field.",
+  "- competency_label should name the specific aspect of the focus area the question tests.",
+].join("\n")
+
+function buildUserPrompt(
+  input: QuestionnaireGenerationInput,
+  plan: InterviewQuestionPlan,
+  allocation: FocusAllocation[] | null = null
+) {
   const skills = (input.coreSkills ?? []).map((s) => String(s ?? "").trim()).filter(Boolean)
   const distribution = plan.distribution
 
@@ -201,9 +273,22 @@ function buildUserPrompt(input: QuestionnaireGenerationInput, plan: InterviewQue
     payload.must_not_repeat_or_paraphrase = input.excludeQuestions.slice(0, 60)
   }
 
+  const activeAllocation = allocation?.filter((area) => area.questions > 0) ?? []
+  if (activeAllocation.length > 0) {
+    payload.focus_areas = activeAllocation.map((area) => ({
+      key: area.areaKey,
+      name: area.label,
+      meaning: area.description ?? "",
+      questions: area.questions,
+    }))
+  }
+
   return [
     `Produce exactly ${plan.structuredQuestionCount} questions.`,
     `Use exactly ${distribution.job} with source_type "job", ${distribution.experience} with source_type "experience", and ${distribution.behavioral} with source_type "behavioral".`,
+    activeAllocation.length > 0
+      ? `Allocate focus areas exactly: ${activeAllocation.map((area) => `${area.questions} with focus_area_key "${area.areaKey}"`).join(", ")}.`
+      : "",
     input.excludeQuestions?.length
       ? "The candidate has already been asked the questions listed in must_not_repeat_or_paraphrase. Cover the same competencies with genuinely different situations."
       : "",
@@ -214,7 +299,12 @@ function buildUserPrompt(input: QuestionnaireGenerationInput, plan: InterviewQue
     .join("\n")
 }
 
-async function callOpenAi(system: string, user: string, signal: AbortSignal) {
+async function callOpenAi(
+  system: string,
+  user: string,
+  signal: AbortSignal,
+  schema: object = RESPONSE_SCHEMA
+) {
   const apiKey = getApiKey()
   if (!apiKey) {
     throw new QuestionnaireGenerationError("OPENAI_API_KEY is not configured")
@@ -240,7 +330,7 @@ async function callOpenAi(system: string, user: string, signal: AbortSignal) {
         json_schema: {
           name: "interview_questionnaire",
           strict: true,
-          schema: RESPONSE_SCHEMA,
+          schema,
         },
       },
     }),
@@ -267,7 +357,12 @@ async function callOpenAi(system: string, user: string, signal: AbortSignal) {
   }
 }
 
-function mapQuestions(raw: unknown[], plan: InterviewQuestionPlan): GeneratedQuestion[] {
+function mapQuestions(
+  raw: unknown[],
+  plan: InterviewQuestionPlan,
+  allocation: FocusAllocation[] | null = null
+): GeneratedQuestion[] {
+  const areasByKey = new Map((allocation ?? []).map((area) => [area.areaKey, area]))
   const total = raw.length
   const seen = new Set<string>()
   const mapped: GeneratedQuestion[] = []
@@ -285,8 +380,7 @@ function mapQuestions(raw: unknown[], plan: InterviewQuestionPlan): GeneratedQue
     seen.add(dedupeKey)
 
     const sourceType = normalizeSource(record.source_type)
-
-    mapped.push({
+    const question: GeneratedQuestion = {
       questionText,
       sourceType,
       competencyLabel:
@@ -297,15 +391,46 @@ function mapQuestions(raw: unknown[], plan: InterviewQuestionPlan): GeneratedQue
       evaluationCriteria:
         String(record.evaluation_criteria ?? "").replace(/\s+/g, " ").trim() ||
         "Answer gives a concrete, first-hand account with a clear outcome.",
-    })
+    }
+
+    if (allocation) {
+      // Only keys from the plan are accepted; anything else is untagged.
+      const area = areasByKey.get(String(record.focus_area_key ?? ""))
+      question.focusAreaKey = area ? area.areaKey : null
+    }
+
+    mapped.push(question)
   })
 
   return mapped.slice(0, plan.structuredQuestionCount)
 }
 
 /**
+ * How far a question set is from the focus targets: the number of questions
+ * that would have to move for every area to hit its target exactly.
+ */
+export function focusAllocationDeviation(questions: GeneratedQuestion[], allocation: FocusAllocation[]) {
+  const counts = new Map<string, number>()
+  let untagged = 0
+  for (const question of questions) {
+    if (!question.focusAreaKey) {
+      untagged += 1
+      continue
+    }
+    counts.set(question.focusAreaKey, (counts.get(question.focusAreaKey) ?? 0) + 1)
+  }
+  const over = allocation.reduce((sum, area) => sum + Math.max(0, (counts.get(area.areaKey) ?? 0) - area.questions), 0)
+  const under = allocation.reduce((sum, area) => sum + Math.max(0, area.questions - (counts.get(area.areaKey) ?? 0)), 0)
+  return Math.max(over + untagged, under)
+}
+
+/** Acceptable drift from the focus targets before the one retry is used. */
+const MAX_FOCUS_DEVIATION = 1
+
+/**
  * Generates the structured core. ONE OpenAI call on the happy path; a single
- * retry only if the first response yields too few usable questions.
+ * retry only if the first response yields too few usable questions or, with a
+ * focus plan, misses the per-area targets by more than one question.
  */
 export async function generateStructuredQuestionnaire(
   input: QuestionnaireGenerationInput
@@ -314,14 +439,40 @@ export async function generateStructuredQuestionnaire(
     durationMinutes: input.durationMinutes,
     experienceLevel: input.experienceLevel ?? input.jobTitle,
     resumeQuestionsEnabled: input.resumeQuestionsEnabled,
+    resumeEmphasis: input.resumeEmphasis,
   })
+  const allocation = resolveFocusAllocation(input.focusAreas, plan)
 
-  const system = buildSystemPrompt()
-  const user = buildUserPrompt(input, plan)
+  const system = allocation ? `${buildSystemPrompt()}\n${FOCUS_SYSTEM_SECTION}` : buildSystemPrompt()
+  const user = buildUserPrompt(input, plan, allocation)
+  const schema = allocation ? buildFocusResponseSchema(allocation.map((area) => area.areaKey)) : RESPONSE_SCHEMA
 
   let openAiCalls = 0
   let lastError: unknown = null
   let best: GeneratedQuestion[] = []
+
+  // plan.minQuestions is a floor for the whole interview. Without resume
+  // emphasis the structured count always meets it, so it is used unchanged;
+  // HEAVY emphasis can move enough slots to resume questions that it would be
+  // unreachable, so the floor is then one below the structured count.
+  const minStructured =
+    plan.structuredQuestionCount >= plan.minQuestions
+      ? plan.minQuestions
+      : Math.max(1, plan.structuredQuestionCount - 1)
+
+  const acceptable = (questions: GeneratedQuestion[]) =>
+    questions.length >= minStructured &&
+    (!allocation || focusAllocationDeviation(questions, allocation) <= MAX_FOCUS_DEVIATION)
+
+  // With a focus plan, a complete set beats an incomplete one, then the set
+  // closest to the targets wins. Without one this is the original rule.
+  const better = (candidate: GeneratedQuestion[], current: GeneratedQuestion[]) => {
+    if (!allocation) return candidate.length > current.length
+    const complete = (q: GeneratedQuestion[]) => q.length >= minStructured
+    if (complete(candidate) !== complete(current)) return complete(candidate)
+    if (!complete(candidate)) return candidate.length > current.length
+    return focusAllocationDeviation(candidate, allocation) < focusAllocationDeviation(current, allocation)
+  }
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const controller = new AbortController()
@@ -329,23 +480,25 @@ export async function generateStructuredQuestionnaire(
 
     try {
       openAiCalls += 1
-      const parsed = await callOpenAi(system, user, controller.signal)
+      const parsed = await callOpenAi(system, user, controller.signal, schema)
       const questions = mapQuestions(
         Array.isArray(parsed.questions) ? parsed.questions : [],
-        plan
+        plan,
+        allocation
       )
 
-      if (questions.length > best.length) {
+      if (better(questions, best)) {
         best = questions
       }
 
-      if (best.length >= plan.minQuestions) {
+      if (acceptable(best)) {
         return {
           questions: best,
           plan,
           model: QUESTIONNAIRE_MODEL,
           openAiCalls,
           usedFallback: false,
+          focusAllocation: allocation,
         }
       }
     } catch (error) {
@@ -356,7 +509,14 @@ export async function generateStructuredQuestionnaire(
   }
 
   if (best.length > 0) {
-    return { questions: best, plan, model: QUESTIONNAIRE_MODEL, openAiCalls, usedFallback: true }
+    return {
+      questions: best,
+      plan,
+      model: QUESTIONNAIRE_MODEL,
+      openAiCalls,
+      usedFallback: true,
+      focusAllocation: allocation,
+    }
   }
 
   throw new QuestionnaireGenerationError(
@@ -386,6 +546,23 @@ const RESUME_RESPONSE_SCHEMA = {
   },
 } as const
 
+function buildResumeFocusSchema(areaKeys: string[]) {
+  const item = RESUME_RESPONSE_SCHEMA.properties.questions.items
+  return {
+    ...RESUME_RESPONSE_SCHEMA,
+    properties: {
+      questions: {
+        ...RESUME_RESPONSE_SCHEMA.properties.questions,
+        items: {
+          ...item,
+          required: [...item.required, "focus_area_key"],
+          properties: { ...item.properties, focus_area_key: { type: "string", enum: areaKeys } },
+        },
+      },
+    },
+  }
+}
+
 /**
  * Candidate-specific questions drawn from the candidate's own background.
  *
@@ -404,6 +581,8 @@ export async function generateResumeQuestions(input: {
   candidateBackground?: string | null
   questionCount: number
   excludeQuestions?: string[]
+  /** Interview Focus areas; each resume question is tagged with the one it best assesses. */
+  focusAreas?: GenerationFocusArea[] | null
 }): Promise<{ questions: GeneratedQuestion[]; openAiCalls: number }> {
   const background = String(input.candidateBackground ?? "").trim()
 
@@ -427,6 +606,12 @@ export async function generateResumeQuestions(input: {
     "Return JSON only, matching the provided schema.",
   ].join("\n")
 
+  const focusAreas = input.focusAreas?.length ? input.focusAreas : null
+  const focusKeys = new Set((focusAreas ?? []).map((area) => area.areaKey))
+  const focusSystem = focusAreas
+    ? `${system}\nSet focus_area_key to the supplied focus area each question best assesses, expressed in the terms of this role.`
+    : system
+
   const user = [
     `Produce exactly ${input.questionCount} question(s).`,
     input.excludeQuestions?.length
@@ -441,6 +626,9 @@ export async function generateResumeQuestions(input: {
         candidate_background: background.slice(0, 6000),
         ...(input.excludeQuestions?.length
           ? { must_not_repeat: input.excludeQuestions.slice(0, 60) }
+          : {}),
+        ...(focusAreas
+          ? { focus_areas: focusAreas.map((area) => ({ key: area.areaKey, name: area.label, meaning: area.description ?? "" })) }
           : {}),
       },
       null,
@@ -467,7 +655,7 @@ export async function generateResumeQuestions(input: {
         model: QUESTIONNAIRE_MODEL,
         temperature: 0,
         messages: [
-          { role: "system", content: system },
+          { role: "system", content: focusSystem },
           { role: "user", content: user },
         ],
         response_format: {
@@ -475,7 +663,7 @@ export async function generateResumeQuestions(input: {
           json_schema: {
             name: "resume_questions",
             strict: true,
-            schema: RESUME_RESPONSE_SCHEMA,
+            schema: focusAreas ? buildResumeFocusSchema([...focusKeys]) : RESUME_RESPONSE_SCHEMA,
           },
         },
       }),
@@ -506,7 +694,7 @@ export async function generateResumeQuestions(input: {
       if (seen.has(key)) continue
       seen.add(key)
 
-      questions.push({
+      const resumeQuestion: GeneratedQuestion = {
         questionText,
         sourceType: "resume",
         competencyLabel:
@@ -517,7 +705,12 @@ export async function generateResumeQuestions(input: {
         evaluationCriteria:
           String(record.evaluation_criteria ?? "").replace(/\s+/g, " ").trim() ||
           "Answer gives a specific first-hand account with a clear outcome.",
-      })
+      }
+      if (focusAreas) {
+        const focusKey = String(record.focus_area_key ?? "")
+        resumeQuestion.focusAreaKey = focusKeys.has(focusKey) ? focusKey : null
+      }
+      questions.push(resumeQuestion)
     }
 
     return { questions: questions.slice(0, input.questionCount), openAiCalls: 1 }

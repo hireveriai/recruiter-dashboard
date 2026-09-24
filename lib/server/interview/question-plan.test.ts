@@ -116,3 +116,39 @@ test("plan works identically across unrelated industries", () => {
     assert.deepEqual(plan.distribution, plans[0].distribution, "role must not change the plan")
   }
 })
+
+test("resume emphasis: absent and STANDARD are identical to the existing plan", () => {
+  for (const durationMinutes of [30, 45, 60]) {
+    for (const experienceLevel of ["Junior", "Mid", "Senior"]) {
+      const legacy = resolveInterviewQuestionPlan({ durationMinutes, experienceLevel })
+      assert.deepEqual(resolveInterviewQuestionPlan({ durationMinutes, experienceLevel, resumeEmphasis: "STANDARD" }), legacy)
+      assert.deepEqual(resolveInterviewQuestionPlan({ durationMinutes, experienceLevel, resumeEmphasis: null }), legacy)
+    }
+  }
+})
+
+test("resume emphasis: OFF, LIGHT and HEAVY change only the resume share, never the total", () => {
+  for (const durationMinutes of [30, 45, 60]) {
+    const standard = resolveInterviewQuestionPlan({ durationMinutes, experienceLevel: "Mid" })
+    const off = resolveInterviewQuestionPlan({ durationMinutes, experienceLevel: "Mid", resumeEmphasis: "OFF" })
+    const light = resolveInterviewQuestionPlan({ durationMinutes, experienceLevel: "Mid", resumeEmphasis: "LIGHT" })
+    const heavy = resolveInterviewQuestionPlan({ durationMinutes, experienceLevel: "Mid", resumeEmphasis: "HEAVY" })
+
+    for (const plan of [off, light, heavy]) {
+      assert.equal(plan.totalQuestions, standard.totalQuestions, `${durationMinutes} min total unchanged`)
+      assert.equal(plan.structuredQuestionCount + plan.resumeQuestionCount, standard.totalQuestions)
+    }
+    assert.equal(off.resumeQuestionCount, 0)
+    assert.equal(off.resumeQuestionsEnabled, false)
+    assert.equal(light.resumeQuestionCount, 1)
+    assert.ok(heavy.resumeQuestionCount > standard.resumeQuestionCount)
+    assert.ok(heavy.resumeQuestionCount <= 4)
+  }
+  assert.equal(resolveInterviewQuestionPlan({ durationMinutes: 30, resumeEmphasis: "HEAVY" }).resumeQuestionCount, 3)
+  assert.equal(resolveInterviewQuestionPlan({ durationMinutes: 60, resumeEmphasis: "HEAVY" }).resumeQuestionCount, 4)
+})
+
+test("resume emphasis cannot override a job that has resume questions turned off", () => {
+  const plan = resolveInterviewQuestionPlan({ durationMinutes: 60, resumeQuestionsEnabled: false, resumeEmphasis: "HEAVY" })
+  assert.equal(plan.resumeQuestionCount, 0)
+})
