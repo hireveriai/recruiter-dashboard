@@ -146,8 +146,8 @@ $$;
 --    b) Only DRAFT plans are editable. ACTIVE/SUPERSEDED versions are
 --       referenced by questionnaire versions and must stay reproducible, so
 --       their areas cannot change and the only allowed status moves are
---       DRAFT -> ACTIVE and ACTIVE -> SUPERSEDED. Deletes are not blocked, so
---       deleting a job (cascade) or purging an organization still works.
+--       DRAFT -> ACTIVE and ACTIVE -> SUPERSEDED. Direct deletes are
+--       covered in (c) below; cascades still work.
 -- ---------------------------------------------------------------------------
 create or replace function public.fn_interview_focus_plans_guard()
 returns trigger
