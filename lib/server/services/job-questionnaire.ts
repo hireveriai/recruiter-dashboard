@@ -589,6 +589,13 @@ export async function reserveInterviewGenerationAttempt(params: {
         coalesce(max(version_number), 0) + 1,
         'DRAFT',
         'AI',
+        -- interview_mode was missing here, so forking a draft from a
+        -- FINALIZED questionnaire always failed ("INSERT has more target
+        -- columns than expressions"). Same source as saveQuestionnaireDraft.
+        coalesce(
+          (select interview_mode from public.job_positions where job_id = ${params.jobId}::uuid),
+          'STANDARD'
+        ),
         1,
         ${params.createdBy ?? null}::uuid
       from public.job_questionnaire_versions
