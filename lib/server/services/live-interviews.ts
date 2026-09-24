@@ -55,7 +55,7 @@ export type InterviewerInput =
   | { userId: string; email?: undefined; name?: undefined; panelRole: PanelRole }
   | { userId?: undefined; email: string; name: string | null; panelRole: PanelRole }
 
-const EMAIL_PATTERN = /^[^s@]+@[^s@]+.[^s@]+$/
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function badRequest(message: string): never {
   throw new ApiError(400, "INVALID_LIVE_INTERVIEW", message)
