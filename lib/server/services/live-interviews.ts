@@ -24,6 +24,7 @@ import {
   hashInviteToken,
   inviteExpiry,
 } from "@/lib/server/veris-live/tokens"
+import { closeRoom, livekitRoomControl, removeFromRoom, type RoomControl } from "@/lib/server/veris-live/livekit-room"
 
 export const LIVE_CREDIT_SOURCE = "live_interview"
 export const LIVE_STATUSES = ["SCHEDULED", "INVITATIONS_SENT", "IN_PROGRESS", "COMPLETED", "CANCELLED", "EXPIRED"] as const
@@ -554,11 +555,11 @@ export async function sendLiveInvitations(params: {
   return { sent, failed }
 }
 
-export async function revokeLiveInvitation(params: { organizationId: string; interviewId: string; participantId: string }) {
+export async function revokeLiveInvitation(params: { organizationId: string; interviewId: string; participantId: string; roomControl?: RoomControl | null }) {
   if (!UUID_PATTERN.test(params.participantId) || !UUID_PATTERN.test(params.interviewId)) {
     throw new ApiError(404, "PARTICIPANT_NOT_FOUND", "Participant not found.")
   }
-  const updated = await prisma.$executeRaw(Prisma.sql`
+  const revoked = await prisma.$queryRaw<Array<{ livekit_identity: string; live_room_name: string }>>(Prisma.sql`
     update public.interview_participants p
     set invite_token_hash = null, invite_status = 'REVOKED', revoked_at = now(), updated_at = now()
     from public.interviews i
@@ -567,27 +568,38 @@ export async function revokeLiveInvitation(params: { organizationId: string; int
       and p.organization_id = ${params.organizationId}::uuid
       and i.interview_id = p.interview_id
       and i.delivery_mode = 'LIVE'
+    returning p.livekit_identity, i.live_room_name
   `)
-  if (updated === 0) throw new ApiError(404, "PARTICIPANT_NOT_FOUND", "Participant not found.")
+  if (revoked.length === 0) throw new ApiError(404, "PARTICIPANT_NOT_FOUND", "Participant not found.")
 
   await prisma.$executeRaw(Prisma.sql`
     insert into public.live_interview_events (organization_id, interview_id, participant_id, event_type)
     values (${params.organizationId}::uuid, ${params.interviewId}::uuid, ${params.participantId}::uuid, 'INVITATION_REVOKED')
   `)
-  logLive("invitation_revoked", params)
+  logLive("invitation_revoked", { organizationId: params.organizationId, interviewId: params.interviewId, participantId: params.participantId })
+
+  // Access is already gone in the database; now actively disconnect them.
+  const livekit = await removeFromRoom(params.roomControl === undefined ? livekitRoomControl() : params.roomControl, {
+    roomName: revoked[0].live_room_name,
+    identity: revoked[0].livekit_identity,
+    interviewId: params.interviewId,
+    participantId: params.participantId,
+  })
+  return { revoked: true, livekit }
 }
 
-export async function cancelLiveInterview(params: { organizationId: string; interviewId: string }) {
+export async function cancelLiveInterview(params: { organizationId: string; interviewId: string; roomControl?: RoomControl | null }) {
   if (!UUID_PATTERN.test(params.interviewId)) throw new ApiError(404, "LIVE_INTERVIEW_NOT_FOUND", "Live interview not found.")
-  const updated = await prisma.$executeRaw(Prisma.sql`
+  const cancelled = await prisma.$queryRaw<Array<{ live_room_name: string }>>(Prisma.sql`
     update public.interviews
     set live_status = 'CANCELLED', live_ended_at = coalesce(live_ended_at, now())
     where interview_id = ${params.interviewId}::uuid
       and organization_id = ${params.organizationId}::uuid
       and delivery_mode = 'LIVE'
       and live_status in ('SCHEDULED', 'INVITATIONS_SENT')
+    returning live_room_name
   `)
-  if (updated === 0) {
+  if (cancelled.length === 0) {
     throw new ApiError(409, "LIVE_INTERVIEW_NOT_CANCELLABLE", "Only interviews that have not started can be cancelled.")
   }
   // Kill every outstanding link.
@@ -600,7 +612,14 @@ export async function cancelLiveInterview(params: { organizationId: string; inte
     insert into public.live_interview_events (organization_id, interview_id, event_type)
     values (${params.organizationId}::uuid, ${params.interviewId}::uuid, 'SESSION_CANCELLED')
   `)
-  logLive("cancelled", params)
+  logLive("cancelled", { organizationId: params.organizationId, interviewId: params.interviewId })
+
+  // Interviewers may already be waiting in the room (they can join early).
+  const livekit = await closeRoom(params.roomControl === undefined ? livekitRoomControl() : params.roomControl, {
+    roomName: cancelled[0].live_room_name,
+    interviewId: params.interviewId,
+  })
+  return { cancelled: true, livekit }
 }
 
 export async function listEligibleInterviewers(organizationId: string) {

@@ -163,8 +163,9 @@ export default function LiveInterviewsPanel() {
                           <span className="text-xs text-slate-500">
                             {p.inviteStatus.toLowerCase()} · {p.joinStatus.replace("_", " ").toLowerCase()}
                           </span>
-                          {["SCHEDULED", "INVITATIONS_SENT"].includes(detail.liveStatus) ? (
+                          {["SCHEDULED", "INVITATIONS_SENT", "IN_PROGRESS"].includes(detail.liveStatus) ? (
                             <span className="ml-auto flex gap-2">
+                              {detail.liveStatus !== "IN_PROGRESS" ? (
                               <button
                                 type="button"
                                 className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-800"
@@ -177,18 +178,20 @@ export default function LiveInterviewsPanel() {
                               >
                                 Resend
                               </button>
+                              ) : null}
                               {p.inviteStatus !== "REVOKED" ? (
                                 <button
                                   type="button"
                                   className="rounded-lg border border-rose-300 px-2 py-1 text-xs text-rose-700"
-                                  onClick={() =>
+                                  onClick={() => {
+                                    if (detail.liveStatus === "IN_PROGRESS" && !window.confirm(`Remove ${p.displayName} from the live interview now?`)) return
                                     act(`/api/live-interviews/${row.interviewId}/invitations`, {
                                       method: "DELETE",
                                       body: JSON.stringify({ participantId: p.participantId }),
-                                    }, "Link revoked")
-                                  }
+                                    }, detail.liveStatus === "IN_PROGRESS" ? "Removed from the interview" : "Link revoked")
+                                  }}
                                 >
-                                  Revoke link
+                                  {detail.liveStatus === "IN_PROGRESS" ? "Remove" : "Revoke link"}
                                 </button>
                               ) : null}
                             </span>

@@ -308,6 +308,55 @@ suite("AI read paths exclude LIVE interviews", async () => {
   assert.ok(total[0].n > 0, "LIVE rows exist but were filtered")
 })
 
+suite("revoke and cancel actively remove people from the LiveKit room, best-effort and idempotent", async () => {
+  const calls: string[] = []
+  const control = (mode: "ok" | "gone" | "boom") => ({
+    removeParticipant: async (room: string, identity: string) => {
+      calls.push(`remove:${room}:${identity}`)
+      if (mode === "gone") throw Object.assign(new Error("participant not found"), { status: 404 })
+      if (mode === "boom") throw new Error("livekit unavailable")
+    },
+    deleteRoom: async (room: string) => {
+      calls.push(`delete:${room}`)
+      if (mode === "gone") throw new Error("room does not exist")
+    },
+  })
+
+  const { interviewId } = await svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ sendInvitations: false }), deps })
+  await q(`update public.interviews set live_status = 'IN_PROGRESS', live_started_at = now() where interview_id = $1`, [interviewId])
+  const [row] = await q<{ participant_id: string; livekit_identity: string; live_room_name: string }>(
+    `select p.participant_id::text, p.livekit_identity, i.live_room_name
+     from public.interview_participants p join public.interviews i on i.interview_id = p.interview_id
+     where p.interview_id = $1 and p.user_id = $2`, [interviewId, panelist]
+  )
+
+  // Mid-interview revoke removes exactly that identity from that room.
+  const result = await svc.revokeLiveInvitation({ organizationId: ORG_A, interviewId, participantId: row.participant_id, roomControl: control("ok") })
+  assert.deepEqual(result, { revoked: true, livekit: "done" })
+  assert.deepEqual(calls, [`remove:${row.live_room_name}:${row.livekit_identity}`])
+
+  // Already disconnected, LiveKit down, or not configured: the revoke itself still succeeds.
+  assert.equal((await svc.revokeLiveInvitation({ organizationId: ORG_A, interviewId, participantId: row.participant_id, roomControl: control("gone") })).livekit, "not_present")
+  assert.equal((await svc.revokeLiveInvitation({ organizationId: ORG_A, interviewId, participantId: row.participant_id, roomControl: control("boom") })).livekit, "failed")
+  assert.equal((await svc.revokeLiveInvitation({ organizationId: ORG_A, interviewId, participantId: row.participant_id, roomControl: null })).livekit, "not_configured")
+  const [after] = await q<{ invite_status: string; invite_token_hash: string | null }>(`select invite_status, invite_token_hash from public.interview_participants where participant_id = $1`, [row.participant_id])
+  assert.deepEqual(after, { invite_status: "REVOKED", invite_token_hash: null })
+
+  // Another org cannot trigger a removal.
+  calls.length = 0
+  await assert.rejects(
+    svc.revokeLiveInvitation({ organizationId: ORG_B, interviewId, participantId: row.participant_id, roomControl: control("ok") }),
+    { code: "PARTICIPANT_NOT_FOUND" }
+  )
+  assert.deepEqual(calls, [])
+
+  // Cancelling before start closes the room (early-joining interviewers are disconnected).
+  const second = await svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ sendInvitations: false }), deps })
+  const [{ live_room_name: room2 }] = await q<{ live_room_name: string }>(`select live_room_name from public.interviews where interview_id = $1`, [second.interviewId])
+  assert.deepEqual(await svc.cancelLiveInterview({ organizationId: ORG_A, interviewId: second.interviewId, roomControl: control("gone") }), { cancelled: true, livekit: "not_present" })
+  assert.deepEqual(calls, [`delete:${room2}`])
+})
+
 suite("report: submitted scorecards side by side, no drafts, no private notes, no combined score", async () => {
   const { interviewId } = await svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ sendInvitations: false }), deps })
   const parts = await q<{ participant_id: string; role: string; user_id: string | null }>(
