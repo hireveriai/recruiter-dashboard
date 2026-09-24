@@ -26,8 +26,6 @@ const navItems = [
   { href: "/jobs", label: "Jobs", feature: "jobs" },
   { href: "/candidates", label: "Candidates", feature: "candidates" },
   { href: "/interviews", label: "Interviews", feature: "interviews" },
-  { href: "/reports", label: "Reports", feature: "reports" },
-  { href: "/billing", label: "Billing", feature: "billing" },
 ];
 
 const ALERT_READ_STORAGE_KEY = "verisnova-read-alert-ids";
@@ -103,6 +101,17 @@ function BillingIcon() {
       <path d="M8 7h8" />
       <path d="M8 11h8" />
       <path d="M8 15h5" />
+    </svg>
+  );
+}
+
+function ReportsIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6" />
+      <path d="M9 17h4" />
     </svg>
   );
 }
@@ -268,6 +277,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
   const canManageTeam = canAccessFeature(displayProfile, "manageTeam", entitlements);
   const canViewEmployees = canAccessFeature(displayProfile, "employees", entitlements);
   const canViewBilling = canAccessFeature(displayProfile, "billing", entitlements);
+  const canViewReports = canAccessFeature(permissionProfile, "reports", entitlements);
   const canManageSettings = canAccessFeature(displayProfile, "settings", entitlements);
   const canUseCopilot = canAccessFeature(permissionProfile, "copilot", entitlements);
   const alertReadStorageKey = useMemo(() => getAlertReadStorageKey(displayProfile), [displayProfile]);
@@ -800,6 +810,13 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                     <Link href="/billing#usage" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-200 transition hover:bg-slate-800/70 hover:text-white" onClick={() => { setProfileOpen(false); handleNavigationClick("/billing"); }}>
                       <CreditsIcon />
                       <span>Usage & Credits</span>
+                    </Link>
+                    ) : null}
+
+                    {canViewReports ? (
+                    <Link href="/reports" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-200 transition hover:bg-slate-800/70 hover:text-white" onClick={() => { setProfileOpen(false); handleNavigationClick("/reports"); }}>
+                      <ReportsIcon />
+                      <span>Reports</span>
                     </Link>
                     ) : null}
 
