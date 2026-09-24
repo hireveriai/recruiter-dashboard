@@ -44,7 +44,7 @@ export type ComparablePlan = {
 const PLAN_TYPE_GROUP_LABEL: Record<string, string> = {
   ASSESSMENT: "VERIS Assessment",
   BUNDLE: "Complete Hiring Suite",
-  INTERVIEW: "AI Interview",
+  INTERVIEW: "AI & Live Interview",
 }
 
 type PlanComparisonProps = {
