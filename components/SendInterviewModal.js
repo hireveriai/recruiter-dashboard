@@ -88,6 +88,32 @@ function AccessFeatureIcon({ type }) {
   )
 }
 
+function FormStep({ number, title, hint, children }) {
+  return (
+    <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-sm sm:p-5">
+      <div className="mb-3 flex items-start gap-3">
+        <span className="hv-solid-action flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-indigo-600 text-sm font-semibold text-white shadow-sm">
+          {number}
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-white">{title}</h3>
+          {hint ? <p className="mt-0.5 text-xs text-slate-400">{hint}</p> : null}
+        </div>
+      </div>
+      <div className="space-y-4">{children}</div>
+    </section>
+  )
+}
+
+function SummaryItem({ label, value, muted }) {
+  return (
+    <div className="py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
+      <p className={`mt-0.5 text-sm ${muted ? "text-slate-500" : "font-medium text-white"}`}>{value}</p>
+    </div>
+  )
+}
+
 function DateTimeField({ label, value, onChange }) {
   return (
     <div>
@@ -777,6 +803,9 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
     duplicateWarning?.candidates.some((candidate) => duplicateResendEmails.includes(candidate.email))
   )
 
+  const selectedJob = jobs.find((job) => (job.jobId || job.job_id) === jobId)
+  const selectedJobTitle = selectedJob ? selectedJob.jobTitle || selectedJob.job_title : null
+
   if (!isOpen) return null
 
   return (
@@ -883,32 +912,42 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
           </div>
         </div>
       ) : null}
-      <div className="hv-send-interview-modal hv-theme-modal relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-cyan-500/20 bg-[#06101f]/95 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_30%)]" />
-        <div className="relative max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-h-[calc(100dvh-1.5rem)] sm:p-5 md:p-5">
-          <div className="mb-5 flex items-start justify-between gap-4 border-b border-slate-800/80 pb-4">
-            <div className="min-w-0">
-              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" aria-hidden="true" />
-                Interview Access
+      <div className="hv-send-interview-modal relative flex max-h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-slate-900 text-white shadow-[0_24px_80px_rgba(15,23,42,0.35)]">
+        {/* Header */}
+        <div className="relative shrink-0 overflow-hidden border-b border-slate-800 px-5 py-5 sm:px-7">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_0%_0%,rgba(34,211,238,0.14),transparent_60%),radial-gradient(50%_120%_at_100%_0%,rgba(99,102,241,0.12),transparent_60%)]"
+          />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <span className="hv-solid-action flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20">
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="3" width="6" height="11" rx="3" />
+                  <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+                  <path d="M19.5 3.5l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z" />
+                </svg>
               </span>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-[28px]">
-                Send Interview Link
-              </h2>
-              <p className="mt-1.5 max-w-lg text-sm leading-6 text-slate-400">
-                Add one or several candidates, apply one access window, and send every
-                secure interview invite in a single batch.
-              </p>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">VERIS AI Interview</p>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">Send Interview Link</h2>
+                <p className="mt-1 max-w-xl text-sm text-slate-400">
+                  Add one or several candidates, apply one access window, and send every secure interview invite in a single batch.
+                </p>
+              </div>
             </div>
             <button
+              type="button"
               onClick={handleClose}
-              className="rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-1 text-sm text-slate-300 transition hover:border-cyan-400/60 hover:text-white"
+              className="rounded-full border border-slate-700 bg-slate-900 px-3.5 py-1.5 text-sm text-slate-300 transition hover:text-white"
             >
               Close
             </button>
           </div>
+        </div>
 
-          {emptyJobsState ? (
+        {emptyJobsState ? (
+          <div className="overflow-y-auto p-5 sm:p-7">
             <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-5">
               <p className="text-xs font-medium uppercase tracking-[0.28em] text-amber-200/80">Job Required</p>
               <h3 className="mt-3 text-xl font-semibold text-white">Create a job first to send your interview link</h3>
@@ -939,54 +978,19 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                 </button>
               </div>
             </div>
-          ) : (
-            <>
-              {queuedCandidates.length > 0 ? (
-                <div className="mb-5 rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.045] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-white">Candidates in this batch</p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {queuedCandidates.length} {queuedCandidates.length === 1 ? "candidate" : "candidates"} ready · max {MAX_BATCH_CANDIDATES}
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">
-                      {queuedCandidates.length}
-                    </span>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {queuedCandidates.map((candidate, index) => (
-                      <div key={candidate.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/80 bg-slate-950/45 px-3 py-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-white">
-                            {index + 1}. {candidate.name}
-                          </p>
-                          <p className="mt-1 truncate text-xs text-slate-400">
-                            {candidate.email} · {candidate.resumeFile.name}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeQueuedCandidate(candidate.id)}
-                          disabled={loading}
-                          className="shrink-0 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-200 transition hover:border-rose-300/50 hover:text-white disabled:opacity-50"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="space-y-4">
-                <div className="w-full">
-                  <label className="text-sm text-gray-400">Select Job *</label>
+          </div>
+        ) : (
+          <>
+            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_300px]">
+              {/* Steps */}
+              <div className="space-y-4 p-5 sm:p-6">
+                <FormStep number={1} title="Job" hint="The role this interview evaluates.">
                   <select
-                    className="mt-1.5 w-full truncate rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+                    className="w-full truncate rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-white shadow-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                     value={jobId}
                     onChange={(e) => setJobId(e.target.value)}
                     disabled={jobsLoading}
+                    aria-label="Select job"
                   >
                     <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
                     {jobs.map((job) => {
@@ -1000,312 +1004,358 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                       )
                     })}
                   </select>
-                </div>
+                </FormStep>
 
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    {queuedCandidates.length > 0 ? "Add another candidate" : "Candidate details"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Name, email, and resume for this invite.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-[minmax(0,0.94fr)_minmax(0,0.94fr)]">
-                  <div>
-                    <label className="text-sm text-gray-400">Candidate Full Name *</label>
-                    <input
-                      className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
-                      placeholder="Enter candidate name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm text-gray-400">Candidate Email *</label>
-                    <input
-                      type="email"
-                      className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
-                      placeholder="Enter email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400">Resume *</label>
-                  <div className="mt-1.5 rounded-2xl border border-dashed border-slate-600 bg-slate-900/70 p-3">
-                    <input
-                      ref={primaryFileInputRef}
-                      type="file"
-                      className="w-full text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-cyan-200 hover:file:bg-cyan-500/25"
-                      onChange={handleResumeSelect}
-                    />
-
-                    {resumeFile ? (
-                      <div className="mt-3 rounded-2xl border border-cyan-500/15 bg-slate-950/60 p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-white">{resumeFile.name}</p>
-                            <p className="mt-1 text-xs text-slate-400">
-                              {getResumeSourceLabel(resumeFile)}
+                <FormStep
+                  number={2}
+                  title={queuedCandidates.length > 0 ? "Candidates" : "Candidate"}
+                  hint={`Name, email and resume. Add up to ${MAX_BATCH_CANDIDATES} candidates to one batch.`}
+                >
+                  {queuedCandidates.length > 0 ? (
+                    <div className="space-y-2">
+                      {queuedCandidates.map((candidate, index) => (
+                        <div key={candidate.id} className="flex items-center gap-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] px-3 py-2.5">
+                          <span className="hv-solid-action flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-[11px] font-semibold text-white">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-white">{candidate.name}</p>
+                            <p className="truncate text-xs text-slate-400">
+                              {candidate.email} · {candidate.resumeFile.name}
                             </p>
                           </div>
-
-                          <div className="flex shrink-0 items-center gap-2">
-                            <label className="cursor-pointer rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-cyan-400/50 hover:text-white">
-                              Change
-                              <input
-                                ref={changeFileInputRef}
-                                type="file"
-                                className="hidden"
-                                onChange={handleResumeSelect}
-                              />
-                            </label>
-                            <button
-                              type="button"
-                              onClick={clearResumeFile}
-                              className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/15 hover:text-white"
-                            >
-                              Remove
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeQueuedCandidate(candidate.id)}
+                            disabled={loading}
+                            className="shrink-0 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-200 transition hover:border-rose-300/50 hover:text-white disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
                         </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/35 p-4">
-                  <p className="text-sm font-semibold text-white">Interview Access Type</p>
-
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <label
-                      className={[
-                        "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
-                        accessType === "FLEXIBLE"
-                          ? "border-cyan-400/30 bg-cyan-400/[0.07] text-white"
-                          : "border-slate-800 text-slate-300 hover:border-cyan-500/20 hover:bg-slate-800/40",
-                      ].join(" ")}
-                    >
-                      <input
-                        type="radio"
-                        value="FLEXIBLE"
-                        checked={accessType === "FLEXIBLE"}
-                        onChange={() => setAccessType("FLEXIBLE")}
-                        className="h-4 w-4 accent-cyan-400"
-                      />
-                      <span>Flexible (24h access)</span>
-                    </label>
-
-                    <label
-                      className={[
-                        "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
-                        accessType === "SCHEDULED"
-                          ? "border-cyan-400/30 bg-cyan-400/[0.07] text-white"
-                          : "border-slate-800 text-slate-300 hover:border-cyan-500/20 hover:bg-slate-800/40",
-                      ].join(" ")}
-                    >
-                      <input
-                        type="radio"
-                        value="SCHEDULED"
-                        checked={accessType === "SCHEDULED"}
-                        onChange={() => setAccessType("SCHEDULED")}
-                        className="h-4 w-4 accent-cyan-400"
-                      />
-                      <span>Scheduled window</span>
-                    </label>
-                  </div>
-                </div>
-
-                {accessType === "SCHEDULED" && (
-                  <div className="rounded-2xl border border-cyan-500/15 bg-slate-900/45 p-4">
-                    <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.28em] text-cyan-200/75">
-                      <CalendarIcon />
-                      <span>Schedule Window</span>
+                      ))}
+                      <p className="pt-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Add another candidate</p>
                     </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <DateTimeField label="Start Time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-                      <DateTimeField label="End Time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                  ) : null}
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm text-slate-300">Full name *</label>
+                      <input
+                        className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-white shadow-sm outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                        placeholder="Enter candidate name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-300">Email *</label>
+                      <input
+                        type="email"
+                        className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-white shadow-sm outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                        placeholder="candidate@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
                     </div>
                   </div>
-                )}
 
-                <button
-                  type="button"
-                  onClick={addCandidateToBatch}
-                  disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/18 bg-transparent px-4 py-2 text-sm font-semibold text-cyan-100/90 transition hover:border-cyan-300/45 hover:bg-cyan-400/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <span className="text-lg leading-none">+</span>
-                  Add candidate to batch
-                </button>
-
-                <div className="grid gap-3 md:grid-cols-3">
-                  {[
-                    ["single", "Single-use Access", "Each invite works for one candidate only."],
-                    ["expiry", "Auto Expiry", "Links expire automatically after the access window."],
-                    ["integrity", "Integrity Monitoring", "Sessions are watched for trust signals."],
-                  ].map(([type, title, detail]) => (
-                    <div key={title} className="flex min-h-[112px] flex-col rounded-2xl border border-slate-800 bg-slate-900/45 p-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-cyan-400/18 bg-cyan-400/[0.07]">
-                          <AccessFeatureIcon type={type} />
+                  <div>
+                    <label className="block text-sm text-slate-300">Resume *</label>
+                    {resumeFile ? (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-3 rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06] px-3 py-2.5">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M6 3h8l4 4v14H6z" />
+                            <path d="M14 3v4h4" />
+                          </svg>
                         </span>
-                        <span>{title}</span>
-                      </div>
-                      <p className="mt-2 text-xs leading-5 text-slate-500">{detail}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className={`inline-flex w-fit max-w-full rounded-full border px-4 py-2 text-sm ${trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-100"}`}>
-                  {trialCredits.interviewCreditsRemaining <= 0
-                    ? (
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <span>{trialCredits.upgradeMessage}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-white">{resumeFile.name}</p>
+                          <p className="text-xs text-slate-400">{getResumeSourceLabel(resumeFile)}</p>
+                        </div>
+                        <label className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-400/50 hover:text-white">
+                          Change
+                          <input ref={changeFileInputRef} type="file" className="hidden" onChange={handleResumeSelect} />
+                        </label>
                         <button
                           type="button"
-                          onClick={() => setUpgradeLimitOpen(true)}
-                          className="rounded-xl border border-amber-200/35 bg-amber-300/12 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:border-amber-100/60"
+                          onClick={clearResumeFile}
+                          className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:border-rose-300/50 hover:text-white"
                         >
-                          View Subscription Plans
+                          Remove
                         </button>
                       </div>
-                    )
-                    : (
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span>{trialCredits.interviewCreditsRemaining} Credits Remaining</span>
-                        {pendingCandidateCount > 0 ? (
-                          <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold">
-                            This batch uses {pendingCandidateCount}
-                          </span>
-                        ) : null}
-                      </div>
+                    ) : (
+                      <label className="mt-1.5 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-700 bg-slate-950/40 px-4 py-3 transition hover:border-cyan-400/40">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+                          </svg>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-white">Upload resume</span>
+                          <span className="block text-xs text-slate-400">PDF or DOCX</span>
+                        </span>
+                        <input ref={primaryFileInputRef} type="file" className="hidden" onChange={handleResumeSelect} />
+                      </label>
                     )}
-                </div>
-              </div>
+                  </div>
 
-              {error && <p className="mt-3 text-center text-sm text-red-400">{error}</p>}
-              <div className="mt-4 flex justify-center">
-                <button
-                  onClick={() => handleSubmit()}
-                  disabled={loading || jobsLoading || trialCredits.interviewCreditsRemaining <= 0}
-                  className="w-full max-w-xl rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-5 py-3 text-base font-semibold text-white shadow-[0_18px_30px_rgba(37,99,235,0.3)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading
-                    ? `Preparing ${pendingCandidateCount || queuedCandidates.length} ${pendingCandidateCount === 1 ? "invite" : "invites"}...`
-                    : pendingCandidateCount > 1
-                      ? `Send ${pendingCandidateCount} Interview Invites`
-                      : "Send Interview Invite"}
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={addCandidateToBatch}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-cyan-400/40 px-3.5 py-1.5 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <span className="text-base leading-none">+</span> Add candidate to batch
+                  </button>
+                </FormStep>
 
-              {batchResults.length > 1 || batchResults.some((result) => result.status === "failed") ? (
-                <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-950/55 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-white">Batch results</p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {batchResults.filter((result) => result.status === "success").length} successful ·{" "}
-                        {batchResults.filter((result) => result.status === "failed").length} failed
-                      </p>
+                <FormStep number={3} title="Access window" hint="When candidates can open their interview link.">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      ["FLEXIBLE", "Flexible", "Open for 24 hours from sending"],
+                      ["SCHEDULED", "Scheduled window", "Only between a start and end time"],
+                    ].map(([value, title, detail]) => {
+                      const active = accessType === value
+                      return (
+                        <label
+                          key={value}
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition ${
+                            active ? "border-cyan-400/40 bg-cyan-400/10" : "border-slate-800 hover:border-slate-600"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            value={value}
+                            checked={active}
+                            onChange={() => setAccessType(value)}
+                            className="mt-0.5 h-4 w-4 accent-cyan-400"
+                          />
+                          <span>
+                            <span className="block text-sm font-medium text-white">{title}</span>
+                            <span className="block text-xs text-slate-400">{detail}</span>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+
+                  {accessType === "SCHEDULED" && (
+                    <div className="rounded-xl border border-cyan-500/15 bg-slate-950/40 p-3">
+                      <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/75">
+                        <CalendarIcon />
+                        <span>Schedule Window</span>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <DateTimeField label="Start Time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                        <DateTimeField label="End Time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {batchResults.map((result) => (
-                      <article
-                        key={result.id}
-                        className={`rounded-xl border p-3 ${
-                          result.status === "success"
-                            ? "border-emerald-400/20 bg-emerald-500/[0.07]"
-                            : "border-rose-400/20 bg-rose-500/[0.07]"
-                        }`}
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-white">{result.name}</p>
-                            <p className="mt-1 truncate text-xs text-slate-400">{result.email}</p>
-                            <p className={`mt-2 text-xs ${result.status === "success" ? "text-emerald-200" : "text-rose-200"}`}>
-                              {result.status === "success"
-                                ? result.emailStatus === "sent"
-                                  ? "Invite emailed successfully"
-                                  : result.emailStatus === "queued"
-                                    ? "Invite queued for email delivery"
-                                    : "Link created; manual delivery may be needed"
-                                : result.error}
-                            </p>
+                  )}
+                </FormStep>
+
+                {batchResults.length > 1 || batchResults.some((result) => result.status === "failed") ? (
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/55 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-white">Batch results</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {batchResults.filter((result) => result.status === "success").length} successful ·{" "}
+                          {batchResults.filter((result) => result.status === "failed").length} failed
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      {batchResults.map((result) => (
+                        <article
+                          key={result.id}
+                          className={`rounded-xl border p-3 ${
+                            result.status === "success"
+                              ? "border-emerald-400/20 bg-emerald-500/[0.07]"
+                              : "border-rose-400/20 bg-rose-500/[0.07]"
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-white">{result.name}</p>
+                              <p className="mt-1 truncate text-xs text-slate-400">{result.email}</p>
+                              <p className={`mt-2 text-xs ${result.status === "success" ? "text-emerald-200" : "text-rose-200"}`}>
+                                {result.status === "success"
+                                  ? result.emailStatus === "sent"
+                                    ? "Invite emailed successfully"
+                                    : result.emailStatus === "queued"
+                                      ? "Invite queued for email delivery"
+                                      : "Link created; manual delivery may be needed"
+                                  : result.error}
+                              </p>
+                            </div>
+                            {result.status === "success" && result.link ? (
+                              <button
+                                type="button"
+                                onClick={() => copyResultLink(result)}
+                                className="shrink-0 rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:border-emerald-200/50"
+                              >
+                                Copy link
+                              </button>
+                            ) : null}
                           </div>
-                          {result.status === "success" && result.link ? (
-                            <button
-                              type="button"
-                              onClick={() => copyResultLink(result)}
-                              className="shrink-0 rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:border-emerald-200/50"
-                            >
-                              Copy link
-                            </button>
-                          ) : null}
-                        </div>
-                      </article>
-                    ))}
+                        </article>
+                      ))}
+                    </div>
+                    {batchResults.every((result) => result.status === "success") ? (
+                      <button
+                        type="button"
+                        onClick={startAnotherBatch}
+                        className="mt-4 w-full rounded-xl border border-cyan-400/25 bg-cyan-400/[0.07] px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50"
+                      >
+                        Send another batch
+                      </button>
+                    ) : null}
                   </div>
-                  {batchResults.every((result) => result.status === "success") ? (
+                ) : null}
+
+                {link && (
+                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                    <p className="mb-2 text-sm text-emerald-300">
+                      {emailStatus === "sent"
+                        ? "Link generated and email sent successfully"
+                        : emailStatus === "queued"
+                          ? "Link generated. Email delivery is in progress."
+                          : "Link generated successfully. Email delivery needs attention."}
+                    </p>
+                    {emailStatus === "failed" ? (
+                      <p className="mb-3 text-xs text-amber-200">
+                        The interview link is ready, but the email could not be delivered from the server. You can still copy and send it manually.
+                        {emailError ? <><br />Reason: {emailError}</> : null}
+                      </p>
+                    ) : null}
+                    {copyStatus === "failed" ? (
+                      <p className="mb-3 text-xs text-rose-200">
+                        Copy failed on this browser session. Please select the link manually.
+                      </p>
+                    ) : null}
+                    <input
+                      className="mb-3 w-full rounded-2xl border border-slate-700 bg-slate-950/80 p-3 text-sm text-white"
+                      value={link}
+                      readOnly
+                    />
+                    <button
+                      onClick={copy}
+                      className="w-full rounded-xl border border-slate-600 bg-slate-900/90 px-3.5 py-2 text-sm text-slate-100 transition hover:border-cyan-400/50 hover:bg-slate-800"
+                    >
+                      {copyStatus === "success" ? "Copied" : "Copy Link"}
+                    </button>
                     <button
                       type="button"
                       onClick={startAnotherBatch}
-                      className="mt-4 w-full rounded-xl border border-cyan-400/25 bg-cyan-400/[0.07] px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50"
+                      className="mt-3 w-full rounded-xl border border-cyan-400/25 bg-cyan-400/[0.07] px-3.5 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10"
                     >
-                      Send another batch
+                      Send another candidate
                     </button>
-                  ) : null}
-                </div>
-              ) : null}
+                  </div>
+                )}
+              </div>
 
-              {link && (
-                <div className="mt-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                  <p className="mb-2 text-sm text-emerald-300">
-                    {emailStatus === "sent"
-                      ? "Link generated and email sent successfully"
-                      : emailStatus === "queued"
-                        ? "Link generated. Email delivery is in progress."
-                        : "Link generated successfully. Email delivery needs attention."}
-                  </p>
-                  {emailStatus === "failed" ? (
-                    <p className="mb-3 text-xs text-amber-200">
-                      The interview link is ready, but the email could not be delivered from the server. You can still copy and send it manually.
-                      {emailError ? <><br />Reason: {emailError}</> : null}
-                    </p>
-                  ) : null}
-                  {copyStatus === "failed" ? (
-                    <p className="mb-3 text-xs text-rose-200">
-                      Copy failed on this browser session. Please select the link manually.
-                    </p>
-                  ) : null}
-                  <input
-                    className="mb-3 w-full rounded-2xl border border-slate-700 bg-slate-950/80 p-3 text-sm text-white"
-                    value={link}
-                    readOnly
-                  />
-                  <button
-                    onClick={copy}
-                    className="w-full rounded-xl border border-slate-600 bg-slate-900/90 px-3.5 py-2 text-sm text-slate-100 transition hover:border-cyan-400/50 hover:bg-slate-800"
+              {/* Summary */}
+              <aside className="border-t border-slate-800 bg-slate-950/40 p-5 sm:p-6 lg:border-l lg:border-t-0">
+                <div className="lg:sticky lg:top-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Invite summary</p>
+                  <div className="mt-2 divide-y divide-slate-800">
+                    <SummaryItem label="Job" value={selectedJobTitle || "Select a job"} muted={!selectedJobTitle} />
+                    <SummaryItem
+                      label="Candidates"
+                      value={pendingCandidateCount ? `${pendingCandidateCount} ready to invite` : "None added yet"}
+                      muted={!pendingCandidateCount}
+                    />
+                    <SummaryItem
+                      label="Access"
+                      value={
+                        accessType === "SCHEDULED"
+                          ? startTime && endTime
+                            ? `${formatDateTime(startTime)} – ${formatDateTime(endTime)}`
+                            : "Scheduled window (set times)"
+                          : "Flexible · 24 hours"
+                      }
+                      muted={accessType === "SCHEDULED" && !(startTime && endTime)}
+                    />
+                  </div>
+
+                  <div
+                    className={`mt-4 rounded-2xl border p-4 ${
+                      trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10" : "border-cyan-400/20 bg-cyan-400/[0.06]"
+                    }`}
                   >
-                    {copyStatus === "success" ? "Copied" : "Copy Link"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={startAnotherBatch}
-                    className="mt-3 w-full rounded-xl border border-cyan-400/25 bg-cyan-400/[0.07] px-3.5 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10"
-                  >
-                    Send another candidate
-                  </button>
+                    {trialCredits.interviewCreditsRemaining <= 0 ? (
+                      <>
+                        <p className="text-sm text-amber-100">{trialCredits.upgradeMessage}</p>
+                        <button
+                          type="button"
+                          onClick={() => setUpgradeLimitOpen(true)}
+                          className="mt-3 w-full rounded-xl border border-amber-200/35 bg-amber-300/12 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:border-amber-100/60"
+                        >
+                          View Subscription Plans
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">AI interview credits</p>
+                        <p className="mt-1 text-2xl font-semibold text-white">{trialCredits.interviewCreditsRemaining}</p>
+                        <p className="text-xs text-slate-400">
+                          remaining{pendingCandidateCount > 0 ? ` · this batch uses ${pendingCandidateCount}` : ""}
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="mt-4 space-y-2.5">
+                    {[
+                      ["single", "Single-use access", "Each invite works for one candidate only."],
+                      ["expiry", "Auto expiry", "Links expire after the access window."],
+                      ["integrity", "Integrity monitoring", "Sessions are watched for trust signals."],
+                    ].map(([type, title, detail]) => (
+                      <div key={title} className="flex items-start gap-2.5">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/[0.07]">
+                          <AccessFeatureIcon type={type} />
+                        </span>
+                        <span>
+                          <span className="block text-xs font-semibold text-white">{title}</span>
+                          <span className="block text-xs text-slate-400">{detail}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-            </>
-          )}
-        </div>
+              </aside>
+            </div>
+
+            {/* Footer */}
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-800 bg-slate-900 px-5 py-4 sm:px-7">
+              <div className="min-w-0 flex-1">
+                {error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : (
+                  <p className="text-xs text-slate-400">Each candidate gets a secure, single-use interview link by email.</p>
+                )}
+              </div>
+              <button
+                onClick={() => handleSubmit()}
+                disabled={loading || jobsLoading || trialCredits.interviewCreditsRemaining <= 0}
+                className="hv-solid-action inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading
+                  ? `Preparing ${pendingCandidateCount || queuedCandidates.length} ${pendingCandidateCount === 1 ? "invite" : "invites"}...`
+                  : pendingCandidateCount > 1
+                    ? `Send ${pendingCandidateCount} Interview Invites`
+                    : "Send Interview Invite"}
+                {!loading ? (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                ) : null}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
