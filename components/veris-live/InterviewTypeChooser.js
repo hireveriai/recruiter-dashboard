@@ -39,36 +39,47 @@ export default function InterviewTypeChooser({ onCancel, onContinue }) {
       aria-modal="true"
       aria-labelledby="send-interview-type-title"
     >
-      <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-[28px] border border-slate-800 bg-slate-900 p-5 text-white shadow-[0_0_60px_rgba(37,99,235,0.18)] sm:p-6">
-        <h2 id="send-interview-type-title" className="text-2xl font-semibold tracking-tight text-white">
-          Send Interview Link
-        </h2>
-        <p className="mt-1 text-sm text-slate-400">Choose Interview Type</p>
+      <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-slate-800 bg-slate-900 text-white shadow-[0_24px_80px_rgba(15,23,42,0.35)]">
+        <div className="relative overflow-hidden border-b border-slate-800 px-5 py-5 sm:px-7">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_0%_0%,rgba(34,211,238,0.14),transparent_60%),radial-gradient(50%_120%_at_100%_0%,rgba(37,99,235,0.12),transparent_60%)]"
+          />
+          <h2 id="send-interview-type-title" className="relative text-2xl font-semibold tracking-tight text-white">
+            Send Interview Link
+          </h2>
+          <p className="relative mt-1 text-sm text-slate-400">Choose Interview Type</p>
+        </div>
 
-        <div role="radiogroup" aria-labelledby="send-interview-type-title" className="mt-5 grid gap-3">
+        <div className="p-5 sm:p-7">
+        <div role="radiogroup" aria-labelledby="send-interview-type-title" className="grid gap-3 sm:grid-cols-2">
           {OPTIONS.map((option) => {
             const active = selected === option.value
             return (
               <label
                 key={option.value}
-                className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition ${
-                  active ? "border-cyan-400/40 bg-cyan-400/10" : "border-slate-700 bg-slate-900/80 hover:border-slate-500"
+                className={`relative flex cursor-pointer flex-col gap-3 rounded-2xl border p-5 transition ${
+                  active
+                    ? "border-cyan-400/60 bg-cyan-400/10 shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-400/40"
+                    : "border-slate-700 bg-slate-900/80 hover:border-slate-500"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="interview-type"
-                  value={option.value}
-                  checked={active}
-                  onChange={() => setSelected(option.value)}
-                  className="mt-1 h-4 w-4 accent-cyan-400"
-                />
-                <span
-                  className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                    active ? "bg-cyan-400/10 text-cyan-300" : "bg-slate-800/60 text-slate-300"
-                  }`}
-                >
-                  {option.icon}
+                <span className="flex items-center justify-between">
+                  <span
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                      active ? "hv-solid-action bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-md" : "bg-slate-800/60 text-slate-300"
+                    }`}
+                  >
+                    {option.icon}
+                  </span>
+                  <input
+                    type="radio"
+                    name="interview-type"
+                    value={option.value}
+                    checked={active}
+                    onChange={() => setSelected(option.value)}
+                    className="h-4 w-4 accent-cyan-400"
+                  />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-base font-semibold text-white">{option.title}</span>
@@ -79,8 +90,9 @@ export default function InterviewTypeChooser({ onCancel, onContinue }) {
             )
           })}
         </div>
+        </div>
 
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="flex justify-end gap-3 border-t border-slate-800 px-5 py-4 sm:px-7">
           <button
             type="button"
             onClick={onCancel}
