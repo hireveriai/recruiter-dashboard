@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -179,7 +180,7 @@ export default function EmployeesPage() {
                       <td className="px-4 py-3 text-slate-400">{employee.title ?? "-"}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${statusTone(employee.status)}`}>
-                          {employee.status}
+                          {formatLabel(employee.status)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(employee.createdAt)}</td>

@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -122,7 +123,7 @@ export default function AssessmentResultsPage() {
                         <div className="text-xs text-slate-500">{row.employee?.email ?? row.candidate?.email ?? ""}</div>
                       </td>
                       <td className="px-4 py-3 text-slate-400">{row.jobTitle ?? "-"}</td>
-                      <td className="px-4 py-3 text-slate-300">{row.status}</td>
+                      <td className="px-4 py-3 text-slate-300">{formatLabel(row.status, "-")}</td>
                       <td className="px-4 py-3 text-slate-200">{row.percentage != null ? `${Number(row.percentage)}%` : "-"}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${passTone(row.passed)}`}>

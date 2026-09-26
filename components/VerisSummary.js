@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 import { useEffect, useState } from "react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
@@ -72,7 +73,7 @@ function VerisInsightCard({ item, expanded, onToggle }) {
       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
         <span className="text-slate-400">Recommendation</span>
         <span className={`font-semibold ${getRecommendationColor(item.recommendation)}`}>
-          {item.recommendation}
+          {formatLabel(item.recommendation)}
         </span>
       </div>
 

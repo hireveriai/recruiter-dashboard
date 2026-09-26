@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
@@ -456,7 +457,7 @@ export default function ReportsPage() {
                           <td className="px-4 py-4 text-cyan-200">{candidate.score} / 100</td>
                           <td className="px-4 py-4">
                             <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${getRecommendationClass(candidate.recommendation)}`}>
-                              {candidate.recommendation}
+                              {formatLabel(candidate.recommendation)}
                             </span>
                           </td>
                           <td className="px-4 py-4 text-slate-300">{candidate.riskLevel}</td>

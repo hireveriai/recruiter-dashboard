@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -368,7 +369,7 @@ export default function AssessmentQuestionsPage() {
             <p className="mt-1 text-sm text-slate-400">
               {assessment?.jobTitle} &middot; {questions.length} question(s) &middot;{" "}
               <span className={assessment?.status === "PUBLISHED" ? "text-emerald-300" : "text-amber-300"}>
-                {assessment?.status}
+                {formatLabel(assessment?.status)}
               </span>
               {editable ? (
                 <span className="ml-2 text-xs text-slate-500">

@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -124,7 +125,7 @@ export default function AssessmentSummary({ isLoading = false }) {
                     <span
                       className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] ${statusTone(assessment.status)}`}
                     >
-                      {assessment.status}
+                      {formatLabel(assessment.status)}
                     </span>
                   </li>
                 ))}

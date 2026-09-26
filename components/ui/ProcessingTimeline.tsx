@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 export type TimelineStep = {
   label: string
@@ -71,7 +72,7 @@ export function ProcessingTimeline({ steps, errorLabel, onRetry }: ProcessingTim
               <span className={`absolute -left-[23px] top-0.5 h-3 w-3 rounded-full border ${tone.dot}`} />
               <div className={`border-l pl-3 ${tone.line}`}>
                 <p className={`text-sm font-medium ${tone.text}`}>{step.label}</p>
-                <p className="mt-0.5 text-xs capitalize text-slate-600">{step.status}</p>
+                <p className="mt-0.5 text-xs text-slate-600">{formatLabel(step.status)}</p>
               </div>
             </li>
           )

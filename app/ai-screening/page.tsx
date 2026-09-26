@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 import Link from "next/link"
 import dynamic from "next/dynamic"
@@ -3243,7 +3244,7 @@ export default function AiScreeningPage() {
                       ) : null}
                     </div>
                     <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em] ${result.status === "SENT" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : result.status === "SKIPPED" ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-rose-500/20 bg-rose-500/10 text-rose-300"}`}>
-                      {result.status}
+                      {formatLabel(result.status)}
                     </span>
                   </div>
                   {result.inviteLink ? (

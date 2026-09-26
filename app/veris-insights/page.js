@@ -1,4 +1,5 @@
 "use client"
+import { formatLabel } from "@/lib/client/format-label"
 
 import { useEffect, useMemo, useState } from "react"
 
@@ -281,7 +282,7 @@ export default function VerisInsightsPage() {
 
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                         <span className="text-slate-400">Recommendation</span>
-                        <span className={`font-semibold ${getRecommendationColor(item.recommendation)}`}>{item.recommendation}</span>
+                        <span className={`font-semibold ${getRecommendationColor(item.recommendation)}`}>{formatLabel(item.recommendation)}</span>
                         <span className="text-slate-700">/</span>
                         <span className="text-slate-400">Score</span>
                         <span className="font-semibold text-blue-300">{item.scoreLabel ?? "-"}</span>
