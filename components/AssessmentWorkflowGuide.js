@@ -1,5 +1,7 @@
 "use client";
 
+import HorizontalWorkflow, { workflowActionClass } from "@/components/ui/HorizontalWorkflow";
+
 // Assessment-side counterpart to components/HiringWorkflow.js's "Hiring
 // Workflow" panel - same visual language (recommendation card, checked/
 // numbered vertical steps, connecting line, "NOW" pulse, CTA buttons) so a
@@ -274,29 +276,10 @@ function getFlowState(summary) {
   };
 }
 
-function SparkIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2v4" />
-      <path d="M12 18v4" />
-      <path d="m4.93 4.93 2.83 2.83" />
-      <path d="m16.24 16.24 2.83 2.83" />
-      <path d="M2 12h4" />
-      <path d="M18 12h4" />
-      <path d="m4.93 19.07 2.83-2.83" />
-      <path d="m16.24 7.76 2.83-2.83" />
-      <circle cx="12" cy="12" r="3.4" />
-    </svg>
-  );
-}
-
 function FlowAction({ action, onCreate, onSend, onShowDrafts, hrefFor }) {
-  const className =
-    "inline-flex items-center justify-center rounded-lg border border-white/20 bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0f172a] shadow-[0_10px_30px_rgba(255,255,255,0.12)] transition duration-200 hover:bg-violet-50";
-
   if (action.kind === "link") {
     return (
-      <a href={hrefFor(action.href)} className={className}>
+      <a href={hrefFor(action.href)} className={workflowActionClass}>
         {action.label}
       </a>
     );
@@ -304,70 +287,16 @@ function FlowAction({ action, onCreate, onSend, onShowDrafts, hrefFor }) {
 
   const onClick = action.kind === "create" ? onCreate : action.kind === "send" ? onSend : onShowDrafts;
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <button type="button" onClick={onClick} className={workflowActionClass}>
       {action.label}
     </button>
   );
 }
 
-function FlowStep({ step, status, action, actionProps }) {
-  const isActive = status === "active";
-  const isCompleted = status === "completed";
-
-  return (
-    <li
-      className={[
-        "relative flex gap-3 rounded-xl border p-3 transition duration-200 lg:flex-col lg:items-center lg:text-center",
-        isActive
-          ? `${THEME.border} bg-gradient-to-br ${THEME.background} ${THEME.glow} hiring-workflow-active`
-          : isCompleted
-            ? "border-transparent hover:border-emerald-400/10 hover:bg-emerald-500/[0.035]"
-            : "border-transparent hover:border-slate-800/70 hover:bg-slate-950/20",
-      ].join(" ")}
-    >
-      {/* Opaque base so the connector line passes behind the node, not through it. */}
-      <div className="relative z-10 h-9 w-9 shrink-0 rounded-xl bg-slate-900">
-        <div
-          className={[
-            "flex h-full w-full items-center justify-center rounded-xl border text-xs font-semibold",
-            isActive ? `${THEME.border} ${THEME.text} bg-violet-400/15 shadow-[0_0_18px_currentColor]` : "",
-            isCompleted ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "",
-            !isActive && !isCompleted ? "border-slate-700 bg-slate-950/40 text-slate-500" : "",
-          ].join(" ")}
-        >
-          {isCompleted ? <CheckIcon /> : step.number}
-        </div>
-        {isActive ? <span className={`absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ${THEME.indicator} hiring-workflow-pulse`} /> : null}
-      </div>
-
-      <div className="min-w-0 lg:mt-1">
-        <p className={`text-[13px] font-semibold leading-tight ${isActive ? "text-white" : isCompleted ? "text-slate-200" : "text-slate-400"}`}>
-          {step.title}
-        </p>
-        <p
-          className={[
-            "mt-1 text-[9px] font-semibold uppercase leading-none tracking-[0.16em]",
-            isActive ? THEME.text : isCompleted ? "text-emerald-300/80" : "text-slate-500",
-          ].join(" ")}
-        >
-          {isActive ? "Now" : isCompleted ? "Completed" : "Pending"}
-        </p>
-        <p className={`mt-2 text-[11px] leading-4 ${isActive ? "text-slate-300" : "text-slate-500"}`}>{step.description}</p>
-        {isActive && action ? (
-          <div className="mt-3">
-            <FlowAction action={action} {...actionProps} />
-          </div>
-        ) : null}
-      </div>
-    </li>
-  );
-}
-
 /**
  * Horizontal counterpart to AssessmentWorkflowPanel for the Assessments list
- * page, in the dashboard Hiring Workflow's visual language: a VERIS
- * recommendation up top, then the five steps on one connecting line with
- * completed ones checked and the current one lifted out as the "Now" card.
+ * page, in the dashboard Hiring Workflow's visual language (see
+ * components/ui/HorizontalWorkflow.js).
  */
 export function AssessmentFlowGuide({
   summary = null,
@@ -378,74 +307,30 @@ export function AssessmentFlowGuide({
   hrefFor = (path) => path,
   className = "",
 }) {
-  const ready = Boolean(summary) && !loading;
-  const state = ready ? getFlowState(summary) : null;
-  const activeIndex = state ? FLOW_STEPS.findIndex((step) => step.id === state.activeId) : -1;
-  const progressPercent = activeIndex > 0 ? (activeIndex / (FLOW_STEPS.length - 1)) * 100 : 0;
+  const state = summary && !loading ? getFlowState(summary) : null;
   const actionProps = { onCreate, onSend, onShowDrafts, hrefFor };
 
+  const steps = FLOW_STEPS.map((step) => ({
+    ...step,
+    status: !state ? "pending" : state.activeId === step.id ? "active" : state.done[step.id] ? "completed" : "pending",
+  }));
+
   return (
-    <section
-      className={`hv-theme-assessment-panel overflow-hidden rounded-2xl border border-violet-300/15 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(2,6,23,0.84))] p-4 shadow-[0_14px_44px_rgba(2,6,23,0.28)] sm:p-5 ${className}`}
-    >
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-300/25 bg-violet-400/10 text-violet-100 shadow-[0_0_24px_rgba(139,92,246,0.16)]">
-            <SparkIcon />
-            <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-violet-300 hiring-workflow-pulse" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200/80">
-              Assessment Flow · VERIS Recommendation
-            </p>
-            <p className="mt-1.5 text-sm leading-6 text-white">
-              {state ? state.recommendation : "Checking your assessment progress…"}
-            </p>
-          </div>
-        </div>
-        {state ? (
-          <div className="flex shrink-0 flex-wrap gap-2 text-[9px] font-semibold uppercase tracking-[0.14em] md:justify-end">
-            <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-2 py-1 text-violet-100">
-              {state.completedCount} of {FLOW_STEPS.length} steps completed
-            </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-slate-300">{state.chip}</span>
-          </div>
-        ) : null}
-      </div>
-
-      <ol className="relative mt-5 grid gap-2 lg:grid-cols-5 lg:gap-3">
-        {/* Connector through the node centres (12px card padding + half the 36px node). */}
-        <li aria-hidden="true" className="pointer-events-none absolute left-[10%] right-[10%] top-[30px] hidden h-px overflow-hidden bg-slate-800/90 lg:block">
-          <div
-            className="h-full bg-gradient-to-r from-emerald-400/70 via-violet-400 to-violet-300 transition-[width] duration-700"
-            style={{ width: `${progressPercent}%` }}
-          />
-          <div className="absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-violet-300/80 to-transparent hiring-workflow-flow-x" />
-        </li>
-        {FLOW_STEPS.map((step, index) => {
-          const status = !state
-            ? "pending"
-            : index === activeIndex
-              ? "active"
-              : state.done[step.id]
-                ? "completed"
-                : "pending";
-          return (
-            <FlowStep
-              key={step.id}
-              step={step}
-              status={status}
-              action={index === activeIndex ? state?.action : null}
-              actionProps={actionProps}
-            />
-          );
-        })}
-      </ol>
-
-      <p className="mt-4 border-t border-violet-500/10 pt-3 text-[11px] leading-5 text-slate-500">
-        Independent of VERIS Screening and the AI Interview: send it before an interview, skip straight to the
-        interview link, or use it on its own.
-      </p>
-    </section>
+    <HorizontalWorkflow
+      className={className}
+      theme="violet"
+      eyebrow="Assessment Flow · VERIS Recommendation"
+      recommendation={state ? state.recommendation : "Checking your assessment progress…"}
+      chips={
+        state
+          ? [
+              { label: `${state.completedCount} of ${FLOW_STEPS.length} steps completed` },
+              { label: state.chip, tone: "muted" },
+            ]
+          : []
+      }
+      steps={steps}
+      action={state?.action ? <FlowAction action={state.action} {...actionProps} /> : null}
+    />
   );
 }

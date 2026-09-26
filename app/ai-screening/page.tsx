@@ -11,7 +11,7 @@ import TrialStatusCard from "@/components/TrialStatusCard"
 import BackToDashboardLink from "@/components/BackToDashboardLink"
 import { InsightTooltip } from "@/components/ui/InsightTooltip"
 import { ProcessingTimeline, type TimelineStep } from "@/components/ui/ProcessingTimeline"
-import { StepProgress } from "@/components/ui/StepProgress"
+import ScreeningWorkflow from "@/components/ScreeningWorkflow"
 import { TableSkeleton } from "@/components/system/skeletons"
 import { VerisGlobeLoader } from "@/components/system/loaders"
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -1420,6 +1420,13 @@ export default function AiScreeningPage() {
   // Matching is the step that genuinely needs both halves, so it has to name
   // whichever one is still missing rather than always blaming the job.
   const jobAnalyzed = flowStep === "JD_PROCESSED" || flowStep === "MATCHED"
+  const scrollToWorkflowSection = (target: "resumes" | "job" | "results") => {
+    const element =
+      target === "results"
+        ? resultsSectionRef.current
+        : document.getElementById(target === "resumes" ? "screening-resume-intake" : "screening-job-intelligence")
+    element?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
   const matchHelpText = canRunMatching
     ? ""
     : !jobAnalyzed
@@ -2499,9 +2506,20 @@ export default function AiScreeningPage() {
           </div>
         </section>
 
-        <div className="mt-6">
-          <StepProgress currentStep={flowStep} />
-        </div>
+        <ScreeningWorkflow
+          className="mt-6"
+          resumesUploaded={hasUploadedResumes}
+          resumeCount={uploadedResumeCount}
+          jobSelected={hasSelectedJob}
+          jobAnalyzed={jobAnalyzed}
+          matched={flowStep === "MATCHED"}
+          matchedCount={stats.candidates}
+          strongFit={stats.strongFit}
+          sentCount={sendResults.filter((result) => result.status === "SENT").length}
+          busyStep={uploading ? "upload" : isProcessingJD ? "job" : isMatching ? "match" : sending ? "send" : null}
+          onGoTo={scrollToWorkflowSection}
+          interviewsHref={authUrl("/interviews")}
+        />
 
         {(notice || error) ? (
           <section className="hv-preserve-dark mt-6 rounded-2xl border border-slate-800 bg-[#0f172a] px-5 py-4">
@@ -2520,7 +2538,7 @@ export default function AiScreeningPage() {
         </div>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+          <section id="screening-resume-intake" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-white">Resume Intake</h2>
@@ -2563,10 +2581,10 @@ export default function AiScreeningPage() {
                 <UploadIcon />
               </div>
               <p className="mt-4 text-base font-semibold text-white">Drop PDF/DOCX resumes to begin screening</p>
-              <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">Files are stored in Supabase Storage, parsed, email-validated, and saved to the recruiter workspace.</p>
+              <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">Resumes are parsed, emails are validated, and everything is saved securely to your workspace.</p>
             </label>
 
-            <p className="mt-3 text-sm text-slate-400">Step 1 of 3 — Upload resumes to start the screening process</p>
+            <p className="mt-3 text-sm text-slate-400">Step 1 of 4 — Upload resumes to start the screening process</p>
 
             <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/25 px-4 py-3">
               <p className="text-xs font-medium uppercase tracking-[0.22em] text-slate-500">Current Upload</p>
@@ -2596,7 +2614,7 @@ export default function AiScreeningPage() {
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+          <section id="screening-job-intelligence" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-white">Job Intelligence</h2>
@@ -2709,7 +2727,7 @@ export default function AiScreeningPage() {
           </section>
         </div>
 
-        <section ref={resultsSectionRef} className="mt-8 overflow-visible rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+        <section ref={resultsSectionRef} className="mt-8 scroll-mt-28 overflow-visible rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
           <div className="border-b border-slate-800 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
