@@ -150,7 +150,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
     return (
       <Shell eyebrow="Subscription Credits" title="Subscription Credits">
         <div className={STAT_ROW_CLASS}>
-          {showInterview ? <Stat label="AI Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
+          {showInterview ? <Stat label="AI/Live Interview Credits" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screening Credits" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessment Credits" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
         </div>
@@ -202,7 +202,7 @@ export default function TrialStatusCard({ credits, entitlements = null }) {
           </div>
         ) : null}
         <div className={STAT_ROW_CLASS}>
-          {showInterview ? <Stat label="AI Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
+          {showInterview ? <Stat label="AI/Live Interviews Remaining" value={interviewCredits} depleted={interviewCredits === 0} /> : null}
           {showScreening ? <Stat label="VERIS Screenings Remaining" value={screeningCredits} depleted={screeningCredits === 0} /> : null}
           {showAssessment ? <Stat label="VERIS Assessments Remaining" value={assessmentCredits} depleted={assessmentCredits === 0} /> : null}
         </div>

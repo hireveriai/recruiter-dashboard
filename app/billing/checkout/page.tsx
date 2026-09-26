@@ -744,7 +744,7 @@ export default function BillingCheckoutPage() {
               </p>
             </div>
             <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Interview credits</p>
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">AI/Live interview credits</p>
               <p className="mt-2 text-2xl font-semibold leading-none text-slate-100">
                 {summary?.plan.interviewSessions ?? "--"}
               </p>

@@ -94,6 +94,9 @@ type ScreeningRun = {
 type TrialCredits = {
   interviewCreditsRemaining: number
   screeningCreditsRemaining: number
+  // Only /api/trial-credits carries this (assessment credits are a standalone
+  // module), so it is optional and must survive merges with other payloads.
+  assessmentCreditsRemaining?: number
   upgradeMessage: string
   source?: "trial" | "subscription"
   subscriptionId?: string | null
@@ -793,6 +796,9 @@ function normalizeTrialCredits(credits: Partial<TrialCredits> | null | undefined
   return {
     interviewCreditsRemaining: Math.max(0, Number(credits?.interviewCreditsRemaining ?? 5)),
     screeningCreditsRemaining: Math.max(0, Number(credits?.screeningCreditsRemaining ?? 15)),
+    ...(credits?.assessmentCreditsRemaining == null
+      ? {}
+      : { assessmentCreditsRemaining: Math.max(0, Number(credits.assessmentCreditsRemaining)) }),
     upgradeMessage: credits?.upgradeMessage || UPGRADE_MESSAGE,
     source: credits?.source ?? "trial",
     subscriptionId: credits?.subscriptionId ?? null,
@@ -808,6 +814,10 @@ function mergeTrialCredits(current: TrialCredits | null, incoming: Partial<Trial
   }
 
   const normalizedIncoming = normalizeTrialCredits(incoming)
+  // Payloads without assessment credits (screening responses) keep the last known value.
+  if (normalizedIncoming.assessmentCreditsRemaining === undefined && current?.assessmentCreditsRemaining !== undefined) {
+    normalizedIncoming.assessmentCreditsRemaining = current.assessmentCreditsRemaining
+  }
 
   if (!current || normalizedIncoming.source === "subscription" || current.source !== normalizedIncoming.source) {
     return normalizedIncoming
@@ -2170,7 +2180,7 @@ export default function AiScreeningPage() {
       if (allTrialCreditsReached) {
         setUpgradeLimitOpen(true)
       }
-      setError("AI interview credits are exhausted for this workspace.")
+      setError("AI/Live interview credits are exhausted for this workspace.")
       return
     }
 

@@ -815,10 +815,10 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
           <div className="hv-theme-modal w-full max-w-md rounded-2xl border border-cyan-400/20 bg-[#0b1220] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-200/75">Credit Notice</p>
             <h3 className="mt-3 text-lg font-semibold text-white">
-              You are about to use {pendingCandidateCount} AI Interview {pendingCandidateCount === 1 ? "credit" : "credits"}.
+              You are about to use {pendingCandidateCount} AI/Live Interview {pendingCandidateCount === 1 ? "credit" : "credits"}.
             </h3>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Remaining Interview Credits after this batch: {Math.max(0, trialCredits.interviewCreditsRemaining - pendingCandidateCount)}
+              Remaining AI/Live Interview Credits after this batch: {Math.max(0, trialCredits.interviewCreditsRemaining - pendingCandidateCount)}
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -1300,7 +1300,7 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                       </>
                     ) : (
                       <>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">AI interview credits</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">AI/Live interview credits</p>
                         <p className="mt-1 text-2xl font-semibold text-white">{trialCredits.interviewCreditsRemaining}</p>
                         <p className="text-xs text-slate-400">
                           remaining{pendingCandidateCount > 0 ? ` · this batch uses ${pendingCandidateCount}` : ""}

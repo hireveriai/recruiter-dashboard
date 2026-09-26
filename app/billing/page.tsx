@@ -479,7 +479,7 @@ export default function BillingPage() {
 
           <section id="usage" className="mt-6 grid gap-4 lg:grid-cols-2">
             <CreditUsageCard
-              title="Interview Credits"
+              title="AI/Live Interview Credits"
               total={activeSubscription?.totalCredits ?? 0}
               used={activeSubscription?.usedCredits ?? 0}
               accent="blue"
