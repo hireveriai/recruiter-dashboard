@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Download, Ellipsis, FileText, Info, Link2, MessageSquare, RotateCw, Video } from "lucide-react"
+import { CircleCheck, Download, Ellipsis, FileText, FileWarning, Info, Link2, MessageSquare, RotateCw, TriangleAlert, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -90,7 +90,11 @@ const RECRUITER_STATUS_DEFINITIONS = {
   },
 }
 
-const STATUS_GUIDE_KEYS = ["COMPLETED", "NEEDS_REVIEW", "INTERRUPTED", "INCOMPLETE", "EXITED_EARLY", "IN_PROGRESS", "READY"]
+const STATUS_GUIDE_KEYS = ["COMPLETED", "NEEDS_REVIEW", "INTERRUPTED", "INCOMPLETE", "EXITED_EARLY", "IN_PROGRESS", "READY", "EXPIRED"]
+// Shorter wording for the compact guide cards; row tooltips keep the full text.
+const STATUS_GUIDE_TEXT = {
+  NEEDS_REVIEW: "Session did not finish cleanly, so any score is partial. Check what was captured before deciding.",
+}
 
 function normalizeStatusKey(status) {
   return String(status ?? "").trim().toUpperCase()
@@ -616,6 +620,13 @@ const recordingAction =
 // First line of every register cell: one fixed-height, vertically centred line
 // so plain text, chips and buttons share the same baseline across the row.
 const cellLine = "flex min-h-7 min-w-0 items-center"
+const rowNoteChip =
+  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4"
+const ROW_NOTE_TONES = {
+  rose: "border-rose-500/25 bg-rose-500/10 text-rose-300",
+  emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+  amber: "border-amber-500/25 bg-amber-500/10 text-amber-300",
+}
 
 function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
@@ -787,7 +798,6 @@ export default function InterviewsPage() {
   const cacheKey = `interviews:${searchParams.toString()}`
   // AI Interviews / VERIS Live Interviews switch (only when VERIS Live is enabled).
   const [interviewView, setInterviewView] = useState("ai")
-  const [showStatusGuide, setShowStatusGuide] = useState(false)
   const [liveEnabled, setLiveEnabled] = useState(false)
 
   useEffect(() => {
@@ -1224,40 +1234,22 @@ export default function InterviewsPage() {
             <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
           </div>
 
-          <div className="border-b border-slate-800 bg-slate-950/30 px-5 py-3 2xl:px-6">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Status guide</p>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {STATUS_GUIDE_KEYS.map((key) => (
-                  <span
-                    key={key}
-                    className={`inline-flex cursor-help whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getStatusBadge(key)}`}
-                    title={RECRUITER_STATUS_DEFINITIONS[key].description}
-                  >
-                    {RECRUITER_STATUS_DEFINITIONS[key].label}
-                  </span>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowStatusGuide((value) => !value)}
-                aria-expanded={showStatusGuide}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-300 transition hover:text-cyan-200"
-              >
-                <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                {showStatusGuide ? "Hide meanings" : "What do these mean?"}
-              </button>
-            </div>
-            {showStatusGuide ? (
-              <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-xs leading-5 sm:grid-cols-2 xl:grid-cols-3">
-                {STATUS_GUIDE_KEYS.map((key) => (
-                  <div key={key} className="flex gap-2">
-                    <dt className="w-24 shrink-0 font-semibold text-slate-300">{RECRUITER_STATUS_DEFINITIONS[key].label}</dt>
-                    <dd className="text-slate-400">{RECRUITER_STATUS_DEFINITIONS[key].description}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
+          <div className="border-b border-slate-800 bg-slate-950/30 px-5 py-4 2xl:px-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Status guide</p>
+            <dl className="mt-2.5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {STATUS_GUIDE_KEYS.map((key) => (
+                <div key={key} className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+                  <dt>
+                    <span className={`inline-flex whitespace-nowrap rounded-md border px-1.5 py-px text-[10.5px] font-semibold ${getStatusBadge(key)}`}>
+                      {RECRUITER_STATUS_DEFINITIONS[key].label}
+                    </span>
+                  </dt>
+                  <dd className="mt-1.5 text-[11px] leading-4 text-slate-400">
+                    {STATUS_GUIDE_TEXT[key] ?? RECRUITER_STATUS_DEFINITIONS[key].description}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
           <div className="grid gap-x-3 gap-y-2.5 border-b border-slate-800 bg-slate-950/20 px-5 py-3 lg:grid-cols-2 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto] 2xl:gap-x-4 2xl:px-6 2xl:py-4">
@@ -1354,15 +1346,14 @@ export default function InterviewsPage() {
                   <th className="whitespace-nowrap px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.08em]">Actions</th>
                 </tr>
               </thead>
-              <tbody>
                   {interviews.length === 0 ? (
-                  <tr>
+                  <tbody><tr>
                     <td colSpan={10} className="p-10 text-center text-slate-400">No interviews available</td>
-                  </tr>
+                  </tr></tbody>
                 ) : filteredInterviews.length === 0 ? (
-                  <tr>
+                  <tbody><tr>
                     <td colSpan={10} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
-                  </tr>
+                  </tr></tbody>
                 ) : (
                   filteredInterviews.map((interview) => {
                     const recruiterStatus = getRecruiterStatus(interview)
@@ -1393,8 +1384,38 @@ export default function InterviewsPage() {
                       canTakeAction || canChangeDecision || canViewSummary || canSendCandidateFeedback || canCopyLink || canRetryPreparation || canRetryEmail
                     const latestActivity = formatLatestActivity(getInterviewActivityValue(interview))
 
+                    // Row-level notes sit in one strip under the row instead of
+                    // wrapping inside narrow columns.
+                    const rowNotes = [
+                      faultNote?.party === "VERISNOVA"
+                        ? { key: "fault", tone: "rose", icon: TriangleAlert, text: "Platform recording issue" }
+                        : null,
+                      interview.creditRefunded
+                        ? {
+                            key: "refund",
+                            tone: "emerald",
+                            icon: CircleCheck,
+                            text: "Interview credit refunded",
+                            title: "This interview was affected by a VerisNova recording issue. 1 interview credit has been returned to your account.",
+                          }
+                        : null,
+                      evidenceIncomplete
+                        ? {
+                            key: "evidence",
+                            tone: "amber",
+                            icon: FileWarning,
+                            text: evidenceCompleteness
+                              ? `Evidence ${evidenceCompleteness.available}/${evidenceCompleteness.total} recovered · review manually before deciding`
+                              : "Review manually before deciding",
+                            title: incompleteEvidenceNote,
+                          }
+                        : null,
+                    ].filter(Boolean)
+                    const hasRowNotes = rowNotes.length > 0
+
                     return (
-                    <tr key={interview.interviewId} className="border-t border-slate-800/80 align-top text-slate-200 transition-colors hover:bg-slate-800/30">
+                    <tbody key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200 transition-colors hover:bg-slate-800/30">
+                    <tr className={`align-top ${hasRowNotes ? "[&>td]:pb-1.5" : ""}`}>
                       <td className="px-3 py-4 font-medium text-white">
                         <div className={cellLine}>
                           <span className="block min-w-0 break-words font-semibold leading-snug" title={interview.candidateName || "Candidate"}>
@@ -1441,19 +1462,6 @@ export default function InterviewsPage() {
                           </span>
                           {faultNote ? <FaultNote note={faultNote} /> : null}
                         </div>
-                        {faultNote?.party === "VERISNOVA" ? (
-                          <span className="mt-1 block break-words text-[11px] leading-snug text-rose-200/70">
-                            Platform recording issue
-                          </span>
-                        ) : null}
-                        {interview.creditRefunded ? (
-                          <span
-                            className="mt-0.5 block break-words text-[11px] leading-snug text-emerald-300/80"
-                            title="This interview was affected by a VerisNova recording issue. 1 interview credit has been returned to your account."
-                          >
-                            ✓ Interview credit refunded
-                          </span>
-                        ) : null}
                       </td>
                       <td className="px-3 py-4 text-slate-300">
                         <div className={cellLine}>
@@ -1467,11 +1475,6 @@ export default function InterviewsPage() {
                             <span className="text-amber-300" title={incompleteEvidenceNote}>*</span>
                           ) : null}
                         </div>
-                        {evidenceCompleteness ? (
-                          <span className="mt-1 block whitespace-nowrap text-[11px] text-amber-300/70">
-                            Evidence {evidenceCompleteness.available}/{evidenceCompleteness.total}
-                          </span>
-                        ) : null}
                       </td>
                       <td className="px-3 py-4 text-slate-300">
                         <div className={cellLine}>
@@ -1482,11 +1485,6 @@ export default function InterviewsPage() {
                             ) : null}
                           </span>
                         </div>
-                        {evidenceIncomplete ? (
-                          <span className="mt-1 block text-[11px] leading-snug text-amber-300/70">
-                            Review manually before deciding
-                          </span>
-                        ) : null}
                       </td>
                       <td className="px-3 py-4">
                         <div className={cellLine}>
@@ -1589,10 +1587,25 @@ export default function InterviewsPage() {
                         </div>
                       </td>
                     </tr>
+                    {hasRowNotes ? (
+                      <tr className="align-top">
+                        <td colSpan={3} aria-hidden="true" />
+                        <td colSpan={7} className="px-3 pb-4 pt-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {rowNotes.map(({ key, tone, icon: NoteIcon, text, title }) => (
+                              <span key={key} className={`${rowNoteChip} ${ROW_NOTE_TONES[tone]}`} title={title}>
+                                <NoteIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                {text}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                    </tbody>
                     )
                   })
                 )}
-                </tbody>
             </table>
           </div>
         </section>
