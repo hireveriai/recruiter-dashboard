@@ -21,3 +21,13 @@ export function aiInterviewsOnly(alias: string) {
   }
   return Prisma.sql`coalesce(to_jsonb(${Prisma.raw(alias)}) ->> 'delivery_mode', 'AI') = 'AI'`
 }
+
+/**
+ * Prisma equivalent for queries that go through prisma.interview (the Prisma
+ * model has no delivery_mode field). Every Live interview is created with
+ * status = 'LIVE' and no Live code path changes that column, so this keeps
+ * them out. NULL statuses are AI interviews and must stay included.
+ */
+export const aiInterviewsOnlyWhere = {
+  OR: [{ status: null }, { status: { not: "LIVE" } }],
+} satisfies Prisma.InterviewWhereInput

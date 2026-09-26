@@ -608,11 +608,11 @@ function formatLatestActivity(value) {
 }
 
 const tableMutedChip =
-  "inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-medium leading-none text-slate-500"
+  "inline-flex max-w-full items-center rounded-lg py-1 text-xs font-medium leading-none text-slate-500"
 const tableProcessingChip =
-  "inline-flex max-w-full items-center justify-center rounded-lg px-1.5 py-1 text-xs font-medium leading-none text-amber-100"
+  "inline-flex max-w-full items-center rounded-lg py-1 text-xs font-medium leading-none text-amber-100"
 const recordingAction =
-  "hv-recording-action inline-flex max-w-full flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-[13px] font-semibold leading-tight transition"
+  "hv-recording-action -ml-2 inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[13px] font-semibold leading-tight transition"
 
 function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
@@ -782,6 +782,22 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
 export default function InterviewsPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `interviews:${searchParams.toString()}`
+  // AI Interviews / VERIS Live Interviews switch (only when VERIS Live is enabled).
+  const [interviewView, setInterviewView] = useState("ai")
+  const [liveEnabled, setLiveEnabled] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    fetch(buildAuthUrl("/api/veris-live/status", searchParams), { credentials: "include" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (active) setLiveEnabled(body?.data?.enabled === true)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [searchParams])
   const [interviews, setInterviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [summaryInterviewId, setSummaryInterviewId] = useState("")
@@ -1169,7 +1185,30 @@ export default function InterviewsPage() {
           </div>
         </section>
 
-        <section className="hv-elevated-section mt-6 overflow-hidden rounded-2xl 2xl:mt-8 border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+        {liveEnabled ? (
+          <div role="tablist" aria-label="Interview type" className="mt-6 inline-flex rounded-2xl border border-slate-800 bg-slate-900/80 p-1 shadow-sm 2xl:mt-8">
+            {[
+              ["ai", "VERIS AI Interviews", "AI-led"],
+              ["live", "VERIS Live Interviews", "Human-led"],
+            ].map(([key, title, hint]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={interviewView === key}
+                onClick={() => setInterviewView(key)}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                  interviewView === key ? "hv-solid-action bg-[#2563eb] text-white shadow-sm" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {title}
+                <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-semibold sm:inline ${interviewView === key ? "bg-white/20" : "bg-slate-800/60"}`}>{hint}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <section className={`hv-elevated-section overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)] ${liveEnabled ? "mt-4" : "mt-6 2xl:mt-8"} ${liveEnabled && interviewView === "live" ? "hidden" : ""}`}>
           <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between 2xl:px-6 2xl:py-5">
             <div>
               <h2 className="text-lg font-semibold text-white">Interview Register</h2>
@@ -1274,28 +1313,28 @@ export default function InterviewsPage() {
             <table className="w-full table-fixed text-[13px] 2xl:text-sm">
               <colgroup>
                 <col className="w-[13%]" />
-                <col className="w-[9%]" />
-                <col className="w-[11%]" />
-                <col className="w-[12%]" />
                 <col className="w-[8%]" />
+                <col className="w-[15%]" />
+                <col className="w-[10%]" />
+                <col className="w-[8%]" />
+                <col className="w-[6%]" />
+                <col className="w-[9%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
                 <col className="w-[7%]" />
-                <col className="w-[9%]" />
-                <col className="w-[11%]" />
-                <col className="w-[12%]" />
-                <col className="w-[8%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
-                  <th className="px-4 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Candidate</span><span className="block">Name</span></th>
-                  <th className="px-3 py-3.5 2xl:py-5 text-center font-medium"><span className="block">Interview</span><span className="block">Recording</span></th>
-                  <th className="px-4 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Applied</span><span className="block">Role</span></th>
-                  <th className="px-3 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Status</span></th>
-                  <th className="px-3 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Interview</span><span className="block">Type</span></th>
-                  <th className="px-3 py-3.5 2xl:py-5 pr-5 text-left font-medium"><span className="block">Interview</span><span className="block">Score</span></th>
-                  <th className="px-5 py-3.5 2xl:py-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Decision</span></th>
-                  <th className="px-3 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Recruiter</span><span className="block">Decision</span></th>
-                  <th className="px-3 py-3.5 2xl:py-5 text-left font-medium"><span className="block">Latest</span><span className="block">Activity</span></th>
-                  <th className="px-3 py-3.5 2xl:py-5 text-center font-medium"><span className="block">Hiring</span><span className="block">Actions</span></th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Candidate</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Recording</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Role</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Status</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Access</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Score</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">VERIS decision</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Recruiter decision</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Last activity</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.08em]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1338,13 +1377,13 @@ export default function InterviewsPage() {
                     const latestActivity = formatLatestActivity(getInterviewActivityValue(interview))
 
                     return (
-                    <tr key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200">
-                      <td className="px-4 py-3.5 2xl:py-5 font-medium text-white">
-                        <span className="block break-words leading-snug" title={interview.candidateName || "Candidate"}>
+                    <tr key={interview.interviewId} className="border-t border-slate-800/80 align-top text-slate-200 transition-colors hover:bg-slate-800/30">
+                      <td className="px-3 py-4 font-medium text-white">
+                        <span className="block break-words font-semibold leading-snug" title={interview.candidateName || "Candidate"}>
                           {interview.candidateName}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 2xl:py-5 text-center">
+                      <td className="px-3 py-4">
                         {interview.hasRecording && interview.recordingUrl ? (
                           <Link
                             href={interview.recordingUrl}
@@ -1353,11 +1392,8 @@ export default function InterviewsPage() {
                             className={recordingAction}
                             aria-label={`View recording for ${interview.candidateName}`}
                           >
-                            <span className="inline-flex items-center gap-1.5">
-                              <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              <span>View</span>
-                            </span>
-                            <span className="block">Recording</span>
+                            <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
+                            <span>View</span>
                           </Link>
                         ) : interview.recordingId ? (
                           <span className={tableProcessingChip}>
@@ -1369,8 +1405,8 @@ export default function InterviewsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 2xl:py-5 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
-                      <td className="overflow-hidden px-4 py-3.5 2xl:py-5">
+                      <td className="px-3 py-4 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
+                      <td className="overflow-hidden px-3 py-4">
                         <div className="flex min-w-0 items-center gap-1.5">
                           <span
                             className={`inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium ${getStatusBadge(recruiterStatus.key)}`}
@@ -1394,8 +1430,8 @@ export default function InterviewsPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-3 py-3.5 2xl:py-5 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
-                      <td className="px-3 py-3.5 2xl:py-5 pr-5 text-slate-300">
+                      <td className="px-3 py-4 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
+                      <td className="px-3 py-4 text-slate-300">
                         <span className="whitespace-nowrap">
                           {formatScore(interview.score)}
                           {evidenceIncomplete ? (
@@ -1408,7 +1444,7 @@ export default function InterviewsPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-5 py-3.5 2xl:py-5 text-slate-300">
+                      <td className="px-3 py-4 text-slate-300">
                         <span className="block truncate">
                           {interview.decision ?? "-"}
                           {evidenceIncomplete && interview.decision ? (
@@ -1421,23 +1457,23 @@ export default function InterviewsPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-3 py-3.5 2xl:py-5">
+                      <td className="px-3 py-4">
                         {interview.recruiterDecisionStatus ? (
                           <DecisionPill status={interview.recruiterDecisionStatus} />
                         ) : isCompleted && !isEarlyExit ? (
-                          <span className="inline-flex rounded-full border border-slate-700 bg-slate-950/30 px-3 py-1 text-[11px] font-semibold text-slate-400">
+                          <span className="inline-flex whitespace-nowrap rounded-full border border-slate-700 bg-slate-950/30 px-2.5 py-1 text-[11px] font-semibold text-slate-400">
                             Awaiting decision
                           </span>
                         ) : (
                           <span className="text-slate-600">-</span>
                         )}
                       </td>
-                      <td className="px-3 py-3.5 2xl:py-5 text-[13px] leading-snug text-slate-400">
+                      <td className="px-3 py-4 text-[13px] leading-snug text-slate-400">
                         <span className="block whitespace-nowrap">{latestActivity.date}</span>
                         <span className="mt-0.5 block whitespace-nowrap text-slate-500">{latestActivity.time}</span>
                       </td>
-                      <td className="px-3 py-3.5 2xl:py-5 align-middle">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-end gap-2">
                           {hasHiringActions ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1528,7 +1564,7 @@ export default function InterviewsPage() {
           </div>
         </section>
 
-        <LiveInterviewsPanel />
+        {!liveEnabled || interviewView === "live" ? <LiveInterviewsPanel /> : null}
       </main>
 
       <CandidateActionModal

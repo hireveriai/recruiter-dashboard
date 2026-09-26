@@ -7,6 +7,7 @@ import {
   clearInterviewQuestions,
   fetchExistingInterviewQuestions,
 } from "@/lib/server/services/interview-questions"
+import { aiInterviewsOnlyWhere } from "@/lib/server/veris-live/ai-scope"
 
 type RepairInterviewInput = {
   organizationId: string
@@ -141,6 +142,7 @@ export async function repairInterviewQuestions(input: RepairInterviewInput): Pro
   const interviews = await prisma.interview.findMany({
     where: {
       organizationId: input.organizationId,
+      AND: [aiInterviewsOnlyWhere],
       ...(input.jobId ? { jobId: input.jobId } : {}),
       ...(input.interviewId ? { interviewId: input.interviewId } : {}),
     },

@@ -7,6 +7,7 @@ import {
   fetchAnswerSummaries,
   type InterviewAnswerSummary,
 } from "@/lib/server/services/interview-summary"
+import { aiInterviewsOnlyWhere } from "@/lib/server/veris-live/ai-scope"
 
 type CacheEntry = {
   value: ReportsPayload
@@ -1262,6 +1263,7 @@ export async function getNormalizedReportRows(organizationId: string): Promise<N
   const interviews = await prisma.interview.findMany({
     where: {
       organizationId,
+      AND: [aiInterviewsOnlyWhere],
     },
     orderBy: {
       createdAt: "desc",

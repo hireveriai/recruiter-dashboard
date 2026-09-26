@@ -18,6 +18,7 @@ import {
   extractCandidateAnswersFromTranscript,
   fillMissingAnswersFromTranscript,
 } from "@/lib/server/services/transcript-fallback"
+import { aiInterviewsOnlyWhere } from "@/lib/server/veris-live/ai-scope"
 
 type InterviewAnswerSummaryRow = {
   attempt_id: string
@@ -823,6 +824,7 @@ async function getInterviewsScreenData(auth: RecruiterRequestContext, options: I
   const interviews = await prisma.interview.findMany({
     where: {
       organizationId: auth.organizationId,
+      AND: [aiInterviewsOnlyWhere],
       ...(options.interviewId ? { interviewId: options.interviewId } : {}),
     },
     orderBy: {
