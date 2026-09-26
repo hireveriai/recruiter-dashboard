@@ -391,7 +391,7 @@ function FaultNote({ note }) {
   }, [position])
 
   return (
-    <span className="inline-flex">
+    <span className="inline-flex shrink-0">
       <span
         ref={anchorRef}
         tabIndex={0}
@@ -1323,8 +1323,8 @@ export default function InterviewsPage() {
               <colgroup>
                 <col className="w-[13%]" />
                 <col className="w-[8%]" />
-                <col className="w-[15%]" />
-                <col className="w-[10%]" />
+                <col className="w-[13%]" />
+                <col className="w-[12%]" />
                 <col className="w-[8%]" />
                 <col className="w-[6%]" />
                 <col className="w-[9%]" />
@@ -1453,9 +1453,10 @@ export default function InterviewsPage() {
                         </div>
                       </td>
                       <td className="overflow-hidden px-3 py-4">
-                        <div className={`${cellLine} gap-1.5`}>
+                        {/* Wraps rather than clips when the column is narrow (small windows). */}
+                        <div className={`${cellLine} flex-wrap gap-x-1.5 gap-y-1`}>
                           <span
-                            className={`inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium ${getStatusBadge(recruiterStatus.key)}`}
+                            className={`inline-flex max-w-full rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4 ${getStatusBadge(recruiterStatus.key)}`}
                             title={recruiterStatus.description}
                           >
                             {recruiterStatus.label}
