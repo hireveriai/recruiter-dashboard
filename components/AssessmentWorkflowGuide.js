@@ -187,55 +187,265 @@ export function AssessmentWorkflowPanel({
   );
 }
 
-// Same 5 steps as buildSteps() above, without the per-assessment done/href/
-// cta wiring -- this is the generic "how this page works" explainer shown
-// on the Assessments list page, not tied to one assessment's own progress.
+// Same 5 steps as buildSteps() above, driven by the org-wide assessment
+// summary (GET /api/dashboard/assessments) instead of one assessment's own
+// progress -- this is the Assessments list page's view of "where am I".
 const FLOW_STEPS = [
-  { number: 1, title: "Create Assessment", description: "Set the job, duration, passing percentage, and question mix." },
-  { number: 2, title: "Generate & Review Questions", description: "Generate with AI, then edit, add, or remove before publishing." },
-  { number: 3, title: "Publish", description: "Lock the reviewed question set so it can be sent to a candidate." },
-  { number: 4, title: "Send to Candidate", description: "Invite a candidate, independent of Screening or the interview link." },
-  { number: 5, title: "Review Results", description: "See scores, pass/fail, and integrity risk once completed." },
+  { id: "create", number: 1, title: "Create Assessment", description: "Set the job, duration, passing percentage, and question mix." },
+  { id: "questions", number: 2, title: "Generate & Review Questions", description: "Generate with AI, then edit, add, or remove before publishing." },
+  { id: "publish", number: 3, title: "Publish", description: "Lock the reviewed question set so it can be sent to a candidate." },
+  { id: "send", number: 4, title: "Send to Candidate", description: "Invite a candidate, independent of Screening or the interview link." },
+  { id: "results", number: 5, title: "Review Results", description: "See scores, pass/fail, and integrity risk once completed." },
 ];
 
-/**
- * Horizontal counterpart to AssessmentWorkflowPanel, for the Assessments
- * list page rather than one assessment's own detail page -- a first-time
- * recruiter landing here sees the whole create -> send -> review sequence
- * at a glance instead of discovering each step page by page.
- */
-export function AssessmentFlowGuide({ className = "" }) {
+function countLabel(count, one, many) {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+function getFlowState(summary) {
+  const total = Number(summary?.totalAssessments ?? 0);
+  const drafts = Number(summary?.draftAssessments ?? 0);
+  const published = Number(summary?.publishedAssessments ?? 0);
+  const invites = Number(summary?.invitesSent ?? 0);
+  const completed = Number(summary?.completedAttempts ?? 0);
+  const awaiting = Number(summary?.awaitingReview ?? 0);
+  const recent = Array.isArray(summary?.recent) ? summary.recent : [];
+  const done = {
+    create: total > 0,
+    questions: published > 0,
+    publish: published > 0,
+    send: invites > 0,
+    results: completed > 0,
+  };
+  const completedCount = Object.values(done).filter(Boolean).length;
+
+  if (!done.create) {
+    return {
+      activeId: "create",
+      done,
+      completedCount,
+      recommendation: "Create your first VERIS Assessment: choose the job, duration, and passing score.",
+      chip: "Start here",
+      action: { kind: "create", label: "Create Assessment" },
+    };
+  }
+
+  if (!done.publish) {
+    const draft = recent.find((assessment) => assessment.status === "DRAFT");
+    return {
+      activeId: "questions",
+      done,
+      completedCount,
+      recommendation: `${countLabel(drafts, "draft is", "drafts are")} waiting. Generate and review the questions, then publish.`,
+      chip: countLabel(drafts, "draft", "drafts"),
+      action: draft
+        ? { kind: "link", label: "Open Draft", href: `/assessments/${draft.id}/questions` }
+        : { kind: "drafts", label: "View Drafts" },
+    };
+  }
+
+  if (!done.send) {
+    return {
+      activeId: "send",
+      done,
+      completedCount,
+      recommendation: `${countLabel(published, "published assessment is", "published assessments are")} ready. Send one to a candidate.`,
+      chip: `${published} published`,
+      action: { kind: "send", label: "Send Assessment" },
+    };
+  }
+
+  const withResults =
+    recent.find((assessment) => Number(assessment.completedAttempts) > 0) ??
+    recent.find((assessment) => Number(assessment.invitesSent) > 0);
+
+  return {
+    activeId: "results",
+    done,
+    completedCount,
+    recommendation:
+      completed === 0
+        ? `${countLabel(invites, "invite has", "invites have")} been sent. Results appear here as candidates finish.`
+        : awaiting > 0
+          ? `${countLabel(completed, "attempt", "attempts")} submitted, ${awaiting} still being evaluated. Review scores, pass/fail, and integrity risk.`
+          : `${countLabel(completed, "candidate has", "candidates have")} completed an assessment. Review scores, pass/fail, and integrity risk.`,
+    chip: completed > 0 ? `${completed} completed` : `${invites} sent`,
+    action: withResults ? { kind: "link", label: "View Results", href: `/assessments/${withResults.id}/results` } : null,
+  };
+}
+
+function SparkIcon() {
   return (
-    <div className={`rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 sm:p-5 ${className}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-300">Assessment Flow</p>
-
-      <div className="mt-4 flex flex-col gap-0 sm:flex-row sm:items-stretch sm:gap-0">
-        {FLOW_STEPS.map((step, index) => (
-          <div key={step.number} className="flex flex-1 items-stretch">
-            <div className="flex min-w-0 flex-1 flex-col items-start gap-2 px-1 py-2 sm:px-3">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-violet-400/35 bg-violet-400/10 text-[12px] font-semibold text-violet-100">
-                {step.number}
-              </div>
-              <p className="text-[13px] font-semibold leading-tight text-white">{step.title}</p>
-              <p className="text-[11px] leading-4 text-slate-400">{step.description}</p>
-            </div>
-
-            {index < FLOW_STEPS.length - 1 ? (
-              <div className="hidden w-6 shrink-0 items-center justify-center text-violet-400/40 sm:flex" aria-hidden="true">
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
-              </div>
-            ) : null}
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-4 border-t border-violet-500/10 pt-3 text-[11px] leading-5 text-slate-500">
-        Independent of VERIS Screening and the AI Interview — send it before an interview, skip straight to the
-        interview link, or use it on its own.
-      </p>
-    </div>
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v4" />
+      <path d="M12 18v4" />
+      <path d="m4.93 4.93 2.83 2.83" />
+      <path d="m16.24 16.24 2.83 2.83" />
+      <path d="M2 12h4" />
+      <path d="M18 12h4" />
+      <path d="m4.93 19.07 2.83-2.83" />
+      <path d="m16.24 7.76 2.83-2.83" />
+      <circle cx="12" cy="12" r="3.4" />
+    </svg>
   );
 }
 
+function FlowAction({ action, onCreate, onSend, onShowDrafts, hrefFor }) {
+  const className =
+    "inline-flex items-center justify-center rounded-lg border border-white/20 bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0f172a] shadow-[0_10px_30px_rgba(255,255,255,0.12)] transition duration-200 hover:bg-violet-50";
+
+  if (action.kind === "link") {
+    return (
+      <a href={hrefFor(action.href)} className={className}>
+        {action.label}
+      </a>
+    );
+  }
+
+  const onClick = action.kind === "create" ? onCreate : action.kind === "send" ? onSend : onShowDrafts;
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {action.label}
+    </button>
+  );
+}
+
+function FlowStep({ step, status, action, actionProps }) {
+  const isActive = status === "active";
+  const isCompleted = status === "completed";
+
+  return (
+    <li
+      className={[
+        "relative flex gap-3 rounded-xl border p-3 transition duration-200 lg:flex-col lg:items-center lg:text-center",
+        isActive
+          ? `${THEME.border} bg-gradient-to-br ${THEME.background} ${THEME.glow} hiring-workflow-active`
+          : isCompleted
+            ? "border-transparent hover:border-emerald-400/10 hover:bg-emerald-500/[0.035]"
+            : "border-transparent hover:border-slate-800/70 hover:bg-slate-950/20",
+      ].join(" ")}
+    >
+      {/* Opaque base so the connector line passes behind the node, not through it. */}
+      <div className="relative z-10 h-9 w-9 shrink-0 rounded-xl bg-slate-900">
+        <div
+          className={[
+            "flex h-full w-full items-center justify-center rounded-xl border text-xs font-semibold",
+            isActive ? `${THEME.border} ${THEME.text} bg-violet-400/15 shadow-[0_0_18px_currentColor]` : "",
+            isCompleted ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "",
+            !isActive && !isCompleted ? "border-slate-700 bg-slate-950/40 text-slate-500" : "",
+          ].join(" ")}
+        >
+          {isCompleted ? <CheckIcon /> : step.number}
+        </div>
+        {isActive ? <span className={`absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ${THEME.indicator} hiring-workflow-pulse`} /> : null}
+      </div>
+
+      <div className="min-w-0 lg:mt-1">
+        <p className={`text-[13px] font-semibold leading-tight ${isActive ? "text-white" : isCompleted ? "text-slate-200" : "text-slate-400"}`}>
+          {step.title}
+        </p>
+        <p
+          className={[
+            "mt-1 text-[9px] font-semibold uppercase leading-none tracking-[0.16em]",
+            isActive ? THEME.text : isCompleted ? "text-emerald-300/80" : "text-slate-500",
+          ].join(" ")}
+        >
+          {isActive ? "Now" : isCompleted ? "Completed" : "Pending"}
+        </p>
+        <p className={`mt-2 text-[11px] leading-4 ${isActive ? "text-slate-300" : "text-slate-500"}`}>{step.description}</p>
+        {isActive && action ? (
+          <div className="mt-3">
+            <FlowAction action={action} {...actionProps} />
+          </div>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+/**
+ * Horizontal counterpart to AssessmentWorkflowPanel for the Assessments list
+ * page, in the dashboard Hiring Workflow's visual language: a VERIS
+ * recommendation up top, then the five steps on one connecting line with
+ * completed ones checked and the current one lifted out as the "Now" card.
+ */
+export function AssessmentFlowGuide({
+  summary = null,
+  loading = false,
+  onCreate,
+  onSend,
+  onShowDrafts,
+  hrefFor = (path) => path,
+  className = "",
+}) {
+  const ready = Boolean(summary) && !loading;
+  const state = ready ? getFlowState(summary) : null;
+  const activeIndex = state ? FLOW_STEPS.findIndex((step) => step.id === state.activeId) : -1;
+  const progressPercent = activeIndex > 0 ? (activeIndex / (FLOW_STEPS.length - 1)) * 100 : 0;
+  const actionProps = { onCreate, onSend, onShowDrafts, hrefFor };
+
+  return (
+    <section
+      className={`hv-theme-assessment-panel overflow-hidden rounded-2xl border border-violet-300/15 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(2,6,23,0.84))] p-4 shadow-[0_14px_44px_rgba(2,6,23,0.28)] sm:p-5 ${className}`}
+    >
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-300/25 bg-violet-400/10 text-violet-100 shadow-[0_0_24px_rgba(139,92,246,0.16)]">
+            <SparkIcon />
+            <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-violet-300 hiring-workflow-pulse" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200/80">
+              Assessment Flow · VERIS Recommendation
+            </p>
+            <p className="mt-1.5 text-sm leading-6 text-white">
+              {state ? state.recommendation : "Checking your assessment progress…"}
+            </p>
+          </div>
+        </div>
+        {state ? (
+          <div className="flex shrink-0 flex-wrap gap-2 text-[9px] font-semibold uppercase tracking-[0.14em] md:justify-end">
+            <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-2 py-1 text-violet-100">
+              {state.completedCount} of {FLOW_STEPS.length} steps completed
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-slate-300">{state.chip}</span>
+          </div>
+        ) : null}
+      </div>
+
+      <ol className="relative mt-5 grid gap-2 lg:grid-cols-5 lg:gap-3">
+        {/* Connector through the node centres (12px card padding + half the 36px node). */}
+        <li aria-hidden="true" className="pointer-events-none absolute left-[10%] right-[10%] top-[30px] hidden h-px overflow-hidden bg-slate-800/90 lg:block">
+          <div
+            className="h-full bg-gradient-to-r from-emerald-400/70 via-violet-400 to-violet-300 transition-[width] duration-700"
+            style={{ width: `${progressPercent}%` }}
+          />
+          <div className="absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-violet-300/80 to-transparent hiring-workflow-flow-x" />
+        </li>
+        {FLOW_STEPS.map((step, index) => {
+          const status = !state
+            ? "pending"
+            : index === activeIndex
+              ? "active"
+              : state.done[step.id]
+                ? "completed"
+                : "pending";
+          return (
+            <FlowStep
+              key={step.id}
+              step={step}
+              status={status}
+              action={index === activeIndex ? state?.action : null}
+              actionProps={actionProps}
+            />
+          );
+        })}
+      </ol>
+
+      <p className="mt-4 border-t border-violet-500/10 pt-3 text-[11px] leading-5 text-slate-500">
+        Independent of VERIS Screening and the AI Interview: send it before an interview, skip straight to the
+        interview link, or use it on its own.
+      </p>
+    </section>
+  );
+}

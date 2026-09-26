@@ -338,6 +338,13 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+:root[data-theme="light"] .hv-theme-assessment-panel {
+  background:
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.12), transparent 42%),
+    linear-gradient(135deg, rgba(245, 243, 255, 0.98), rgba(248, 250, 252, 0.98));
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+}
+
 :root[data-theme="light"] .hv-theme-intelligence-panel {
   background:
     radial-gradient(circle at top left, rgba(6, 182, 212, 0.12), transparent 42%),
@@ -1021,6 +1028,21 @@ a {
   animation: hiring-workflow-flow 4s linear infinite;
 }
 
+/* Horizontal twin of hiring-workflow-flow, for the Assessments flow strip. */
+@keyframes hiring-workflow-flow-x {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.hiring-workflow-flow-x {
+  animation: hiring-workflow-flow-x 4.5s linear infinite;
+}
+
 @keyframes hv-ai-scan {
   0% {
     transform: translateY(-120%);
@@ -1546,6 +1568,7 @@ a {
   .verisnova-skeleton::after,
   .hiring-workflow-pulse,
   .hiring-workflow-flow,
+  .hiring-workflow-flow-x,
   .hv-ai-panel::before,
   .hv-ai-panel::after,
   .hv-ai-node,

@@ -46,6 +46,26 @@ export default function AssessmentsPage() {
   const [openSend, setOpenSend] = useState(false)
   const [editing, setEditing] = useState(null)
   const [lockedFeature, setLockedFeature] = useState(null)
+  const [flowSummary, setFlowSummary] = useState(null)
+  const [flowLoading, setFlowLoading] = useState(true)
+
+  // Org-wide progress for the Assessment Flow strip. Cache-busted because the
+  // endpoint allows a short private cache and this refreshes right after the
+  // recruiter creates or sends something.
+  const loadFlowSummary = () => {
+    fetch(buildAuthUrl(`/api/dashboard/assessments?t=${Date.now()}`, searchParams), { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success) setFlowSummary(data.data)
+      })
+      .catch(() => {})
+      .finally(() => setFlowLoading(false))
+  }
+
+  useEffect(() => {
+    loadFlowSummary()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadAssessments = () => {
     setLoading(true)
@@ -110,7 +130,18 @@ export default function AssessmentsPage() {
           </div>
         </div>
 
-        <AssessmentFlowGuide className="mt-6" />
+        <AssessmentFlowGuide
+          className="mt-6"
+          summary={flowSummary}
+          loading={flowLoading}
+          hrefFor={(path) => buildAuthUrl(path, searchParams)}
+          onCreate={() => {
+            setEditing(null)
+            setOpenCreate(true)
+          }}
+          onSend={() => setOpenSend(true)}
+          onShowDrafts={() => setStatus("DRAFT")}
+        />
 
         <div className="mt-6 flex flex-wrap gap-2">
           {tabs.map((tab) => (
@@ -209,9 +240,18 @@ export default function AssessmentsPage() {
         open={openCreate}
         onClose={() => setOpenCreate(false)}
         initialAssessment={editing}
-        onSuccess={loadAssessments}
+        onSuccess={() => {
+          loadAssessments()
+          loadFlowSummary()
+        }}
       />
-      <SendAssessmentModal isOpen={openSend} onClose={() => setOpenSend(false)} />
+      <SendAssessmentModal
+        isOpen={openSend}
+        onClose={() => {
+          setOpenSend(false)
+          loadFlowSummary()
+        }}
+      />
     </div>
   )
 }
