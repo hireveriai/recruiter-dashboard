@@ -612,7 +612,10 @@ const tableMutedChip =
 const tableProcessingChip =
   "inline-flex max-w-full items-center rounded-lg py-1 text-xs font-medium leading-none text-amber-100"
 const recordingAction =
-  "hv-recording-action -ml-2 inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[13px] font-semibold leading-tight transition"
+  "hv-recording-action -ml-2 inline-flex h-7 max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[13px] font-semibold leading-none transition"
+// First line of every register cell: one fixed-height, vertically centred line
+// so plain text, chips and buttons share the same baseline across the row.
+const cellLine = "flex min-h-7 min-w-0 items-center"
 
 function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloading = false, isLoadingDetails = false }) {
   if (!interview) {
@@ -784,6 +787,7 @@ export default function InterviewsPage() {
   const cacheKey = `interviews:${searchParams.toString()}`
   // AI Interviews / VERIS Live Interviews switch (only when VERIS Live is enabled).
   const [interviewView, setInterviewView] = useState("ai")
+  const [showStatusGuide, setShowStatusGuide] = useState(false)
   const [liveEnabled, setLiveEnabled] = useState(false)
 
   useEffect(() => {
@@ -1220,27 +1224,40 @@ export default function InterviewsPage() {
             <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
           </div>
 
-          <div className="border-b border-slate-800 bg-slate-950/30 px-5 py-4 2xl:px-6 2xl:py-5">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Status Guide</p>
-                <p className="mt-1 text-sm text-slate-400">Recruiter-facing labels describe what happened in the candidate session.</p>
+          <div className="border-b border-slate-800 bg-slate-950/30 px-5 py-3 2xl:px-6">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Status guide</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {STATUS_GUIDE_KEYS.map((key) => (
+                  <span
+                    key={key}
+                    className={`inline-flex cursor-help whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getStatusBadge(key)}`}
+                    title={RECRUITER_STATUS_DEFINITIONS[key].description}
+                  >
+                    {RECRUITER_STATUS_DEFINITIONS[key].label}
+                  </span>
+                ))}
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {STATUS_GUIDE_KEYS.map((key) => {
-                  const item = RECRUITER_STATUS_DEFINITIONS[key]
-
-                  return (
-                    <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/40 px-3.5 py-2.5 2xl:px-4 2xl:py-3">
-                      <span className={`inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getStatusBadge(key)}`}>
-                        {item.label}
-                      </span>
-                      <p className="mt-2 text-xs leading-5 text-slate-400">{item.description}</p>
-                    </div>
-                  )
-                })}
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowStatusGuide((value) => !value)}
+                aria-expanded={showStatusGuide}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-300 transition hover:text-cyan-200"
+              >
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                {showStatusGuide ? "Hide meanings" : "What do these mean?"}
+              </button>
             </div>
+            {showStatusGuide ? (
+              <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-xs leading-5 sm:grid-cols-2 xl:grid-cols-3">
+                {STATUS_GUIDE_KEYS.map((key) => (
+                  <div key={key} className="flex gap-2">
+                    <dt className="w-24 shrink-0 font-semibold text-slate-300">{RECRUITER_STATUS_DEFINITIONS[key].label}</dt>
+                    <dd className="text-slate-400">{RECRUITER_STATUS_DEFINITIONS[key].description}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
           </div>
 
           <div className="grid gap-x-3 gap-y-2.5 border-b border-slate-800 bg-slate-950/20 px-5 py-3 lg:grid-cols-2 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto] 2xl:gap-x-4 2xl:px-6 2xl:py-4">
@@ -1379,11 +1396,14 @@ export default function InterviewsPage() {
                     return (
                     <tr key={interview.interviewId} className="border-t border-slate-800/80 align-top text-slate-200 transition-colors hover:bg-slate-800/30">
                       <td className="px-3 py-4 font-medium text-white">
-                        <span className="block break-words font-semibold leading-snug" title={interview.candidateName || "Candidate"}>
-                          {interview.candidateName}
-                        </span>
+                        <div className={cellLine}>
+                          <span className="block min-w-0 break-words font-semibold leading-snug" title={interview.candidateName || "Candidate"}>
+                            {interview.candidateName}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-3 py-4">
+                        <div className={cellLine}>
                         {interview.hasRecording && interview.recordingUrl ? (
                           <Link
                             href={interview.recordingUrl}
@@ -1404,10 +1424,15 @@ export default function InterviewsPage() {
                             Not available
                           </span>
                         )}
+                        </div>
                       </td>
-                      <td className="px-3 py-4 text-slate-300"><span className="block truncate">{interview.jobTitle}</span></td>
+                      <td className="px-3 py-4 text-slate-300">
+                        <div className={cellLine}>
+                          <span className="block truncate" title={interview.jobTitle || ""}>{interview.jobTitle}</span>
+                        </div>
+                      </td>
                       <td className="overflow-hidden px-3 py-4">
-                        <div className="flex min-w-0 items-center gap-1.5">
+                        <div className={`${cellLine} gap-1.5`}>
                           <span
                             className={`inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium ${getStatusBadge(recruiterStatus.key)}`}
                             title={recruiterStatus.description}
@@ -1430,14 +1455,18 @@ export default function InterviewsPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-3 py-4 text-slate-300"><span className="block truncate">{getAccessLabel(interview)}</span></td>
                       <td className="px-3 py-4 text-slate-300">
-                        <span className="whitespace-nowrap">
+                        <div className={cellLine}>
+                          <span className="block truncate">{getAccessLabel(interview)}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 text-slate-300">
+                        <div className={`${cellLine} whitespace-nowrap`}>
                           {formatScore(interview.score)}
                           {evidenceIncomplete ? (
                             <span className="text-amber-300" title={incompleteEvidenceNote}>*</span>
                           ) : null}
-                        </span>
+                        </div>
                         {evidenceCompleteness ? (
                           <span className="mt-1 block whitespace-nowrap text-[11px] text-amber-300/70">
                             Evidence {evidenceCompleteness.available}/{evidenceCompleteness.total}
@@ -1445,12 +1474,14 @@ export default function InterviewsPage() {
                         ) : null}
                       </td>
                       <td className="px-3 py-4 text-slate-300">
-                        <span className="block truncate">
-                          {interview.decision ?? "-"}
-                          {evidenceIncomplete && interview.decision ? (
-                            <span className="text-amber-300" title={incompleteEvidenceNote}>*</span>
-                          ) : null}
-                        </span>
+                        <div className={cellLine}>
+                          <span className="block truncate">
+                            {interview.decision ?? "-"}
+                            {evidenceIncomplete && interview.decision ? (
+                              <span className="text-amber-300" title={incompleteEvidenceNote}>*</span>
+                            ) : null}
+                          </span>
+                        </div>
                         {evidenceIncomplete ? (
                           <span className="mt-1 block text-[11px] leading-snug text-amber-300/70">
                             Review manually before deciding
@@ -1458,31 +1489,33 @@ export default function InterviewsPage() {
                         ) : null}
                       </td>
                       <td className="px-3 py-4">
+                        <div className={cellLine}>
                         {interview.recruiterDecisionStatus ? (
                           <DecisionPill status={interview.recruiterDecisionStatus} />
                         ) : isCompleted && !isEarlyExit ? (
-                          <span className="inline-flex whitespace-nowrap rounded-full border border-slate-700 bg-slate-950/30 px-2.5 py-1 text-[11px] font-semibold text-slate-400">
+                          <span className="inline-flex whitespace-nowrap rounded-full border border-slate-700 bg-slate-950/30 px-2.5 py-0.5 text-[11px] font-semibold text-slate-400">
                             Awaiting decision
                           </span>
                         ) : (
                           <span className="text-slate-600">-</span>
                         )}
+                        </div>
                       </td>
                       <td className="px-3 py-4 text-[13px] leading-snug text-slate-400">
-                        <span className="block whitespace-nowrap">{latestActivity.date}</span>
-                        <span className="mt-0.5 block whitespace-nowrap text-slate-500">{latestActivity.time}</span>
+                        <div className={`${cellLine} whitespace-nowrap`}>{latestActivity.date}</div>
+                        <span className="block whitespace-nowrap text-xs text-slate-500">{latestActivity.time}</span>
                       </td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-3 py-4">
+                        <div className={`${cellLine} justify-end gap-2`}>
                           {hasHiringActions ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button
                                   type="button"
-                                  className="hv-interview-actions-trigger inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+                                  className="hv-interview-actions-trigger inline-flex h-7 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
                                   aria-label={`Open hiring actions for ${interview.candidateName || "candidate"}`}
                                 >
-                                  <Ellipsis className="h-5 w-5" aria-hidden="true" />
+                                  <Ellipsis className="h-4 w-4" aria-hidden="true" />
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent
