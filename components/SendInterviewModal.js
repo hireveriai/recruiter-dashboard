@@ -88,17 +88,30 @@ function AccessFeatureIcon({ type }) {
   )
 }
 
-function FormStep({ number, title, hint, children }) {
+// Same control styling as the Create Job modal. Slate and cyan are remapped by
+// the light theme (globals.css), so one set of classes serves both themes.
+const INPUT_CLASS =
+  "w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/70 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.12)]"
+
+const INPUT_ERROR_CLASS = "border-rose-400/70 focus:border-rose-300 focus:shadow-[0_0_0_3px_rgba(244,63,94,0.12)]"
+
+function FormStep({ number, title, hint, aside = null, children }) {
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-sm sm:p-5">
-      <div className="mb-3 flex items-start gap-3">
-        <span className="hv-solid-action flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-indigo-600 text-sm font-semibold text-white shadow-sm">
-          {number}
-        </span>
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-white">{title}</h3>
-          {hint ? <p className="mt-0.5 text-xs text-slate-400">{hint}</p> : null}
+    <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-cyan-400/15 text-xs font-semibold text-cyan-200"
+          >
+            {number}
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-white">{title}</h3>
+            {hint ? <p className="mt-0.5 text-xs leading-5 text-slate-400">{hint}</p> : null}
+          </div>
         </div>
+        {aside}
       </div>
       <div className="space-y-4">{children}</div>
     </section>
@@ -114,25 +127,55 @@ function SummaryItem({ label, value, muted }) {
   )
 }
 
-function DateTimeField({ label, value, onChange }) {
+function DateTimeField({ id, label, value, onChange, invalid = false }) {
   return (
     <div>
-      <label className="mb-2 block text-sm text-gray-400">{label}</label>
+      <label htmlFor={id} className="mb-1.5 block text-sm text-slate-300">
+        {label}
+      </label>
       <div className="relative">
-        <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
+        <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2">
           <CalendarIcon />
         </div>
         <input
+          id={id}
           type="datetime-local"
-          className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-10 py-2 text-sm text-white outline-none transition focus:border-cyan-400/60 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.08)]"
+          className={`${INPUT_CLASS} pl-10 ${invalid ? INPUT_ERROR_CLASS : ""}`}
           value={value}
           onChange={onChange}
         />
-        <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-medium uppercase tracking-[0.18em] text-cyan-200/70">
-          Pick
-        </div>
       </div>
     </div>
+  )
+}
+
+function CheckCircleIcon({ className = "h-4 w-4" }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+function ResultStatusPill({ result }) {
+  if (result.status !== "success") {
+    return (
+      <span className="inline-flex flex-none items-center rounded-full border border-rose-400/30 bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-200">
+        Failed
+      </span>
+    )
+  }
+
+  const label = result.emailStatus === "sent" ? "Emailed" : result.emailStatus === "queued" ? "Queued" : "Link only"
+  const tone =
+    result.emailStatus === "sent" || result.emailStatus === "queued"
+      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+      : "border-amber-400/30 bg-amber-500/10 text-amber-200"
+
+  return (
+    <span className={`inline-flex flex-none items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${tone}`}>
+      {label}
+    </span>
   )
 }
 
@@ -288,6 +331,8 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
   const [creditConfirmationOpen, setCreditConfirmationOpen] = useState(false)
   const [confirmedCreditNotice, setConfirmedCreditNotice] = useState(false)
   const [upgradeLimitOpen, setUpgradeLimitOpen] = useState(false)
+  const [emailTouched, setEmailTouched] = useState(false)
+  const bodyRef = useRef(null)
 
   const resetModalState = () => {
     setJobId("")
@@ -310,6 +355,7 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
     setCreditConfirmationOpen(false)
     setConfirmedCreditNotice(false)
     setUpgradeLimitOpen(false)
+    setEmailTouched(false)
     resetFileInputs()
   }
 
@@ -415,6 +461,13 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
     return () => clearTimeout(timer)
   }, [copyStatus])
 
+  // Results render above the form; scroll them into view once a send finishes.
+  useEffect(() => {
+    if (link || batchResults.length > 0) {
+      bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }, [link, batchResults])
+
   const hasJobs = jobs.length > 0
   const emptyJobsState = useMemo(() => !jobsLoading && !hasJobs, [jobsLoading, hasJobs])
   const hasCurrentCandidateInput = Boolean(name.trim() || email.trim() || resumeFile)
@@ -470,6 +523,7 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
   const clearCurrentCandidate = () => {
     setName("")
     setEmail("")
+    setEmailTouched(false)
     setResumeFile(null)
     resetFileInputs()
   }
@@ -636,6 +690,11 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
 
     if (accessType === "SCHEDULED" && (!startTime || !endTime)) {
       showFormError("Start time and end time are required")
+      return
+    }
+
+    if (accessType === "SCHEDULED" && new Date(endTime) <= new Date(startTime)) {
+      showFormError("End time must be after the start time")
       return
     }
 
@@ -808,23 +867,35 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
 
   if (!isOpen) return null
 
+  const successfulCount = batchResults.filter((result) => result.status === "success").length
+  const failedCount = batchResults.filter((result) => result.status === "failed").length
+  const showBatchResults = batchResults.length > 1 || failedCount > 0
+  const emailLooksInvalid = emailTouched && email.trim() !== "" && !isValidEmail(email)
+  const scheduleOrderInvalid =
+    accessType === "SCHEDULED" && Boolean(startTime && endTime) && new Date(endTime) <= new Date(startTime)
+
   return (
-    <div className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-md sm:py-6" role="dialog" aria-modal="true">
+    <div
+      className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 px-3 py-3 backdrop-blur-md sm:items-center sm:px-4 sm:py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="send-interview-title"
+    >
       {creditConfirmationOpen ? (
-        <div className="hv-theme-dialog-backdrop fixed inset-0 z-[65] flex items-start justify-center overflow-y-auto bg-slate-950/70 px-4 py-4 backdrop-blur-sm sm:py-6" role="dialog" aria-modal="true">
-          <div className="hv-theme-modal w-full max-w-md rounded-2xl border border-cyan-400/20 bg-[#0b1220] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-200/75">Credit Notice</p>
-            <h3 className="mt-3 text-lg font-semibold text-white">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-[65] flex items-center justify-center overflow-y-auto bg-slate-950/70 px-4 py-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="hv-theme-modal w-full max-w-md rounded-[20px] border border-slate-700/70 bg-[#0a1020] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Credit Notice</p>
+            <h3 className="mt-2 text-lg font-semibold text-white">
               You are about to use {pendingCandidateCount} AI/Live Interview {pendingCandidateCount === 1 ? "credit" : "credits"}.
             </h3>
-            <p className="mt-3 text-sm leading-6 text-slate-300">
+            <p className="mt-2 text-sm leading-6 text-slate-300">
               Remaining AI/Live Interview Credits after this batch: {Math.max(0, trialCredits.interviewCreditsRemaining - pendingCandidateCount)}
             </p>
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setCreditConfirmationOpen(false)}
-                className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white"
+                className="rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500"
               >
                 Cancel
               </button>
@@ -835,7 +906,7 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                   setConfirmedCreditNotice(true)
                   void handleSubmit({ confirmedCredit: true })
                 }}
-                className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50"
+                className="hv-solid-action rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500"
               >
                 Continue
               </button>
@@ -850,10 +921,11 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
         message={trialCredits.upgradeMessage}
       />
       {duplicateWarning ? (
-        <div className="hv-theme-dialog-backdrop fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-sm sm:py-6" role="dialog" aria-modal="true">
-          <div className="hv-theme-modal w-full max-w-md rounded-2xl border border-amber-400/25 bg-[#0b1220] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
-            <h3 className="text-lg font-semibold text-white">Duplicate invite detected</h3>
-            <p className="mt-3 text-sm leading-6 text-slate-300">
+        <div className="hv-theme-dialog-backdrop fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="hv-theme-modal w-full max-w-md rounded-[20px] border border-amber-400/25 bg-[#0a1020] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-300">Already invited</p>
+            <h3 className="mt-2 text-lg font-semibold text-white">Duplicate invite detected</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
               Previously invited candidates are skipped by default. Select any candidate who should receive another invite.
             </p>
             <div className="mt-4 max-h-48 space-y-2 overflow-y-auto">
@@ -882,11 +954,11 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                 )
               })}
             </div>
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setDuplicateWarning(null)}
-                className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white"
+                className="rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500"
               >
                 Cancel
               </button>
@@ -900,10 +972,10 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                   setDuplicateWarning(null)
                   void handleSubmit({ confirmedDuplicate: true, skippedEmails })
                 }}
-                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                   hasSelectedDuplicate
-                    ? "hv-solid-action border-[#2563eb] bg-[#2563eb] text-white shadow-sm hover:border-[#1d4ed8] hover:bg-[#1d4ed8]"
-                    : "cursor-not-allowed border-[#cbd5e1] bg-[#e2e8f0] text-[#64748b]"
+                    ? "hv-solid-action bg-cyan-600 text-white hover:bg-cyan-500"
+                    : "cursor-not-allowed border border-slate-700 bg-slate-800 text-slate-500"
                 }`}
               >
                 Continue with selected
@@ -912,59 +984,47 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
           </div>
         </div>
       ) : null}
-      <div className="hv-send-interview-modal relative flex max-h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-slate-900 text-white shadow-[0_24px_80px_rgba(15,23,42,0.35)]">
-        {/* Header */}
-        <div className="relative shrink-0 overflow-hidden border-b border-slate-800 px-5 py-5 sm:px-7">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_0%_0%,rgba(34,211,238,0.14),transparent_60%),radial-gradient(50%_120%_at_100%_0%,rgba(99,102,241,0.12),transparent_60%)]"
-          />
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <span className="hv-solid-action flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20">
-                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="3" width="6" height="11" rx="3" />
-                  <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
-                  <path d="M19.5 3.5l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z" />
-                </svg>
-              </span>
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">VERIS AI Interview</p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">Send Interview Link</h2>
-                <p className="mt-1 max-w-xl text-sm text-slate-400">
-                  Add one or several candidates, apply one access window, and send every secure interview invite in a single batch.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="rounded-full border border-slate-700 bg-slate-900 px-3.5 py-1.5 text-sm text-slate-300 transition hover:text-white"
-            >
-              Close
-            </button>
+
+      <div className="hv-send-interview-modal hv-theme-modal relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-slate-700/70 bg-[#0a1020]/95 text-white shadow-[0_30px_80px_rgba(2,6,23,0.55)] sm:max-h-[calc(100dvh-3rem)]">
+        {/* Header stays put while the form scrolls. */}
+        <div className="flex flex-none items-start justify-between gap-4 border-b border-slate-800 px-5 py-3.5 sm:px-7 sm:py-5 [@media(max-height:720px)]:sm:py-3.5">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">VERIS AI Interview</p>
+            <h2 id="send-interview-title" className="mt-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+              Send Interview Link
+            </h2>
+            <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-slate-400 sm:block [@media(max-height:720px)]:hidden">
+              Add one or several candidates, apply one access window, and send every secure interview invite in a single batch.
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="flex-none rounded-full border border-slate-700/80 bg-slate-900/80 px-3.5 py-1.5 text-sm text-slate-300 transition hover:border-cyan-300/60 hover:text-white"
+          >
+            Close
+          </button>
         </div>
 
         {emptyJobsState ? (
           <div className="overflow-y-auto p-5 sm:p-7">
-            <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.28em] text-amber-200/80">Job Required</p>
-              <h3 className="mt-3 text-xl font-semibold text-white">Create a job first to send your interview link</h3>
-              <p className="mt-3 text-sm text-amber-100/85">
+            <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-5 sm:p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-200/80">Job Required</p>
+              <h3 className="mt-2 text-lg font-semibold text-white">Create a job first to send your interview link</h3>
+              <p className="mt-2 text-sm text-amber-100/85">
                 Interview links can only be generated against an existing job in your recruiter workspace.
               </p>
-              <div className="mt-5 flex flex-wrap gap-3">
+              <div className="mt-5 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={openCreateJobFlow}
-                  className="rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                  className="hv-solid-action rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500"
                 >
                   Create Job First
                 </button>
                 <Link
                   href="/jobs"
-                  className="rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white"
+                  className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white"
                   onClick={handleClose}
                 >
                   Go to Jobs Page
@@ -972,7 +1032,7 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white"
+                  className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white"
                 >
                   Close
                 </button>
@@ -981,207 +1041,81 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
           </div>
         ) : (
           <>
-            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_300px]">
-              {/* Steps */}
-              <div className="space-y-4 p-5 sm:p-6">
-                <FormStep number={1} title="Job" hint="The role this interview evaluates.">
-                  <select
-                    className="w-full truncate rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-white shadow-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                    value={jobId}
-                    onChange={(e) => setJobId(e.target.value)}
-                    disabled={jobsLoading}
-                    aria-label="Select job"
-                  >
-                    <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
-                    {jobs.map((job) => {
-                      const optionId = job.jobId || job.job_id
-                      const optionTitle = job.jobTitle || job.job_title
-
-                      return (
-                        <option key={optionId} value={optionId}>
-                          {optionTitle}
-                        </option>
-                      )
-                    })}
-                  </select>
-                </FormStep>
-
-                <FormStep
-                  number={2}
-                  title={queuedCandidates.length > 0 ? "Candidates" : "Candidate"}
-                  hint={`Name, email and resume. Add up to ${MAX_BATCH_CANDIDATES} candidates to one batch.`}
-                >
-                  {queuedCandidates.length > 0 ? (
-                    <div className="space-y-2">
-                      {queuedCandidates.map((candidate, index) => (
-                        <div key={candidate.id} className="flex items-center gap-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] px-3 py-2.5">
-                          <span className="hv-solid-action flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-[11px] font-semibold text-white">
-                            {index + 1}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-white">{candidate.name}</p>
-                            <p className="truncate text-xs text-slate-400">
-                              {candidate.email} · {candidate.resumeFile.name}
+            <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto">
+              <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+                <div className="min-w-0 space-y-5">
+                  {/* Results sit first, so they are the first thing seen after sending. */}
+                  {link ? (
+                    <section className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.08] p-4 sm:p-5" aria-live="polite">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-emerald-400/15 text-emerald-200">
+                          <CheckCircleIcon />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-white">
+                            {emailStatus === "sent"
+                              ? "Link generated and email sent successfully"
+                              : emailStatus === "queued"
+                                ? "Link generated. Email delivery is in progress."
+                                : "Link generated successfully. Email delivery needs attention."}
+                          </p>
+                          {emailStatus === "failed" ? (
+                            <p className="mt-1 text-xs leading-5 text-amber-200">
+                              The interview link is ready, but the email could not be delivered from the server. You can still copy and send it manually.
+                              {emailError ? <><br />Reason: {emailError}</> : null}
                             </p>
+                          ) : null}
+                          {copyStatus === "failed" ? (
+                            <p className="mt-1 text-xs text-rose-200">
+                              Copy failed on this browser session. Please select the link manually.
+                            </p>
+                          ) : null}
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                            <input
+                              aria-label="Interview link"
+                              className={`${INPUT_CLASS} min-w-0 flex-1 font-mono text-xs`}
+                              value={link}
+                              readOnly
+                              onFocus={(event) => event.target.select()}
+                            />
+                            <button
+                              type="button"
+                              onClick={copy}
+                              className="flex-none rounded-xl border border-slate-600 bg-slate-900/90 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-300/60"
+                            >
+                              {copyStatus === "success" ? "Copied" : "Copy Link"}
+                            </button>
                           </div>
                           <button
                             type="button"
-                            onClick={() => removeQueuedCandidate(candidate.id)}
-                            disabled={loading}
-                            className="shrink-0 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-200 transition hover:border-rose-300/50 hover:text-white disabled:opacity-50"
+                            onClick={startAnotherBatch}
+                            className="mt-3 text-sm font-semibold text-cyan-200 underline-offset-4 transition hover:text-cyan-100 hover:underline"
                           >
-                            Remove
+                            Send another candidate
                           </button>
                         </div>
-                      ))}
-                      <p className="pt-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Add another candidate</p>
-                    </div>
+                      </div>
+                    </section>
                   ) : null}
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm text-slate-300">Full name *</label>
-                      <input
-                        className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-white shadow-sm outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                        placeholder="Enter candidate name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-300">Email *</label>
-                      <input
-                        type="email"
-                        className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-white shadow-sm outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                        placeholder="candidate@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-slate-300">Resume *</label>
-                    {resumeFile ? (
-                      <div className="mt-1.5 flex flex-wrap items-center gap-3 rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06] px-3 py-2.5">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
-                          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M6 3h8l4 4v14H6z" />
-                            <path d="M14 3v4h4" />
-                          </svg>
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-white">{resumeFile.name}</p>
-                          <p className="text-xs text-slate-400">{getResumeSourceLabel(resumeFile)}</p>
-                        </div>
-                        <label className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-400/50 hover:text-white">
-                          Change
-                          <input ref={changeFileInputRef} type="file" className="hidden" onChange={handleResumeSelect} />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={clearResumeFile}
-                          className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:border-rose-300/50 hover:text-white"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="mt-1.5 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-700 bg-slate-950/40 px-4 py-3 transition hover:border-cyan-400/40">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
-                          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
-                          </svg>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-white">Upload resume</span>
-                          <span className="block text-xs text-slate-400">PDF or DOCX</span>
-                        </span>
-                        <input ref={primaryFileInputRef} type="file" className="hidden" onChange={handleResumeSelect} />
-                      </label>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={addCandidateToBatch}
-                    disabled={loading}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-cyan-400/40 px-3.5 py-1.5 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="text-base leading-none">+</span> Add candidate to batch
-                  </button>
-                </FormStep>
-
-                <FormStep number={3} title="Access window" hint="When candidates can open their interview link.">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {[
-                      ["FLEXIBLE", "Flexible", "Open for 24 hours from sending"],
-                      ["SCHEDULED", "Scheduled window", "Only between a start and end time"],
-                    ].map(([value, title, detail]) => {
-                      const active = accessType === value
-                      return (
-                        <label
-                          key={value}
-                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition ${
-                            active ? "border-cyan-400/40 bg-cyan-400/10" : "border-slate-800 hover:border-slate-600"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            value={value}
-                            checked={active}
-                            onChange={() => setAccessType(value)}
-                            className="mt-0.5 h-4 w-4 accent-cyan-400"
-                          />
-                          <span>
-                            <span className="block text-sm font-medium text-white">{title}</span>
-                            <span className="block text-xs text-slate-400">{detail}</span>
-                          </span>
-                        </label>
-                      )
-                    })}
-                  </div>
-
-                  {accessType === "SCHEDULED" && (
-                    <div className="rounded-xl border border-cyan-500/15 bg-slate-950/40 p-3">
-                      <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/75">
-                        <CalendarIcon />
-                        <span>Schedule Window</span>
-                      </div>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <DateTimeField label="Start Time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-                        <DateTimeField label="End Time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-                      </div>
-                    </div>
-                  )}
-                </FormStep>
-
-                {batchResults.length > 1 || batchResults.some((result) => result.status === "failed") ? (
-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/55 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
+                  {showBatchResults ? (
+                    <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 sm:p-5" aria-live="polite">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-white">Batch results</p>
-                        <p className="mt-1 text-xs text-slate-400">
-                          {batchResults.filter((result) => result.status === "success").length} successful ·{" "}
-                          {batchResults.filter((result) => result.status === "failed").length} failed
+                        <p className="text-xs text-slate-400">
+                          {successfulCount} successful · {failedCount} failed
                         </p>
                       </div>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      {batchResults.map((result) => (
-                        <article
-                          key={result.id}
-                          className={`rounded-xl border p-3 ${
-                            result.status === "success"
-                              ? "border-emerald-400/20 bg-emerald-500/[0.07]"
-                              : "border-rose-400/20 bg-rose-500/[0.07]"
-                          }`}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-white">{result.name}</p>
-                              <p className="mt-1 truncate text-xs text-slate-400">{result.email}</p>
-                              <p className={`mt-2 text-xs ${result.status === "success" ? "text-emerald-200" : "text-rose-200"}`}>
+                      <ul className="mt-3 divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
+                        {batchResults.map((result) => (
+                          <li key={result.id} className="flex flex-wrap items-center gap-3 bg-slate-900/50 px-3 py-2.5">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="truncate text-sm font-medium text-white">{result.name}</p>
+                                <ResultStatusPill result={result} />
+                              </div>
+                              <p className="truncate text-xs text-slate-400">{result.email}</p>
+                              <p className={`mt-1 text-xs ${result.status === "success" ? "text-emerald-200" : "text-rose-200"}`}>
                                 {result.status === "success"
                                   ? result.emailStatus === "sent"
                                     ? "Invite emailed successfully"
@@ -1195,164 +1129,348 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                               <button
                                 type="button"
                                 onClick={() => copyResultLink(result)}
-                                className="shrink-0 rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:border-emerald-200/50"
+                                className="flex-none rounded-lg border border-slate-600 bg-slate-900/90 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-cyan-300/60"
                               >
                                 Copy link
                               </button>
                             ) : null}
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                    {batchResults.every((result) => result.status === "success") ? (
-                      <button
-                        type="button"
-                        onClick={startAnotherBatch}
-                        className="mt-4 w-full rounded-xl border border-cyan-400/25 bg-cyan-400/[0.07] px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50"
-                      >
-                        Send another batch
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {link && (
-                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                    <p className="mb-2 text-sm text-emerald-300">
-                      {emailStatus === "sent"
-                        ? "Link generated and email sent successfully"
-                        : emailStatus === "queued"
-                          ? "Link generated. Email delivery is in progress."
-                          : "Link generated successfully. Email delivery needs attention."}
-                    </p>
-                    {emailStatus === "failed" ? (
-                      <p className="mb-3 text-xs text-amber-200">
-                        The interview link is ready, but the email could not be delivered from the server. You can still copy and send it manually.
-                        {emailError ? <><br />Reason: {emailError}</> : null}
-                      </p>
-                    ) : null}
-                    {copyStatus === "failed" ? (
-                      <p className="mb-3 text-xs text-rose-200">
-                        Copy failed on this browser session. Please select the link manually.
-                      </p>
-                    ) : null}
-                    <input
-                      className="mb-3 w-full rounded-2xl border border-slate-700 bg-slate-950/80 p-3 text-sm text-white"
-                      value={link}
-                      readOnly
-                    />
-                    <button
-                      onClick={copy}
-                      className="w-full rounded-xl border border-slate-600 bg-slate-900/90 px-3.5 py-2 text-sm text-slate-100 transition hover:border-cyan-400/50 hover:bg-slate-800"
-                    >
-                      {copyStatus === "success" ? "Copied" : "Copy Link"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={startAnotherBatch}
-                      className="mt-3 w-full rounded-xl border border-cyan-400/25 bg-cyan-400/[0.07] px-3.5 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10"
-                    >
-                      Send another candidate
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Summary */}
-              <aside className="border-t border-slate-800 bg-slate-950/40 p-5 sm:p-6 lg:border-l lg:border-t-0">
-                <div className="lg:sticky lg:top-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Invite summary</p>
-                  <div className="mt-2 divide-y divide-slate-800">
-                    <SummaryItem label="Job" value={selectedJobTitle || "Select a job"} muted={!selectedJobTitle} />
-                    <SummaryItem
-                      label="Candidates"
-                      value={pendingCandidateCount ? `${pendingCandidateCount} ready to invite` : "None added yet"}
-                      muted={!pendingCandidateCount}
-                    />
-                    <SummaryItem
-                      label="Access"
-                      value={
-                        accessType === "SCHEDULED"
-                          ? startTime && endTime
-                            ? `${formatDateTime(startTime)} – ${formatDateTime(endTime)}`
-                            : "Scheduled window (set times)"
-                          : "Flexible · 24 hours"
-                      }
-                      muted={accessType === "SCHEDULED" && !(startTime && endTime)}
-                    />
-                  </div>
-
-                  <div
-                    className={`mt-4 rounded-2xl border p-4 ${
-                      trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10" : "border-cyan-400/20 bg-cyan-400/[0.06]"
-                    }`}
-                  >
-                    {trialCredits.interviewCreditsRemaining <= 0 ? (
-                      <>
-                        <p className="text-sm text-amber-100">{trialCredits.upgradeMessage}</p>
+                          </li>
+                        ))}
+                      </ul>
+                      {batchResults.every((result) => result.status === "success") ? (
                         <button
                           type="button"
-                          onClick={() => setUpgradeLimitOpen(true)}
-                          className="mt-3 w-full rounded-xl border border-amber-200/35 bg-amber-300/12 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:border-amber-100/60"
+                          onClick={startAnotherBatch}
+                          className="mt-3 text-sm font-semibold text-cyan-200 underline-offset-4 transition hover:text-cyan-100 hover:underline"
                         >
-                          View Subscription Plans
+                          Send another batch
                         </button>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">AI/Live interview credits</p>
-                        <p className="mt-1 text-2xl font-semibold text-white">{trialCredits.interviewCreditsRemaining}</p>
-                        <p className="text-xs text-slate-400">
-                          remaining{pendingCandidateCount > 0 ? ` · this batch uses ${pendingCandidateCount}` : ""}
+                      ) : (
+                        <p className="mt-3 text-xs text-slate-400">
+                          Failed candidates stay in the batch below. Retry them, or remove and re-add corrected details.
                         </p>
-                      </>
-                    )}
-                  </div>
+                      )}
+                    </section>
+                  ) : null}
 
-                  <div className="mt-4 space-y-2.5">
-                    {[
-                      ["single", "Single-use access", "Each invite works for one candidate only."],
-                      ["expiry", "Auto expiry", "Links expire after the access window."],
-                      ["integrity", "Integrity monitoring", "Sessions are watched for trust signals."],
-                    ].map(([type, title, detail]) => (
-                      <div key={title} className="flex items-start gap-2.5">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/[0.07]">
-                          <AccessFeatureIcon type={type} />
+                  <FormStep number={1} title="Job" hint="The role this interview evaluates.">
+                    <select
+                      className={INPUT_CLASS}
+                      value={jobId}
+                      onChange={(e) => setJobId(e.target.value)}
+                      disabled={jobsLoading}
+                      aria-label="Select job"
+                    >
+                      <option value="">{jobsLoading ? "Loading jobs..." : "Select Job"}</option>
+                      {jobs.map((job) => {
+                        const optionId = job.jobId || job.job_id
+                        const optionTitle = job.jobTitle || job.job_title
+
+                        return (
+                          <option key={optionId} value={optionId}>
+                            {optionTitle}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </FormStep>
+
+                  <FormStep
+                    number={2}
+                    title={queuedCandidates.length > 0 ? "Candidates" : "Candidate"}
+                    hint={`Name, email and resume. Add up to ${MAX_BATCH_CANDIDATES} candidates to one batch.`}
+                    aside={
+                      queuedCandidates.length > 0 ? (
+                        <span className="flex-none rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2.5 py-0.5 text-xs font-medium text-cyan-100">
+                          {queuedCandidates.length} of {MAX_BATCH_CANDIDATES} in batch
                         </span>
-                        <span>
-                          <span className="block text-xs font-semibold text-white">{title}</span>
-                          <span className="block text-xs text-slate-400">{detail}</span>
-                        </span>
+                      ) : null
+                    }
+                  >
+                    {queuedCandidates.length > 0 ? (
+                      <ul className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800" aria-label="Candidates in this batch">
+                        {queuedCandidates.map((candidate, index) => (
+                          <li key={candidate.id} className="flex items-center gap-3 bg-slate-900/50 px-3 py-2.5">
+                            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-cyan-400/15 text-[11px] font-semibold text-cyan-200">
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] sm:items-center sm:gap-3">
+                              <p className="truncate text-sm font-medium text-white">{candidate.name}</p>
+                              <p className="truncate text-xs text-slate-400 sm:text-sm">{candidate.email}</p>
+                              <p className="truncate text-xs text-slate-500">{candidate.resumeFile.name}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeQueuedCandidate(candidate.id)}
+                              disabled={loading}
+                              className="flex-none rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-200 transition hover:border-rose-300/50 hover:text-white disabled:opacity-50"
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+
+                    {queuedCandidates.length > 0 ? (
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Add another candidate</p>
+                    ) : null}
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <label htmlFor="send_interview_name" className="mb-1.5 block text-sm text-slate-300">
+                          Full name <span className="text-rose-300" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          id="send_interview_name"
+                          className={INPUT_CLASS}
+                          placeholder="Enter candidate name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                        />
                       </div>
-                    ))}
-                  </div>
+                      <div>
+                        <label htmlFor="send_interview_email" className="mb-1.5 block text-sm text-slate-300">
+                          Email <span className="text-rose-300" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          id="send_interview_email"
+                          type="email"
+                          className={`${INPUT_CLASS} ${emailLooksInvalid ? INPUT_ERROR_CLASS : ""}`}
+                          placeholder="candidate@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          onBlur={() => setEmailTouched(true)}
+                          aria-invalid={emailLooksInvalid}
+                          aria-describedby={emailLooksInvalid ? "send_interview_email_hint" : undefined}
+                        />
+                        {emailLooksInvalid ? (
+                          <p id="send_interview_email_hint" className="mt-1.5 text-xs text-rose-300">
+                            Enter a valid email address.
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 block text-sm text-slate-300">
+                        Resume <span className="text-rose-300" aria-hidden="true">*</span>
+                      </p>
+                      {resumeFile ? (
+                        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-cyan-300/30 bg-cyan-400/[0.06] px-3 py-2.5">
+                          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M6 3h8l4 4v14H6z" />
+                              <path d="M14 3v4h4" />
+                            </svg>
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-white">{resumeFile.name}</p>
+                            <p className="text-xs text-slate-400">{getResumeSourceLabel(resumeFile)}</p>
+                          </div>
+                          <label className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-300/50 hover:text-white">
+                            Change
+                            <input ref={changeFileInputRef} type="file" className="hidden" onChange={handleResumeSelect} />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={clearResumeFile}
+                            className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:border-rose-300/50 hover:text-white"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-700 bg-slate-900/40 px-4 py-3 transition hover:border-cyan-300/50">
+                          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+                            </svg>
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium text-white">Upload resume</span>
+                            <span className="block text-xs text-slate-400">PDF or DOCX</span>
+                          </span>
+                          <input ref={primaryFileInputRef} type="file" className="hidden" onChange={handleResumeSelect} />
+                        </label>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={addCandidateToBatch}
+                      disabled={loading}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-cyan-300/50 px-3.5 py-1.5 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <span className="text-base leading-none">+</span> Add candidate to batch
+                    </button>
+                  </FormStep>
+
+                  <FormStep number={3} title="Access window" hint="When candidates can open their interview link.">
+                    <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Access window">
+                      {[
+                        ["FLEXIBLE", "Flexible", "Open for 24 hours from sending"],
+                        ["SCHEDULED", "Scheduled window", "Only between a start and end time"],
+                      ].map(([value, title, detail]) => {
+                        const active = accessType === value
+                        return (
+                          <label
+                            key={value}
+                            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition ${
+                              active
+                                ? "border-cyan-300/70 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(103,232,249,0.18)]"
+                                : "border-slate-700 bg-slate-900/50 hover:border-slate-500"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="send_interview_access"
+                              value={value}
+                              checked={active}
+                              onChange={() => setAccessType(value)}
+                              className="mt-0.5 h-4 w-4 accent-cyan-400"
+                            />
+                            <span>
+                              <span className="block text-sm font-medium text-white">{title}</span>
+                              <span className="block text-xs text-slate-400">{detail}</span>
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+
+                    {accessType === "SCHEDULED" && (
+                      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3.5">
+                        <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
+                          <CalendarIcon />
+                          <span>Schedule Window</span>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <DateTimeField id="send_interview_start" label="Start Time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                          <DateTimeField
+                            id="send_interview_end"
+                            label="End Time"
+                            value={endTime}
+                            onChange={(e) => setEndTime(e.target.value)}
+                            invalid={scheduleOrderInvalid}
+                          />
+                        </div>
+                        {scheduleOrderInvalid ? (
+                          <p className="mt-2 text-xs text-rose-300">End time must be after the start time.</p>
+                        ) : null}
+                      </div>
+                    )}
+                  </FormStep>
                 </div>
-              </aside>
+
+                {/* Summary */}
+                <aside className="min-w-0">
+                  <div className="space-y-4 lg:sticky lg:top-0">
+                    <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Invite summary</p>
+                      <div className="mt-1 divide-y divide-slate-800">
+                        <SummaryItem label="Job" value={selectedJobTitle || "Select a job"} muted={!selectedJobTitle} />
+                        <SummaryItem
+                          label="Candidates"
+                          value={pendingCandidateCount ? `${pendingCandidateCount} ready to invite` : "None added yet"}
+                          muted={!pendingCandidateCount}
+                        />
+                        <SummaryItem
+                          label="Access"
+                          value={
+                            accessType === "SCHEDULED"
+                              ? startTime && endTime
+                                ? `${formatDateTime(startTime)} – ${formatDateTime(endTime)}`
+                                : "Scheduled window (set times)"
+                              : "Flexible · 24 hours"
+                          }
+                          muted={accessType === "SCHEDULED" && !(startTime && endTime)}
+                        />
+                      </div>
+                    </section>
+
+                    <section
+                      className={`rounded-2xl border p-4 ${
+                        trialCredits.interviewCreditsRemaining <= 0 ? "border-amber-400/25 bg-amber-500/10" : "border-cyan-300/25 bg-cyan-400/[0.06]"
+                      }`}
+                    >
+                      {trialCredits.interviewCreditsRemaining <= 0 ? (
+                        <>
+                          <p className="text-sm text-amber-100">{trialCredits.upgradeMessage}</p>
+                          <button
+                            type="button"
+                            onClick={() => setUpgradeLimitOpen(true)}
+                            className="mt-3 w-full rounded-xl border border-amber-200/35 bg-amber-300/12 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:border-amber-100/60"
+                          >
+                            View Subscription Plans
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">AI/Live interview credits</p>
+                          <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{trialCredits.interviewCreditsRemaining}</p>
+                          <p className="text-xs text-slate-400">
+                            remaining{pendingCandidateCount > 0 ? ` · this batch uses ${pendingCandidateCount}` : ""}
+                          </p>
+                        </>
+                      )}
+                    </section>
+
+                    <ul className="space-y-2.5 px-1">
+                      {[
+                        ["single", "Single-use access", "Each invite works for one candidate only."],
+                        ["expiry", "Auto expiry", "Links expire after the access window."],
+                        ["integrity", "Integrity monitoring", "Sessions are watched for trust signals."],
+                      ].map(([type, title, detail]) => (
+                        <li key={title} className="flex items-start gap-2.5">
+                          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-400/[0.07]">
+                            <AccessFeatureIcon type={type} />
+                          </span>
+                          <span>
+                            <span className="block text-xs font-semibold text-white">{title}</span>
+                            <span className="block text-xs text-slate-400">{detail}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </aside>
+              </div>
             </div>
 
-            {/* Footer */}
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-800 bg-slate-900 px-5 py-4 sm:px-7">
+            {/* Footer stays put: the current error or a reminder, and the actions. */}
+            <div className="flex flex-none flex-col gap-3 border-t border-slate-800 bg-slate-950/40 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-3.5">
               <div className="min-w-0 flex-1">
                 {error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : (
-                  <p className="text-xs text-slate-400">Each candidate gets a secure, single-use interview link by email.</p>
+                  <p className="hidden text-xs text-slate-400 sm:block">Each candidate gets a secure, single-use interview link by email.</p>
                 )}
               </div>
-              <button
-                onClick={() => handleSubmit()}
-                disabled={loading || jobsLoading || trialCredits.interviewCreditsRemaining <= 0}
-                className="hv-solid-action inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading
-                  ? `Preparing ${pendingCandidateCount || queuedCandidates.length} ${pendingCandidateCount === 1 ? "invite" : "invites"}...`
-                  : pendingCandidateCount > 1
-                    ? `Send ${pendingCandidateCount} Interview Invites`
-                    : "Send Interview Invite"}
-                {!loading ? (
-                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M13 6l6 6-6 6" />
-                  </svg>
-                ) : null}
-              </button>
+              <div className="flex flex-none gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="rounded-xl border border-slate-700 bg-slate-900/80 px-5 py-2.5 text-sm text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSubmit()}
+                  disabled={loading || jobsLoading || trialCredits.interviewCreditsRemaining <= 0}
+                  className="hv-solid-action inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(8,145,178,0.22)] transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading
+                    ? `Preparing ${pendingCandidateCount || queuedCandidates.length} ${pendingCandidateCount === 1 ? "invite" : "invites"}...`
+                    : pendingCandidateCount > 1
+                      ? `Send ${pendingCandidateCount} Interview Invites`
+                      : "Send Interview Invite"}
+                  {!loading ? (
+                    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  ) : null}
+                </button>
+              </div>
             </div>
           </>
         )}

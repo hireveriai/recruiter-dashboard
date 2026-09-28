@@ -123,7 +123,7 @@ export default function AssessmentsPage() {
                 setEditing(null)
                 setOpenCreate(true)
               }}
-              className="rounded-full bg-violet-500/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(167,139,250,0.35)] transition hover:bg-violet-500"
+              className="hv-solid-action rounded-full bg-cyan-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(8,145,178,0.22)] transition hover:bg-cyan-500"
             >
               Create Assessment
             </button>
