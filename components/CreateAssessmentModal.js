@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params";
 
 import { showActionFeedback } from "@/lib/client/action-feedback";
 import { buildAuthUrl } from "@/lib/client/auth-query";
 
+// Same control styling as the Create Job modal. Slate and cyan are remapped by
+// the light theme (globals.css), so one set of classes serves both themes.
 const FIELD_CLASS =
-  "w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]";
+  "w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/70 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
 
-const SELECT_CLASS = FIELD_CLASS.replace("w-full", "w-full max-w-[260px]");
+const FIELD_ERROR_CLASS = "border-rose-400/70 focus:border-rose-300 focus:shadow-[0_0_0_3px_rgba(244,63,94,0.12)]";
 
 const QUESTION_TYPE_OPTIONS = [
   { value: "SINGLE_CHOICE", label: "Single Choice" },
@@ -23,6 +26,17 @@ const ACTIVITY_TYPE_OPTIONS = [
   { value: "ASSESSMENT", label: "Assessment", hint: "What do you know?" },
   { value: "CHALLENGE", label: "Challenge", hint: "Can you solve this problem?" },
   { value: "TASK", label: "Task", hint: "Can you perform this work?" },
+];
+
+const PARTICIPANT_OPTIONS = [
+  { value: "CANDIDATE", label: "Candidate" },
+  { value: "EMPLOYEE", label: "Employee" },
+];
+
+const DIFFICULTY_OPTIONS = [
+  { value: "JUNIOR", label: "Junior" },
+  { value: "MID", label: "Mid" },
+  { value: "SENIOR", label: "Senior" },
 ];
 
 const DEFAULT_FORM = {
@@ -47,16 +61,117 @@ const DEFAULT_FORM = {
   skills: "",
 };
 
+function splitSkills(value) {
+  return value ? value.split(",").map((s) => s.trim()).filter(Boolean) : [];
+}
+
+function isWholeNumber(value) {
+  return String(value ?? "").trim() !== "" && Number.isInteger(Number(value));
+}
+
+/** A numbered group of related settings (same pattern as Create Job). */
+function Section({ step, title, description, children }) {
+  return (
+    <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 sm:p-5">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-cyan-400/15 text-xs font-semibold text-cyan-200"
+        >
+          {step}
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-white">{title}</h3>
+          {description ? <p className="mt-0.5 text-xs leading-5 text-slate-400">{description}</p> : null}
+        </div>
+      </div>
+      <div className="mt-4 space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function FieldLabel({ htmlFor, required = false, children }) {
+  return (
+    <label htmlFor={htmlFor} className="mb-1.5 block text-sm text-slate-300">
+      {children}
+      {required ? (
+        <span className="ml-0.5 text-rose-300" aria-hidden="true">
+          *
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+function FieldError({ id, message }) {
+  if (!message) return null;
+  return (
+    <p id={id} className="mt-1.5 text-xs text-rose-300">
+      {message}
+    </p>
+  );
+}
+
+function Segmented({ labelId, value, options, onChange }) {
+  return (
+    <div role="radiogroup" aria-labelledby={labelId} className="flex w-full rounded-xl border border-slate-700 bg-slate-900/70 p-1">
+      {options.map((option) => {
+        const selected = String(value) === String(option.value);
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(option.value)}
+            className={`flex-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
+              selected
+                ? "bg-cyan-400/15 text-cyan-100 shadow-[inset_0_0_0_1px_rgba(103,232,249,0.45)]"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CheckRow({ checked, onChange, title, detail }) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition ${
+        checked ? "border-cyan-300/60 bg-cyan-400/10" : "border-slate-700 bg-slate-900/50 hover:border-slate-500"
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 flex-none accent-cyan-400"
+      />
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-white">{title}</span>
+        {detail ? <span className="mt-0.5 block text-xs leading-5 text-slate-400">{detail}</span> : null}
+      </span>
+    </label>
+  );
+}
+
 export default function CreateAssessmentModal({ open, onClose, initialAssessment, defaultJobId, onSuccess }) {
   const searchParams = useAuthSearchParams();
   const [form, setForm] = useState(DEFAULT_FORM);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const isEditMode = Boolean(initialAssessment?.id);
 
   useEffect(() => {
     if (!open) return;
+
+    setErrors({});
 
     fetch(buildAuthUrl("/api/jobs", searchParams), { credentials: "include" })
       .then((res) => res.json())
@@ -89,7 +204,10 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
 
   if (!open) return null;
 
-  const handleChange = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const handleChange = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }));
+    setErrors((current) => (current[key] ? { ...current, [key]: undefined } : current));
+  };
 
   // Picking a job shouldn't force the recruiter to also type a title by hand -
   // default it from the job, but never clobber something they already typed.
@@ -101,6 +219,7 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
       jobId,
       title: current.title.trim() === "" ? (jobTitle ? `${jobTitle} Assessment` : "") : current.title,
     }));
+    setErrors((current) => ({ ...current, jobId: undefined, title: undefined }));
   };
 
   const toggleQuestionType = (value) => {
@@ -113,17 +232,75 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
     });
   };
 
-  const handleSubmit = async () => {
-    // Job is required for a candidate activity ("is this candidate suitable
-    // for this open job?") but never for an employee activity ("does this
-    // employee have the required knowledge/skill/ability?", which has no
-    // inherent job to attach to).
+  const removeSkill = (skill) => {
+    const target = skill.toLowerCase();
+    handleChange(
+      "skills",
+      splitSkills(form.skills)
+        .filter((item) => item.toLowerCase() !== target)
+        .join(", ")
+    );
+  };
+
+  // Mirrors createAssessmentSchema / updateAssessmentSchema, so the recruiter
+  // sees which field needs attention instead of a generic save failure.
+  const validate = () => {
+    const next = {};
     const jobRequired = form.participantType !== "EMPLOYEE";
-    if ((jobRequired && !form.jobId) || !form.title.trim()) {
+    const title = form.title.trim();
+
+    if (jobRequired && !form.jobId) next.jobId = "Select a job.";
+    if (!title) next.title = "Enter a title.";
+    else if (title.length > 200) next.title = "Keep the title to 200 characters or fewer.";
+    if ((form.description ?? "").trim().length > 4000) next.description = "Keep the description to 4,000 characters or fewer.";
+
+    const duration = Number(form.durationMinutes);
+    if (!isWholeNumber(form.durationMinutes) || duration < 5 || duration > 240) {
+      next.durationMinutes = "Enter whole minutes from 5 to 240.";
+    }
+
+    const passing = Number(form.passingPercentage);
+    if (String(form.passingPercentage ?? "").trim() === "" || Number.isNaN(passing) || passing < 0 || passing > 100) {
+      next.passingPercentage = "Enter a percentage from 0 to 100.";
+    }
+
+    if (form.questionCount) {
+      const count = Number(form.questionCount);
+      if (!isWholeNumber(form.questionCount) || count < 1 || count > 100) {
+        next.questionCount = "Enter a whole number from 1 to 100, or leave it empty.";
+      }
+    }
+
+    const expiry = Number(form.linkExpiryDays);
+    if (!isWholeNumber(form.linkExpiryDays) || expiry < 1 || expiry > 90) {
+      next.linkExpiryDays = "Enter whole days from 1 to 90.";
+    }
+
+    if (!isEditMode && form.participantType === "EMPLOYEE") {
+      const skills = splitSkills(form.skills);
+      if (skills.length > 20) next.skills = "Add up to 20 skills.";
+      else if (skills.some((skill) => skill.length > 60)) next.skills = "Keep each skill to 60 characters or fewer.";
+    }
+
+    setErrors(next);
+    return next;
+  };
+
+  const handleSubmit = async () => {
+    const found = validate();
+    const firstError = Object.values(found).find(Boolean);
+    if (firstError) {
+      // Job and title keep the original summary message.
+      const jobRequired = form.participantType !== "EMPLOYEE";
       showActionFeedback({
         tone: "error",
         title: "Missing details",
-        message: jobRequired ? "Job and title are required." : "Title is required.",
+        message:
+          found.jobId || found.title === "Enter a title."
+            ? jobRequired
+              ? "Job and title are required."
+              : "Title is required."
+            : firstError,
       });
       return;
     }
@@ -193,286 +370,329 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
     }
   };
 
+  const isEmployee = form.participantType === "EMPLOYEE";
+  const skillChips = splitSkills(form.skills).filter(
+    (skill, index, list) => list.findIndex((item) => item.toLowerCase() === skill.toLowerCase()) === index
+  );
+  const activity = ACTIVITY_TYPE_OPTIONS.find((option) => option.value === form.activityType);
+  const summary = [
+    isEmployee ? "Employee" : "Candidate",
+    activity?.label,
+    `${form.durationMinutes || "–"} min`,
+    form.questionCount ? `${form.questionCount} questions` : "Question count not set",
+    `Pass ${form.passingPercentage === "" ? "–" : form.passingPercentage}%`,
+    `Link valid ${form.linkExpiryDays || "–"} days`,
+  ].filter(Boolean);
+  const numberField = (key, label, min, max, hint) => (
+    <div>
+      <FieldLabel htmlFor={`assessment_${key}`}>{label}</FieldLabel>
+      <input
+        id={`assessment_${key}`}
+        type="number"
+        min={min}
+        max={max}
+        value={form[key]}
+        onChange={(e) => handleChange(key, e.target.value)}
+        aria-invalid={Boolean(errors[key])}
+        aria-describedby={errors[key] ? `assessment_${key}_error` : `assessment_${key}_hint`}
+        className={`${FIELD_CLASS} ${errors[key] ? FIELD_ERROR_CLASS : ""}`}
+      />
+      {errors[key] ? (
+        <FieldError id={`assessment_${key}_error`} message={errors[key]} />
+      ) : (
+        <p id={`assessment_${key}_hint`} className="mt-1 text-[11px] text-slate-500">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <div
-      className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-md sm:py-6"
+      className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 px-3 py-3 backdrop-blur-md sm:items-center sm:px-4 sm:py-6"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="create-assessment-title"
     >
-      <div className="hv-theme-modal relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-violet-500/20 bg-[#0a1020]/95 text-white shadow-[0_0_60px_rgba(139,92,246,0.18)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_28%)]" />
-        <div className="relative max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:max-h-[calc(100dvh-3rem)] sm:p-6 md:p-8">
-          <div className="mb-6 flex items-start justify-between gap-4 border-b border-slate-800/80 pb-5">
-            <div className="min-w-0">
-              <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-violet-300" aria-hidden="true" />
-                VERIS Assessment
-              </span>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-[28px]">
-                {isEditMode ? "Edit Assessment" : "Create Assessment"}
-              </h2>
-              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">
-                Configure a scored skills test. Add or generate questions after saving.
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="rounded-full border border-slate-700/80 bg-slate-900/80 px-3.5 py-1.5 text-sm text-slate-300 transition hover:border-violet-400/60 hover:text-white"
-            >
-              Close
-            </button>
+      <div className="hv-create-assessment-modal hv-theme-modal relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-slate-700/70 bg-[#0a1020]/95 text-white shadow-[0_30px_80px_rgba(2,6,23,0.55)] sm:max-h-[calc(100dvh-3rem)]">
+        {/* Header stays put while the form scrolls. */}
+        <div className="flex flex-none items-start justify-between gap-4 border-b border-slate-800 px-5 py-3.5 sm:px-7 sm:py-5 [@media(max-height:720px)]:sm:py-3.5">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">VERIS Assessment</p>
+            <h2 id="create-assessment-title" className="mt-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+              {isEditMode ? "Edit Assessment" : "Create Assessment"}
+            </h2>
+            <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-slate-400 sm:block [@media(max-height:720px)]:hidden">
+              Configure a scored skills test. Add or generate questions after saving.
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-none rounded-full border border-slate-700/80 bg-slate-900/80 px-3.5 py-1.5 text-sm text-slate-300 transition hover:border-cyan-300/60 hover:text-white"
+          >
+            Close
+          </button>
+        </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {!isEditMode && (
-              <>
-                <div>
-                  <label className="mb-2 block text-sm text-slate-300">Participant</label>
-                  <select
-                    value={form.participantType}
-                    onChange={(e) => handleChange("participantType", e.target.value)}
-                    className={SELECT_CLASS}
-                  >
-                    <option value="CANDIDATE">Candidate</option>
-                    <option value="EMPLOYEE">Employee</option>
-                  </select>
-                </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+            {/* Left: who it is for and what it is. */}
+            <div className="space-y-5">
+              <Section step={1} title="Who and what" description="Who takes this activity, and what it is for.">
+                {!isEditMode ? (
+                  <>
+                    <div>
+                      <p id="assessment_participant_label" className="mb-1.5 block text-sm text-slate-300">
+                        Participant
+                      </p>
+                      <Segmented
+                        labelId="assessment_participant_label"
+                        value={form.participantType}
+                        options={PARTICIPANT_OPTIONS}
+                        onChange={(value) => handleChange("participantType", value)}
+                      />
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 block text-sm text-slate-300">Activity Type</p>
+                      <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Activity type">
+                        {ACTIVITY_TYPE_OPTIONS.map((option) => {
+                          const selected = form.activityType === option.value;
+                          return (
+                            <label
+                              key={option.value}
+                              className={`cursor-pointer rounded-xl border px-3 py-2.5 transition ${
+                                selected
+                                  ? "border-cyan-300/70 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(103,232,249,0.18)]"
+                                  : "border-slate-700 bg-slate-900/50 hover:border-slate-500"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="assessment_activity_type"
+                                value={option.value}
+                                checked={selected}
+                                onChange={() => handleChange("activityType", option.value)}
+                                className="sr-only"
+                              />
+                              <span className="block text-sm font-semibold text-white">{option.label}</span>
+                              <span className="mt-0.5 block text-xs text-slate-400">{option.hint}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {isEmployee && (
+                      <div>
+                        <FieldLabel htmlFor="assessment_skills">Skills / Competencies (comma separated)</FieldLabel>
+                        <input
+                          id="assessment_skills"
+                          value={form.skills}
+                          onChange={(e) => handleChange("skills", e.target.value)}
+                          placeholder="e.g. Negotiation, Conflict Resolution, Financial Analysis, SQL — any technical, functional, or behavioral skill"
+                          aria-invalid={Boolean(errors.skills)}
+                          className={`${FIELD_CLASS} ${errors.skills ? FIELD_ERROR_CLASS : ""}`}
+                        />
+                        {skillChips.length > 0 ? (
+                          <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Skills">
+                            {skillChips.map((skill) => (
+                              <li
+                                key={skill.toLowerCase()}
+                                className="inline-flex items-center gap-1 rounded-full border border-cyan-300/25 bg-cyan-400/10 py-0.5 pl-2.5 pr-1 text-xs text-cyan-100"
+                              >
+                                {skill}
+                                <button
+                                  type="button"
+                                  onClick={() => removeSkill(skill)}
+                                  aria-label={`Remove ${skill}`}
+                                  className="rounded-full p-0.5 text-cyan-200/80 transition hover:bg-cyan-400/20 hover:text-white"
+                                >
+                                  <X className="h-3 w-3" aria-hidden="true" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        <FieldError id="assessment_skills_error" message={errors.skills} />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-300">
+                    {isEmployee ? "Employee" : "Candidate"} · {activity?.label ?? form.activityType}
+                  </p>
+                )}
 
                 <div>
-                  <label className="mb-2 block text-sm text-slate-300">Activity Type</label>
+                  <FieldLabel htmlFor="assessment_job" required={!isEmployee}>
+                    {isEmployee ? "Job / Target Role (optional)" : "Job"}
+                  </FieldLabel>
                   <select
-                    value={form.activityType}
-                    onChange={(e) => handleChange("activityType", e.target.value)}
-                    className={SELECT_CLASS}
+                    id="assessment_job"
+                    value={form.jobId}
+                    onChange={(e) => handleJobChange(e.target.value)}
+                    className={`${FIELD_CLASS} ${errors.jobId ? FIELD_ERROR_CLASS : ""}`}
+                    disabled={isEditMode}
+                    aria-invalid={Boolean(errors.jobId)}
                   >
-                    {ACTIVITY_TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label} — {option.hint}
+                    <option value="">{isEmployee ? "No job / target role" : "Select Job"}</option>
+                    {jobs.map((job) => (
+                      <option key={job.jobId ?? job.job_id} value={job.jobId ?? job.job_id}>
+                        {job.jobTitle ?? job.job_title}
                       </option>
                     ))}
                   </select>
+                  <FieldError id="assessment_job_error" message={errors.jobId} />
+                  {isEmployee && (
+                    <p className="mt-1.5 text-xs text-slate-500">
+                      Optional context only — e.g. a target role for future internal mobility. This employee&apos;s
+                      activity does not need a job.
+                    </p>
+                  )}
                 </div>
 
-                {form.participantType === "EMPLOYEE" && (
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm text-slate-300">Skills / Competencies (comma separated)</label>
-                    <input
-                      value={form.skills}
-                      onChange={(e) => handleChange("skills", e.target.value)}
-                      placeholder="e.g. Negotiation, Conflict Resolution, Financial Analysis, SQL — any technical, functional, or behavioral skill"
-                      className={FIELD_CLASS}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">
-                {form.participantType === "EMPLOYEE" ? "Job / Target Role (optional)" : "Job"}
-              </label>
-              <select
-                value={form.jobId}
-                onChange={(e) => handleJobChange(e.target.value)}
-                className={SELECT_CLASS}
-                disabled={isEditMode}
-              >
-                <option value="">{form.participantType === "EMPLOYEE" ? "No job / target role" : "Select Job"}</option>
-                {jobs.map((job) => (
-                  <option key={job.jobId ?? job.job_id} value={job.jobId ?? job.job_id}>
-                    {job.jobTitle ?? job.job_title}
-                  </option>
-                ))}
-              </select>
-              {form.participantType === "EMPLOYEE" && (
-                <p className="mt-1.5 text-xs text-slate-500">
-                  Optional context only — e.g. a target role for future internal mobility. This employee&apos;s
-                  activity does not need a job.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Difficulty</label>
-              <select
-                value={form.difficulty}
-                onChange={(e) => handleChange("difficulty", e.target.value)}
-                className={SELECT_CLASS}
-              >
-                <option value="JUNIOR">Junior</option>
-                <option value="MID">Mid</option>
-                <option value="SENIOR">Senior</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm text-slate-300">Title</label>
-              <input
-                value={form.title}
-                onChange={(e) => handleChange("title", e.target.value)}
-                placeholder="Auto-filled from the selected job - edit if you'd like"
-                className={FIELD_CLASS}
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm text-slate-300">Description</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => handleChange("description", e.target.value)}
-                placeholder="What this assessment evaluates."
-                rows={3}
-                className={FIELD_CLASS}
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Duration (minutes)</label>
-              <input
-                type="number"
-                min={5}
-                max={240}
-                value={form.durationMinutes}
-                onChange={(e) => handleChange("durationMinutes", e.target.value)}
-                className={FIELD_CLASS}
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Passing Percentage</label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={form.passingPercentage}
-                onChange={(e) => handleChange("passingPercentage", e.target.value)}
-                className={FIELD_CLASS}
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Question Count</label>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={form.questionCount}
-                onChange={(e) => handleChange("questionCount", e.target.value)}
-                className={FIELD_CLASS}
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Link Expiry (days)</label>
-              <input
-                type="number"
-                min={1}
-                max={90}
-                value={form.linkExpiryDays}
-                onChange={(e) => handleChange("linkExpiryDays", e.target.value)}
-                className={FIELD_CLASS}
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm text-slate-300">Question Types</label>
-              <div className="flex flex-wrap gap-2">
-                {QUESTION_TYPE_OPTIONS.map((option) => {
-                  const selected = form.questionTypes.includes(option.value);
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => toggleQuestionType(option.value)}
-                      className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
-                        selected
-                          ? "border-violet-400/60 bg-violet-500/20 text-white"
-                          : "border-slate-700 bg-slate-900/70 text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {form.questionTypes.includes("CODING") ? (
-                <p className="mt-2 text-xs text-slate-500">
-                  {form.participantType === "EMPLOYEE" && !form.jobId
-                    ? "Coding questions will be generated as requested for this employee activity."
-                    : "Coding questions are only generated if this job has coding enabled (Job settings → Coding Assessment). Otherwise they're skipped automatically."}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="md:col-span-2 flex flex-col gap-3 rounded-[20px] border border-slate-800 bg-slate-950/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <label className="flex items-center gap-2 text-sm text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={form.randomizeQuestions}
-                  onChange={(e) => handleChange("randomizeQuestions", e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-500"
-                />
-                Randomize question order
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={form.randomizeOptions}
-                  onChange={(e) => handleChange("randomizeOptions", e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-500"
-                />
-                Randomize option order
-              </label>
-            </div>
-
-            <div className="md:col-span-2 flex flex-col gap-3 rounded-[20px] border border-slate-800 bg-slate-950/40 p-4">
-              <div>
-                <p className="text-sm font-medium text-slate-200">Integrity &amp; Security</p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Signals are recorded for recruiter review only - VerisNova never auto-decides a candidate cheated.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <label className="flex items-center gap-2 text-sm text-slate-300">
+                <div>
+                  <FieldLabel htmlFor="assessment_title" required>
+                    Title
+                  </FieldLabel>
                   <input
-                    type="checkbox"
+                    id="assessment_title"
+                    value={form.title}
+                    onChange={(e) => handleChange("title", e.target.value)}
+                    placeholder="Auto-filled from the selected job - edit if you'd like"
+                    aria-invalid={Boolean(errors.title)}
+                    className={`${FIELD_CLASS} ${errors.title ? FIELD_ERROR_CLASS : ""}`}
+                  />
+                  <FieldError id="assessment_title_error" message={errors.title} />
+                </div>
+
+                <div>
+                  <FieldLabel htmlFor="assessment_description">Description</FieldLabel>
+                  <textarea
+                    id="assessment_description"
+                    value={form.description}
+                    onChange={(e) => handleChange("description", e.target.value)}
+                    placeholder="What this assessment evaluates."
+                    rows={3}
+                    aria-invalid={Boolean(errors.description)}
+                    className={`${FIELD_CLASS} resize-y leading-6 ${errors.description ? FIELD_ERROR_CLASS : ""}`}
+                  />
+                  <FieldError id="assessment_description_error" message={errors.description} />
+                </div>
+              </Section>
+
+              <Section step={2} title="Test settings" description="Timing, scoring and how long the invite link stays valid.">
+                <div>
+                  <p id="assessment_difficulty_label" className="mb-1.5 block text-sm text-slate-300">
+                    Difficulty
+                  </p>
+                  <Segmented
+                    labelId="assessment_difficulty_label"
+                    value={form.difficulty}
+                    options={DIFFICULTY_OPTIONS}
+                    onChange={(value) => handleChange("difficulty", value)}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {numberField("durationMinutes", "Duration (minutes)", 5, 240, "5 to 240 minutes")}
+                  {numberField("passingPercentage", "Passing Percentage", 0, 100, "0 to 100%")}
+                  {numberField("questionCount", "Question Count", 1, 100, "1 to 100 questions")}
+                  {numberField("linkExpiryDays", "Link Expiry (days)", 1, 90, "1 to 90 days")}
+                </div>
+              </Section>
+            </div>
+
+            {/* Right: what the questions look like, and integrity. */}
+            <div className="space-y-5">
+              <Section step={3} title="Questions" description="The question formats VERIS generates, and their order.">
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Question types">
+                  {QUESTION_TYPE_OPTIONS.map((option) => {
+                    const selected = form.questionTypes.includes(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleQuestionType(option.value)}
+                        className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
+                          selected
+                            ? "border-cyan-300/60 bg-cyan-400/15 text-cyan-100"
+                            : "border-slate-700 bg-slate-900/70 text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {form.questionTypes.includes("CODING") ? (
+                  <p className="text-xs leading-5 text-slate-400">
+                    {isEmployee && !form.jobId
+                      ? "Coding questions will be generated as requested for this employee activity."
+                      : "Coding questions are only generated if this job has coding enabled (Job settings → Coding Assessment). Otherwise they're skipped automatically."}
+                  </p>
+                ) : null}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <CheckRow
+                    checked={form.randomizeQuestions}
+                    onChange={(value) => handleChange("randomizeQuestions", value)}
+                    title="Randomize question order"
+                  />
+                  <CheckRow
+                    checked={form.randomizeOptions}
+                    onChange={(value) => handleChange("randomizeOptions", value)}
+                    title="Randomize option order"
+                  />
+                </div>
+              </Section>
+
+              <Section
+                step={4}
+                title="Integrity & Security"
+                description="Signals are recorded for recruiter review only - VerisNova never auto-decides a candidate cheated."
+              >
+                <div className="grid gap-2">
+                  <CheckRow
                     checked={form.blockCopyPaste}
-                    onChange={(e) => handleChange("blockCopyPaste", e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-500"
+                    onChange={(value) => handleChange("blockCopyPaste", value)}
+                    title="Block copy/paste"
                   />
-                  Block copy/paste
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <input
-                    type="checkbox"
+                  <CheckRow
                     checked={form.cameraMonitoring}
-                    onChange={(e) => handleChange("cameraMonitoring", e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-500"
+                    onChange={(value) => handleChange("cameraMonitoring", value)}
+                    title="Camera-based integrity monitoring"
+                    detail={
+                      form.cameraMonitoring
+                        ? "Candidates will be asked to grant camera access before starting. VerisNova detects face presence and multiple-person presence only - no video is recorded, stored, or shown to recruiters."
+                        : null
+                    }
                   />
-                  Camera-based integrity monitoring
-                </label>
-              </div>
-              {form.cameraMonitoring && (
-                <p className="text-xs text-slate-500">
-                  Candidates will be asked to grant camera access before starting. VerisNova detects face
-                  presence and multiple-person presence only - no video is recorded, stored, or shown to
-                  recruiters.
-                </p>
-              )}
+                </div>
+              </Section>
             </div>
           </div>
+        </div>
 
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-800/80 pt-5">
+        {/* Footer stays put: a summary of the choices and the actions. */}
+        <div className="flex flex-none flex-col gap-3 border-t border-slate-800 bg-slate-950/40 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-3.5">
+          <p className="hidden min-w-0 text-xs leading-5 text-slate-400 sm:block" aria-live="polite">
+            {summary.join(" · ")}
+          </p>
+          <div className="flex flex-none gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
             <button
+              type="button"
               onClick={onClose}
-              className="rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm text-slate-300 transition hover:text-white"
+              className="rounded-xl border border-slate-700 bg-slate-900/80 px-5 py-2.5 text-sm text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="rounded-full bg-violet-500/90 px-5 py-2 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(167,139,250,0.35)] transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="hv-solid-action whitespace-nowrap rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(8,145,178,0.22)] transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
             >
               {loading ? "Saving..." : isEditMode ? "Save Changes" : "Create Assessment"}
             </button>
