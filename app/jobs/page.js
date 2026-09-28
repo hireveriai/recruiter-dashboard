@@ -511,7 +511,7 @@ export default function JobsPage() {
                   setSelectedJob(null)
                   setOpenCreateJob(true)
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(124,58,237,0.22)] transition hover:bg-violet-500"
+                className="hv-solid-action inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(8,145,178,0.22)] transition hover:bg-cyan-500"
               >
                 Create Job
               </button>
