@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import Link from "next/link"
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Pencil } from "lucide-react"
 import BackToDashboardLink from "@/components/BackToDashboardLink"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
@@ -17,6 +17,16 @@ import { formatLabel } from "@/lib/client/format-label"
 import { CandidateActionModal } from "../../components/dashboard/CandidateActionModal"
 import { DecisionPill } from "../../components/dashboard/DecisionPill"
 import { VerisGlobeLoader } from "../../components/system/loaders"
+
+// Candidate table columns from lg up: candidate, role, status, VERIS score,
+// VERIS Assessment, hiring action. Below lg each row is a stacked card.
+const CANDIDATE_COLUMNS =
+  "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_8.5rem_6rem_10rem_minmax(0,1.1fr)]"
+
+function candidateInitials(name) {
+  const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean)
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "VN"
+}
 
 function getStatusBadge(status) {
   const normalized = String(status ?? "PENDING").toUpperCase()
@@ -99,12 +109,12 @@ function getScoreBand(score) {
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+        className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -253,12 +263,12 @@ function VerisAssessmentSummaryCard({ candidateId, searchParams }) {
   }
 
   return (
-    <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
-      <p className="text-xs uppercase tracking-[0.24em] text-violet-300">VERIS Assessment</p>
-      <p className="mt-3 text-2xl font-semibold text-white">
+    <div className="rounded-xl border border-cyan-300/20 bg-cyan-400/[0.05] p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300">VERIS Assessment</p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums text-white">
         {summary.percentage != null ? `${Number(summary.percentage)}%` : "-"}
       </p>
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-0.5 truncate text-xs text-slate-400">
         {summary.assessmentTitle} &middot; {summary.passed === true ? "Passed" : summary.passed === false ? "Failed" : "Pending"}
       </p>
     </div>
@@ -275,13 +285,12 @@ function CompletedCandidateDetails({ candidate, onClose }) {
   const answerSummaries = Array.isArray(candidate.answerSummaries) ? candidate.answerSummaries : []
 
   return (
-    <div className="hv-completed-summary-modal hv-theme-modal relative overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
-        <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
-
-        <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <div>
-            <h3 className="text-2xl font-semibold text-white">Completed Interview Summary</h3>
-            <p className="mt-2 text-sm text-slate-400">
+    <div className="hv-completed-summary-modal hv-theme-modal relative overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0a1020]/95 shadow-[0_24px_60px_rgba(2,6,23,0.35)]">
+        <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">VERIS Insight</p>
+            <h3 className="mt-1 text-lg font-semibold text-white sm:text-xl">Completed Interview Summary</h3>
+            <p className="mt-0.5 truncate text-sm text-slate-400">
               {candidate.candidateName || "Candidate"} · {candidate.jobTitle || "Role"}
             </p>
           </div>
@@ -289,47 +298,44 @@ function CompletedCandidateDetails({ candidate, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="self-start rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100 transition hover:bg-emerald-400/20 sm:self-auto"
+            className="self-start rounded-full border border-slate-700 bg-slate-900/80 px-3.5 py-1.5 text-sm text-slate-300 transition hover:border-cyan-300/60 hover:text-white sm:self-auto"
           >
             Close
           </button>
         </div>
 
-        <div className="max-h-[74vh] overflow-auto px-6 py-6 sm:px-8">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Score</p>
-              <p className="mt-3 text-2xl font-semibold text-white">{formatScore(candidate.score)}</p>
+        <div className="max-h-[74vh] overflow-auto px-5 py-5 sm:px-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Score</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-white">{formatScore(candidate.score)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Decision</p>
-              <p className="mt-3 text-2xl font-semibold text-white">{candidate.decision || "-"}</p>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Decision</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{candidate.decision || "-"}</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Completed</p>
-              <p className="mt-3 text-lg font-semibold text-white">{formatDateTime(candidate.endedAt || candidate.createdAt)}</p>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Completed</p>
+              <p className="mt-2 text-base font-semibold text-white">{formatDateTime(candidate.endedAt || candidate.createdAt)}</p>
             </div>
-          </div>
-
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <VerisAssessmentSummaryCard candidateId={candidate.candidateId} searchParams={searchParams} />
           </div>
 
-          <div className="mt-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mt-6">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Transcript + Result</p>
-                <h4 className="mt-2 text-lg font-semibold text-white">Question, Answer and VERIS Evaluation</h4>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Transcript + Result</p>
+                <h4 className="mt-1 text-base font-semibold text-white">Question, Answer and VERIS Evaluation</h4>
               </div>
-              <p className="text-sm text-slate-500">{answerSummaries.length} recorded answer{answerSummaries.length === 1 ? "" : "s"}</p>
+              <p className="text-xs text-slate-500">{answerSummaries.length} recorded answer{answerSummaries.length === 1 ? "" : "s"}</p>
             </div>
 
             {answerSummaries.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/35 p-5 text-sm leading-7 text-slate-400">
+              <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/35 p-5 text-sm leading-7 text-slate-400">
                 No answer transcript has been recorded for this completed interview yet.
               </div>
             ) : (
-              <div className="mt-4 space-y-4">
+              <div className="mt-4 space-y-3">
                 {answerSummaries.map((answer, index) => {
                   const evaluationText = formatEvaluationText(answer.evaluation)
                   const metrics = [
@@ -343,48 +349,48 @@ function CompletedCandidateDetails({ candidate, onClose }) {
                   const duration = answer.answerPayload?.duration
 
                   return (
-                    <article key={answer.answerId || `${answer.question}-${index}`} className="rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <article key={answer.answerId || `${answer.question}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950/35 p-4 sm:p-5">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300/80">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
                             Question {answer.questionOrder ?? index + 1}
                           </p>
-                          <p className="mt-2 text-base font-medium leading-7 text-white">{answer.question}</p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                            {answer.skill ? <span>{answer.skill}</span> : null}
-                            {answer.questionType ? <span>{formatLabel(answer.questionType)}</span> : null}
-                            {answer.questionSource ? <span>{answer.questionSource}</span> : null}
+                          <p className="mt-1.5 text-sm font-medium leading-6 text-white sm:text-base">{answer.question}</p>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-slate-500">
+                            {answer.skill ? <span className="rounded-full border border-slate-700 px-2 py-0.5">{answer.skill}</span> : null}
+                            {answer.questionType ? <span className="rounded-full border border-slate-700 px-2 py-0.5">{formatLabel(answer.questionType)}</span> : null}
+                            {answer.questionSource ? <span className="rounded-full border border-slate-700 px-2 py-0.5">{answer.questionSource}</span> : null}
                           </div>
                         </div>
-                        <div className="shrink-0 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm font-semibold text-white">
+                        <div className="shrink-0 rounded-lg border border-cyan-300/25 bg-cyan-400/10 px-3 py-1.5 text-sm font-semibold tabular-nums text-cyan-100">
                           {formatAnswerScore(answer.score)}
                         </div>
                       </div>
 
-                      <div className="mt-4 rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Candidate Transcript</p>
-                        <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">{answer.answerText || "No response provided."}</p>
+                      <div className="mt-3 rounded-lg border border-slate-800/80 bg-slate-900/50 p-3.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Candidate Transcript</p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300">{answer.answerText || "No response provided."}</p>
                         {duration !== null && duration !== undefined ? (
-                          <p className="mt-3 text-xs text-slate-500">Duration: {duration}s</p>
+                          <p className="mt-2 text-xs text-slate-500">Duration: {duration}s</p>
                         ) : null}
                       </div>
 
-                      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.4fr]">
-                        <div className="rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Result</p>
-                          <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1.4fr]">
+                        <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 p-3.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Result</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
                             {metrics.length === 0 ? (
                               <span className="text-sm text-slate-500">No answer-level score recorded.</span>
                             ) : (
                               metrics.map(([label, value]) => (
-                                <span key={label} className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs text-slate-300">
+                                <span key={label} className="rounded-full border border-slate-700 bg-slate-900/70 px-2.5 py-0.5 text-xs text-slate-300">
                                   {label}: {formatAnswerScore(value)}
                                 </span>
                               ))
                             )}
                             {answer.codeSimilarity ? (
                               <span
-                                className={`rounded-full border px-3 py-1 text-xs ${codeSimilarityTone(answer.codeSimilarity.level)}`}
+                                className={`rounded-full border px-2.5 py-0.5 text-xs ${codeSimilarityTone(answer.codeSimilarity.level)}`}
                               >
                                 Code Similarity: {formatCodeSimilarityLevel(answer.codeSimilarity.level)}
                                 {answer.codeSimilarity.score !== null ? ` (${Math.round(answer.codeSimilarity.score)}%)` : ""}
@@ -393,9 +399,9 @@ function CompletedCandidateDetails({ candidate, onClose }) {
                           </div>
                         </div>
 
-                        <div className="rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">VERIS Feedback</p>
-                          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">
+                        <div className="rounded-lg border border-cyan-300/15 bg-cyan-400/[0.05] p-3.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300/90">VERIS Feedback</p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300">
                             {answer.feedback || evaluationText || "No VERIS feedback has been recorded for this answer."}
                           </p>
                         </div>
@@ -407,10 +413,10 @@ function CompletedCandidateDetails({ candidate, onClose }) {
             )}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-emerald-200/80">Overall Interview Summary</p>
-            <p className="mt-2 text-sm text-slate-400">Final VERIS assessment across all recorded answers.</p>
-            <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-200">
+          <div className="mt-5 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.05] p-4 sm:p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Overall Interview Summary</p>
+            <p className="mt-1 text-xs text-slate-400">Final VERIS assessment across all recorded answers. The hiring decision stays with your team.</p>
+            <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">
               {candidate.aiSummaryFull || "No overall VERIS summary has been recorded for this completed interview yet. Review the question-by-question transcript and evaluations above."}
             </div>
           </div>
@@ -435,6 +441,8 @@ export default function CandidatesPage() {
   const [jobFilter, setJobFilter] = useState("ALL")
   const [decisionFilter, setDecisionFilter] = useState("ALL")
   const [scoreFilter, setScoreFilter] = useState("ALL")
+  // Phones only: the four filters fold away behind a toggle.
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -631,61 +639,71 @@ export default function CandidatesPage() {
     )
   }
 
+  const awaitingDecision = candidates.filter(
+    (candidate) => isDecisionReady(candidate) && !candidate.recruiterDecisionStatus
+  ).length
+  const activeFilterCount = [statusFilter, jobFilter, decisionFilter, scoreFilter].filter((value) => value !== "ALL").length
+  const statCards = [
+    ["Total Candidates", stats.total],
+    ["Completed", stats.completed],
+    ["Pending", stats.pending],
+    ["Awaiting your decision", awaitingDecision],
+  ]
+
   return (
     <>
       <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
         <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
-        <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
-            <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-              <div className="max-w-3xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Candidate Registry</p>
-                <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">All Candidates</h1>
-                <p className="mt-4 text-base leading-7 text-slate-400">
-                  Unified candidate view across pending and completed interview journeys, with evaluation signals and recruiter-facing insight.
-                </p>
-              </div>
+        <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <header className="max-w-3xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Candidate Registry</p>
+              <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">All Candidates</h1>
+              <p className="mt-1 text-sm leading-6 text-slate-400">
+                Unified candidate view across pending and completed interview journeys, with evaluation signals and recruiter-facing insight.
+              </p>
+            </header>
+            <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+          </div>
 
-              <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[520px]">
-                <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
-                  <p className="text-sm text-slate-500">Total Candidates</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">{stats.total}</p>
-                </div>
-                <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
-                  <p className="text-sm text-slate-500">Completed</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">{stats.completed}</p>
-                </div>
-                <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
-                  <p className="text-sm text-slate-500">Pending</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">{stats.pending}</p>
-                </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {statCards.map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3.5 shadow-[0_14px_44px_rgba(2,6,23,0.18)]">
+                <p className="text-xs text-slate-400">{label}</p>
+                <p className="mt-1.5 text-2xl font-semibold tabular-nums text-white">{value}</p>
               </div>
-            </div>
-          </section>
+            ))}
+          </div>
 
-          <section className="mt-8 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
-            <div className="flex flex-col gap-4 border-b border-slate-800 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Candidate Pipeline View</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Showing {filteredCandidates.length} of {candidates.length} candidates visible to the current recruiter organization.
-                </p>
-              </div>
-
-              <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+          <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]" aria-label="Candidate Pipeline View">
+            <div className="flex flex-col gap-1 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-5">
+              <h2 className="text-base font-semibold text-white">Candidate Pipeline View</h2>
+              <p className="text-xs text-slate-400">
+                Showing {filteredCandidates.length} of {candidates.length} candidates visible to the current recruiter organization.
+              </p>
             </div>
 
-            <div className="grid gap-4 border-b border-slate-800 bg-slate-950/20 px-6 py-5 xl:grid-cols-[minmax(220px,1.2fr)_repeat(4,minmax(150px,0.7fr))_auto]">
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="grid gap-3 border-b border-slate-800 bg-slate-950/20 px-4 py-4 sm:grid-cols-2 lg:px-5 xl:grid-cols-[minmax(220px,1.3fr)_repeat(4,minmax(140px,0.7fr))_auto]">
+              <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:col-span-2 xl:col-span-1">
                 Search
                 <input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search candidate, job, hiring action"
-                  className="h-11 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+                  className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
                 />
               </label>
+              <button
+                type="button"
+                onClick={() => setShowFilters((current) => !current)}
+                aria-expanded={showFilters}
+                className="h-10 rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 sm:hidden"
+              >
+                {showFilters ? "Hide filters" : "Filters"}
+                {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+              </button>
+              <div className={`${showFilters ? "grid" : "hidden"} gap-3 sm:contents`}>
               <FilterSelect
                 label="Status"
                 value={statusFilter}
@@ -720,103 +738,100 @@ export default function CandidatesPage() {
                 type="button"
                 onClick={clearFilters}
                 disabled={!hasActiveFilters}
-                className="h-11 self-end rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                className="h-10 self-end rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Clear
               </button>
+              </div>
             </div>
 
-            <div className="overflow-hidden">
-              <table className="w-full table-fixed text-sm">
-                <colgroup>
-                  <col className="w-[16%]" />
-                  <col className="w-[24%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[21%]" />
-                </colgroup>
-                <thead className="bg-slate-950/20 text-slate-400">
-                  <tr>
-                    <th className="p-5 text-left font-medium"><span className="block">Candidate</span><span className="block">Name</span></th>
-                    <th className="p-5 text-left font-medium"><span className="block">Applied</span><span className="block">Role</span></th>
-                    <th className="p-5 text-left font-medium"><span className="block">Interview</span><span className="block">Status</span></th>
-                    <th className="p-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Score</span></th>
-                    <th className="p-5 text-left font-medium"><span className="block">VERIS</span><span className="block">Assessment</span></th>
-                    <th className="p-5 text-left font-medium"><span className="block">Hiring</span><span className="block">Action</span></th>
-                  </tr>
-                </thead>
+            {/* Column headings: the table layout starts at lg; below it each
+                candidate is a stacked card with inline labels. */}
+            <div
+              className={`hidden gap-4 border-b border-slate-800 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 lg:grid ${CANDIDATE_COLUMNS}`}
+            >
+              <span>Candidate</span>
+              <span>Applied Role</span>
+              <span>Interview Status</span>
+              <span>VERIS Score</span>
+              <span>VERIS Assessment</span>
+              <span>Hiring Action</span>
+            </div>
 
-                  <tbody>
-                    {loadError ? (
-                    <tr>
-                      <td colSpan={6} className="p-10 text-center text-amber-200">
-                        {loadError}
-                      </td>
-                    </tr>
-                  ) : candidates.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-10 text-center text-slate-400">
-                        No candidates available
-                      </td>
-                    </tr>
-                  ) : filteredCandidates.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-10 text-center text-slate-400">
-                        No candidates match the current filters
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredCandidates.map((candidate, index) => {
-                      const rowKey = candidate.interviewId || candidate.candidateId || `${candidate.candidateName}-${index}`
+            {loadError ? (
+              <p className="px-5 py-10 text-center text-sm text-amber-200">{loadError}</p>
+            ) : candidates.length === 0 ? (
+              <p className="px-5 py-10 text-center text-sm text-slate-400">No candidates available</p>
+            ) : filteredCandidates.length === 0 ? (
+              <p className="px-5 py-10 text-center text-sm text-slate-400">No candidates match the current filters</p>
+            ) : (
+              <ul>
+                {filteredCandidates.map((candidate, index) => {
+                  const rowKey = candidate.interviewId || candidate.candidateId || `${candidate.candidateName}-${index}`
+                  const assessment = assessmentSummaries[candidate.candidateId]
+                  const expanded = expandedCandidateId === rowKey
 
-                      return (
-                      <Fragment key={rowKey}>
-                      <tr className="border-t border-slate-800/80 align-top">
-                        <td className="p-5 font-medium text-white">
-                          <span className="block truncate" title={candidate.candidateName || "Candidate"}>
-                            {candidate.candidateName}
+                  return (
+                    <li key={rowKey} className="border-b border-slate-800/80 last:border-b-0">
+                      <div
+                        className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 px-4 py-4 transition-colors hover:bg-slate-800/30 lg:gap-4 lg:px-5 lg:py-3.5 ${CANDIDATE_COLUMNS}`}
+                      >
+                        <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 lg:col-start-auto lg:row-start-auto">
+                          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-cyan-400/15 text-xs font-semibold text-cyan-200">
+                            {candidateInitials(candidate.candidateName)}
                           </span>
-                          {candidate.aiSummaryFull && isCompletedCandidate(candidate) ? (
-                            <button
-                              type="button"
-                              onClick={() => setExpandedCandidateId((current) => current === rowKey ? "" : rowKey)}
-                              className="mt-2 inline-flex text-xs font-semibold text-cyan-300/85 transition hover:text-cyan-100"
-                              aria-label={`View VERIS insight for ${candidate.candidateName}`}
-                            >
-                              {expandedCandidateId === rowKey ? "Hide insight" : "View insight"}
-                            </button>
-                          ) : null}
-                        </td>
-                        <td className="p-5 text-slate-300"><span className="block truncate">{candidate.jobTitle || "-"}</span></td>
-                        <td className="p-5">
-                          <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.08em] ${getStatusBadge(candidate.status)}`}>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-white" title={candidate.candidateName || "Candidate"}>
+                              {candidate.candidateName}
+                            </p>
+                            {candidate.aiSummaryFull && isCompletedCandidate(candidate) ? (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedCandidateId((current) => current === rowKey ? "" : rowKey)}
+                                className="text-xs font-semibold text-cyan-300/90 transition hover:text-cyan-100"
+                                aria-expanded={expanded}
+                                aria-label={`View VERIS insight for ${candidate.candidateName}`}
+                              >
+                                {expanded ? "Hide insight" : "View insight"}
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <p className="col-span-2 row-start-2 truncate text-sm text-slate-300 lg:col-span-1 lg:row-start-auto">
+                          {candidate.jobTitle || "-"}
+                        </p>
+
+                        <div className="col-start-2 row-start-1 justify-self-end lg:col-start-auto lg:row-start-auto lg:justify-self-start">
+                          <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium ${getStatusBadge(candidate.status)}`}>
                             {formatStatusText(candidate.status)}
                           </span>
-                        </td>
-                        <td className={`p-5 font-medium ${getScoreColor(candidate.verisScreeningScore)}`}>{formatScore(candidate.verisScreeningScore)}</td>
-                        <td className="p-5">
-                          {assessmentSummaries[candidate.candidateId] ? (
-                            <div>
-                              <span className="font-medium text-white">
-                                {formatScore(assessmentSummaries[candidate.candidateId].percentage)}
-                              </span>
+                        </div>
+
+                        <div className="col-start-1 row-start-3 lg:col-start-auto lg:row-start-auto">
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500 lg:hidden">VERIS Score</p>
+                          <p className={`mt-0.5 text-sm font-semibold tabular-nums lg:mt-0 ${getScoreColor(candidate.verisScreeningScore)}`}>
+                            {formatScore(candidate.verisScreeningScore)}
+                          </p>
+                        </div>
+
+                        <div className="col-start-2 row-start-3 justify-self-end text-right lg:col-start-auto lg:row-start-auto lg:justify-self-start lg:text-left">
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500 lg:hidden">VERIS Assessment</p>
+                          {assessment ? (
+                            <p className="mt-0.5 text-sm lg:mt-0">
+                              <span className="font-semibold tabular-nums text-white">{formatScore(assessment.percentage)}</span>
                               <span
                                 className={`ml-2 text-xs font-medium ${
-                                  assessmentSummaries[candidate.candidateId].passed === true
+                                  assessment.passed === true
                                     ? "text-emerald-300"
-                                    : assessmentSummaries[candidate.candidateId].passed === false
+                                    : assessment.passed === false
                                       ? "text-rose-300"
                                       : "text-slate-400"
                                 }`}
                               >
-                                {assessmentSummaries[candidate.candidateId].passed === true
-                                  ? "Passed"
-                                  : assessmentSummaries[candidate.candidateId].passed === false
-                                    ? "Failed"
-                                    : "Pending"}
+                                {assessment.passed === true ? "Passed" : assessment.passed === false ? "Failed" : "Pending"}
                               </span>
-                            </div>
+                            </p>
                           ) : (
                             <button
                               type="button"
@@ -827,14 +842,15 @@ export default function CandidatesPage() {
                                   candidateEmail: candidate.candidateEmail || "",
                                 })
                               }
-                              className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-violet-400/25 bg-violet-400/10 px-3 text-xs font-semibold text-violet-100 transition hover:border-violet-300/45 hover:bg-violet-400/15 hover:text-white"
+                              className="mt-1 inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg border border-slate-700 bg-slate-900/80 px-3 text-xs font-semibold text-slate-200 transition hover:border-cyan-300/50 hover:text-white lg:mt-0"
                               aria-label={`Send VERIS Assessment to ${candidate.candidateName}`}
                             >
                               Send Assessment
                             </button>
                           )}
-                        </td>
-                        <td className="p-5">
+                        </div>
+
+                        <div className="col-span-2 row-start-4 lg:col-span-1 lg:row-start-auto">
                           <div className="flex flex-wrap items-center gap-2">
                             {isDecisionReady(candidate) ? (
                               candidate.recruiterDecisionStatus ? (
@@ -843,7 +859,7 @@ export default function CandidatesPage() {
                                 <button
                                   type="button"
                                   onClick={() => setReviewCandidate(candidate)}
-                                  className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white"
+                                  className="hv-solid-action inline-flex h-9 items-center justify-center whitespace-nowrap rounded-xl bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-500"
                                   aria-label={`Take hiring action for ${candidate.candidateName}`}
                                 >
                                   Take Action
@@ -858,7 +874,7 @@ export default function CandidatesPage() {
                               <button
                                 type="button"
                                 onClick={() => setReviewCandidate(candidate)}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-400/15 hover:text-white"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 transition hover:border-cyan-300/50 hover:text-white"
                                 aria-label={`Edit hiring action for ${candidate.candidateName}`}
                                 title="Edit hiring action"
                               >
@@ -866,22 +882,19 @@ export default function CandidatesPage() {
                               </button>
                             ) : null}
                           </div>
-                        </td>
-                      </tr>
-                      {expandedCandidateId === rowKey ? (
-                        <tr className="border-t border-emerald-400/10">
-                          <td colSpan={6} className="bg-slate-950/30 p-5">
-                            <CompletedCandidateDetails candidate={candidate} onClose={() => setExpandedCandidateId("")} />
-                          </td>
-                        </tr>
+                        </div>
+                      </div>
+
+                      {expanded ? (
+                        <div className="border-t border-slate-800 bg-slate-950/30 p-3 sm:p-5">
+                          <CompletedCandidateDetails candidate={candidate} onClose={() => setExpandedCandidateId("")} />
+                        </div>
                       ) : null}
-                      </Fragment>
-                      )
-                    })
-                  )}
-                  </tbody>
-              </table>
-            </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </section>
         </main>
       </div>
@@ -907,4 +920,3 @@ export default function CandidatesPage() {
     </>
   )
 }
-
