@@ -38,6 +38,23 @@ function passTone(passed) {
   return "border-slate-700 bg-slate-800/60 text-slate-400"
 }
 
+function participantName(row) {
+  return row.employee?.fullName ?? row.candidate?.fullName ?? "-"
+}
+
+function participantEmail(row) {
+  return row.employee?.email ?? row.candidate?.email ?? ""
+}
+
+function initials(name) {
+  const parts = String(name ?? "").trim().split(/\s+/).filter((part) => part && part !== "-")
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "VN"
+}
+
+// Results table columns from lg up. Below lg each row is a stacked card.
+const RESULT_COLUMNS =
+  "lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)_7rem_4.5rem_6.5rem_9.5rem_6rem_6rem_8.5rem]"
+
 export default function AssessmentResultsPage() {
   const { id } = useParams()
   const searchParams = useAuthSearchParams()
@@ -69,24 +86,54 @@ export default function AssessmentResultsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  const scored = results.filter((row) => row.percentage != null)
+  const averageScore = scored.length
+    ? Math.round(scored.reduce((sum, row) => sum + Number(row.percentage), 0) / scored.length)
+    : null
+  const statCards = [
+    ["Results", results.length],
+    ["Average score", averageScore === null ? "-" : `${averageScore}%`],
+    ["Passed", results.filter((row) => row.passed === true).length],
+    ["Integrity review", results.filter((row) => row.riskLevel === "REVIEW_RECOMMENDED" || row.riskLevel === "HIGH").length],
+  ]
+
+  const renderActions = (row) => (
+    <div className="flex items-center gap-2 lg:justify-end">
+      <Link
+        href={buildAuthUrl(`/assessments/${id}/results/${row.attemptId}`, searchParams)}
+        className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-cyan-300/50 hover:text-white"
+      >
+        View
+      </Link>
+      {row.employee ? (
+        <Link
+          href={buildAuthUrl(`/assessments/${id}/results/${row.attemptId}/review`, searchParams)}
+          className="hv-solid-action rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-cyan-500"
+        >
+          Review
+        </Link>
+      ) : null}
+    </div>
+  )
+
   return (
     <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
       <Navbar />
 
-      <main className="mx-auto max-w-[1400px] px-4 py-7 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+      <main className="mx-auto max-w-[1400px] space-y-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <header className="min-w-0">
             <Link href={buildAuthUrl("/assessments", searchParams)} className="text-sm text-slate-400 hover:text-white">
               &larr; Back to Assessments
             </Link>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">{assessmentTitle || "Results"}</h1>
+            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Assessment results</p>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">{assessmentTitle || "Results"}</h1>
             <p className="mt-1 text-sm text-slate-400">Candidate scores, pass/fail, and integrity risk.</p>
-          </div>
-          <BackToDashboardLink className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+          </header>
+          <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
         </div>
 
         <AssessmentWorkflowPanel
-          className="mt-5"
           assessmentId={id}
           isPublished={assessment?.status === "PUBLISHED"}
           hasQuestions={(assessment?.versions ?? []).some((v) => (v.questions?.length ?? 0) > 0)}
@@ -94,74 +141,83 @@ export default function AssessmentResultsPage() {
           hasResults={results.length > 0}
         />
 
-        <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-800 bg-slate-900/40">
-          <div className="hv-table-scroll">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead className="bg-slate-950/20 text-slate-400">
-                <tr>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Participant</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Job</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Status</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Score</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Pass/Fail</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Integrity Risk</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Sent</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Completed</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Detail</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={9} className="p-10 text-center text-slate-400">Loading results...</td></tr>
-                ) : results.length === 0 ? (
-                  <tr><td colSpan={9} className="p-10 text-center text-slate-400">No completed attempts yet.</td></tr>
-                ) : (
-                  results.map((row) => (
-                    <tr key={row.id} className="border-t border-slate-800/80 text-slate-200">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-white">{row.employee?.fullName ?? row.candidate?.fullName ?? "-"}</div>
-                        <div className="text-xs text-slate-500">{row.employee?.email ?? row.candidate?.email ?? ""}</div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">{row.jobTitle ?? "-"}</td>
-                      <td className="px-4 py-3 text-slate-300">{formatLabel(row.status, "-")}</td>
-                      <td className="px-4 py-3 text-slate-200">{row.percentage != null ? `${Number(row.percentage)}%` : "-"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${passTone(row.passed)}`}>
-                          {row.passed === true ? "PASSED" : row.passed === false ? "FAILED" : "PENDING"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${riskTone(row.riskLevel)}`}>
-                          {formatRiskLevel(row.riskLevel)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-400">{row.sentAt ? formatDate(row.sentAt) : "-"}</td>
-                      <td className="px-4 py-3 text-slate-400">{row.completedAt ? formatDate(row.completedAt) : "-"}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            href={buildAuthUrl(`/assessments/${id}/results/${row.attemptId}`, searchParams)}
-                            className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-200 transition hover:text-white"
-                          >
-                            View
-                          </Link>
-                          {row.employee ? (
-                            <Link
-                              href={buildAuthUrl(`/assessments/${id}/results/${row.attemptId}/review`, searchParams)}
-                              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-500/20"
-                            >
-                              Review
-                            </Link>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {statCards.map(([label, value]) => (
+            <div key={label} className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3.5">
+              <p className="text-xs text-slate-400">{label}</p>
+              <p className="mt-1.5 text-2xl font-semibold tabular-nums text-white">{value}</p>
+            </div>
+          ))}
         </div>
+
+        <section aria-label="Results" className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80">
+          <div
+            className={`hidden gap-3 border-b border-slate-800 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 lg:grid ${RESULT_COLUMNS}`}
+          >
+            <span>Participant</span>
+            <span>Job</span>
+            <span>Status</span>
+            <span>Score</span>
+            <span>Pass/Fail</span>
+            <span>Integrity Risk</span>
+            <span>Sent</span>
+            <span>Completed</span>
+            <span className="text-right">Detail</span>
+          </div>
+
+          {loading ? (
+            <p className="px-5 py-10 text-center text-sm text-slate-400">Loading results...</p>
+          ) : results.length === 0 ? (
+            <p className="px-5 py-10 text-center text-sm text-slate-400">No completed attempts yet.</p>
+          ) : (
+            <ul>
+              {results.map((row) => (
+                <li
+                  key={row.id}
+                  className={`grid grid-cols-2 items-center gap-x-3 gap-y-2.5 border-b border-slate-800/80 px-4 py-4 text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/30 lg:gap-3 lg:px-5 lg:py-3 ${RESULT_COLUMNS}`}
+                >
+                  <div className="col-span-2 flex min-w-0 items-center gap-3 lg:col-span-1">
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-cyan-400/15 text-xs font-semibold text-cyan-200">
+                      {initials(participantName(row))}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-white">{participantName(row)}</p>
+                      <p className="truncate text-xs text-slate-500">{participantEmail(row)}</p>
+                    </div>
+                  </div>
+                  <p className="col-span-2 truncate text-slate-400 lg:col-span-1">{row.jobTitle ?? "-"}</p>
+                  <p className="text-slate-300">
+                    <span className="mr-1 text-[10px] uppercase tracking-[0.12em] text-slate-500 lg:hidden">Status</span>
+                    {formatLabel(row.status, "-")}
+                  </p>
+                  <p className="text-right font-semibold tabular-nums text-white lg:text-left">
+                    <span className="mr-1 text-[10px] font-normal uppercase tracking-[0.12em] text-slate-500 lg:hidden">Score</span>
+                    {row.percentage != null ? `${Number(row.percentage)}%` : "-"}
+                  </p>
+                  <div>
+                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] ${passTone(row.passed)}`}>
+                      {row.passed === true ? "PASSED" : row.passed === false ? "FAILED" : "PENDING"}
+                    </span>
+                  </div>
+                  <div className="justify-self-end lg:justify-self-start">
+                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] ${riskTone(row.riskLevel)}`}>
+                      {formatRiskLevel(row.riskLevel)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    <span className="mr-1 uppercase tracking-[0.12em] text-slate-500 lg:hidden">Sent</span>
+                    {row.sentAt ? formatDate(row.sentAt) : "-"}
+                  </p>
+                  <p className="text-right text-xs text-slate-400 lg:text-left">
+                    <span className="mr-1 uppercase tracking-[0.12em] text-slate-500 lg:hidden">Completed</span>
+                    {row.completedAt ? formatDate(row.completedAt) : "-"}
+                  </p>
+                  <div className="col-span-2 lg:col-span-1">{renderActions(row)}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </main>
     </div>
   )

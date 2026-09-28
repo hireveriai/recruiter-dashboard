@@ -487,12 +487,12 @@ function getEvaluationState(interview) {
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label className="grid gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-slate-500 2xl:gap-1.5 2xl:text-[11px] 2xl:tracking-[0.14em]">
+    <label className="grid gap-1.5 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-slate-500">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 2xl:h-10 2xl:px-3"
+        className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -636,23 +636,22 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
   const answerSummaries = Array.isArray(interview.answerSummaries) ? interview.answerSummaries : []
 
   return (
-    <div className="hv-completed-summary-modal hv-theme-modal relative flex max-h-[88vh] flex-col overflow-hidden rounded-[28px] border border-emerald-400/20 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.13),_transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(9,14,28,0.98))] shadow-[0_0_80px_rgba(16,185,129,0.12)]">
-        <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
-
-        <div className="flex shrink-0 flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <div>
-            <h3 className="text-2xl font-semibold text-white">Completed Interview Summary</h3>
-            <p className="mt-2 text-sm text-slate-400">
+    <div className="hv-completed-summary-modal hv-theme-modal relative flex max-h-[88vh] flex-col overflow-hidden rounded-[24px] border border-slate-700/70 bg-[#0a1020]/95 shadow-[0_30px_80px_rgba(2,6,23,0.55)]">
+        <div className="flex shrink-0 flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-5">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">VERIS Insight</p>
+            <h3 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Completed Interview Summary</h3>
+            <p className="mt-0.5 truncate text-sm text-slate-400">
               {interview.candidateName || "Candidate"} · {interview.jobTitle || "Role"}
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={onDownload}
               disabled={isDownloading}
-              className="self-start rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
+              className="hv-solid-action self-start rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
             >
               <span className="inline-flex items-center gap-2">
                 <Download className="h-4 w-4" aria-hidden="true" />
@@ -662,48 +661,48 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
             <button
               type="button"
               onClick={onClose}
-              className="self-start rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100 transition hover:bg-emerald-400/20 sm:self-auto"
+              className="self-start rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-300/60 hover:text-white sm:self-auto"
             >
               Close
             </button>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto px-6 py-6 sm:px-8">
+        <div className="min-h-0 flex-1 overflow-auto px-5 py-5 sm:px-7 sm:py-6">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Score</p>
-              <p className="mt-3 text-2xl font-semibold text-white">{formatScore(interview.score)}</p>
+            <div className="hv-completed-summary-card rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Score</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-white">{formatScore(interview.score)}</p>
             </div>
-            <div className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Decision</p>
-              <p className="mt-3 text-2xl font-semibold text-white">{interview.decision || "-"}</p>
+            <div className="hv-completed-summary-card rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Decision</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{interview.decision || "-"}</p>
             </div>
-            <div className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Completed</p>
-              <p className="mt-3 text-lg font-semibold text-white">{formatDateTime(interview.endedAt || interview.createdAt)}</p>
+            <div className="hv-completed-summary-card rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Completed</p>
+              <p className="mt-2 text-base font-semibold text-white">{formatDateTime(interview.endedAt || interview.createdAt)}</p>
             </div>
           </div>
 
-          <div className="mt-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mt-6">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Transcript + Result</p>
-                <h4 className="mt-2 text-lg font-semibold text-white">Question, Answer and VERIS Evaluation</h4>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Transcript + Result</p>
+                <h4 className="mt-1 text-base font-semibold text-white">Question, Answer and VERIS Evaluation</h4>
               </div>
-              <p className="text-sm text-slate-500">{answerSummaries.length} recorded answer{answerSummaries.length === 1 ? "" : "s"}</p>
+              <p className="text-xs text-slate-500">{answerSummaries.length} recorded answer{answerSummaries.length === 1 ? "" : "s"}</p>
             </div>
 
             {isLoadingDetails ? (
-              <div className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-5 text-sm leading-7 text-cyan-100">
+              <div className="mt-4 rounded-xl border border-cyan-400/15 bg-cyan-400/5 p-5 text-sm leading-7 text-cyan-100">
                 Loading transcript and answer-level VERIS feedback...
               </div>
             ) : answerSummaries.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/35 p-5 text-sm leading-7 text-slate-400">
+              <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/35 p-5 text-sm leading-7 text-slate-400">
                 No answer transcript has been recorded for this completed interview yet.
               </div>
             ) : (
-              <div className="mt-4 space-y-4">
+              <div className="mt-4 space-y-3">
                 {answerSummaries.map((answer, index) => {
                   const evaluationText = formatEvaluationText(answer.evaluation)
                   const metrics = [
@@ -717,48 +716,48 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                   const duration = answer.answerPayload?.duration
 
                   return (
-                    <article key={answer.answerId || `${answer.question}-${index}`} className="hv-completed-summary-card rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <article key={answer.answerId || `${answer.question}-${index}`} className="hv-completed-summary-card rounded-xl border border-slate-800 bg-slate-950/35 p-4 sm:p-5">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300/80">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
                             Question {answer.questionOrder ?? index + 1}
                           </p>
-                          <p className="mt-2 text-base font-medium leading-7 text-white">{answer.question}</p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                            {answer.skill ? <span>{answer.skill}</span> : null}
-                            {answer.questionType ? <span>{formatLabel(answer.questionType)}</span> : null}
-                            {answer.questionSource ? <span>{answer.questionSource}</span> : null}
+                          <p className="mt-1.5 text-sm font-medium leading-6 text-white sm:text-base">{answer.question}</p>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-slate-500">
+                            {answer.skill ? <span className="rounded-full border border-slate-700 px-2 py-0.5">{answer.skill}</span> : null}
+                            {answer.questionType ? <span className="rounded-full border border-slate-700 px-2 py-0.5">{formatLabel(answer.questionType)}</span> : null}
+                            {answer.questionSource ? <span className="rounded-full border border-slate-700 px-2 py-0.5">{answer.questionSource}</span> : null}
                           </div>
                         </div>
-                        <div className="shrink-0 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm font-semibold text-white">
+                        <div className="shrink-0 rounded-lg border border-cyan-300/25 bg-cyan-400/10 px-3 py-1.5 text-sm font-semibold tabular-nums text-cyan-100">
                           {formatAnswerScore(answer.score)}
                         </div>
                       </div>
 
-                      <div className="hv-completed-summary-subcard mt-4 rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Candidate Transcript</p>
-                        <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">{answer.answerText || "No response provided."}</p>
+                      <div className="hv-completed-summary-subcard mt-3 rounded-lg border border-slate-800/80 bg-slate-900/50 p-3.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Candidate Transcript</p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300">{answer.answerText || "No response provided."}</p>
                         {duration !== null && duration !== undefined ? (
-                          <p className="mt-3 text-xs text-slate-500">Duration: {duration}s</p>
+                          <p className="mt-2 text-xs text-slate-500">Duration: {duration}s</p>
                         ) : null}
                       </div>
 
-                      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.4fr]">
-                        <div className="hv-completed-summary-subcard rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Result</p>
-                          <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1.4fr]">
+                        <div className="hv-completed-summary-subcard rounded-lg border border-slate-800/80 bg-slate-900/50 p-3.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Result</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
                             {metrics.length === 0 ? (
                               <span className="text-sm text-slate-500">No answer-level score recorded.</span>
                             ) : (
                               metrics.map(([label, value]) => (
-                                <span key={label} className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs text-slate-300">
+                                <span key={label} className="rounded-full border border-slate-700 bg-slate-900/70 px-2.5 py-0.5 text-xs text-slate-300">
                                   {label}: {formatAnswerScore(value)}
                                 </span>
                               ))
                             )}
                             {answer.codeSimilarity ? (
                               <span
-                                className={`rounded-full border px-3 py-1 text-xs ${codeSimilarityTone(answer.codeSimilarity.level)}`}
+                                className={`rounded-full border px-2.5 py-0.5 text-xs ${codeSimilarityTone(answer.codeSimilarity.level)}`}
                               >
                                 Code Similarity: {formatCodeSimilarityLevel(answer.codeSimilarity.level)}
                                 {answer.codeSimilarity.score !== null ? ` (${Math.round(answer.codeSimilarity.score)}%)` : ""}
@@ -767,9 +766,9 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
                           </div>
                         </div>
 
-                        <div className="hv-completed-summary-subcard rounded-xl border border-slate-800/80 bg-[#08111f]/70 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">VERIS Feedback</p>
-                          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">
+                        <div className="hv-completed-summary-subcard rounded-lg border border-cyan-300/15 bg-cyan-400/[0.05] p-3.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300/90">VERIS Feedback</p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300">
                             {answer.feedback || evaluationText || "No VERIS feedback has been recorded for this answer."}
                           </p>
                         </div>
@@ -781,10 +780,10 @@ function CompletedInterviewDetails({ interview, onClose, onDownload, isDownloadi
             )}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-emerald-200/80">Overall Interview Summary</p>
-            <p className="mt-2 text-sm text-slate-400">Final VERIS assessment across all recorded answers.</p>
-            <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-200">
+          <div className="mt-5 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.05] p-4 sm:p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Overall Interview Summary</p>
+            <p className="mt-1 text-xs text-slate-400">Final VERIS assessment across all recorded answers. The hiring decision stays with your team.</p>
+            <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">
               {interview.aiSummary || "No overall VERIS summary has been recorded for this completed interview yet. Review the question-by-question transcript and evaluations above."}
             </div>
           </div>
@@ -829,6 +828,9 @@ export default function InterviewsPage() {
   const [evaluationFilter, setEvaluationFilter] = useState("ALL")
   const [recruiterDecisionFilter, setRecruiterDecisionFilter] = useState("ALL")
   const [lockedFeature, setLockedFeature] = useState(null)
+  const [showStatusGuide, setShowStatusGuide] = useState(false)
+  // Phones only: the five filters fold away behind a toggle.
+  const [showFilters, setShowFilters] = useState(false)
 
   async function loadInterviews() {
     const response = await fetch(buildAuthUrl("/api/dashboard/interviews?includeAnswers=0", searchParams), {
@@ -1163,44 +1165,266 @@ export default function InterviewsPage() {
     )
   }
 
+  // Everything a row needs, computed once and shared by the table (lg+) and
+  // the stacked cards (below lg), so both show identical states and actions.
+  const buildRowModel = (interview) => {
+    const recruiterStatus = getRecruiterStatus(interview)
+    const faultNote = getFaultNote(interview, recruiterStatus.key)
+    const evidenceIncomplete = hasIncompleteEvidence(interview, recruiterStatus.key)
+    const evidenceCompleteness = evidenceIncomplete ? getEvidenceCompleteness(interview) : null
+    const incompleteEvidenceNote = evidenceIncomplete
+      ? `Incomplete evidence — ${pluralResponses(Number(interview.unrecoveredResponses ?? 0))} could not be recovered. Review manually before making a hiring decision.`
+      : ""
+    const interviewStatus = normalizeStatusKey(interview.status)
+    const isEarlyExit = isEarlyExitInterview(interview)
+    const isCompleted = isCompletedInterview(interview)
+    const canTakeAction = isCompleted && !isEarlyExit && !interview.recruiterDecisionStatus
+    const canChangeDecision = isCompleted && !isEarlyExit && Boolean(interview.recruiterDecisionStatus)
+    const canViewSummary = isCompleted && !isEarlyExit
+    const canSendCandidateFeedback = isCompleted && !isEarlyExit
+    const candidateFeedbackActionLabel = interview.candidateFeedbackText
+      ? "Send Candidate Feedback"
+      : "Generate Candidate Feedback"
+    const canCopyLink =
+      !isCompleted &&
+      !isEarlyExit &&
+      ["READY", "EMAIL_FAILED"].includes(interviewStatus) &&
+      Boolean(interview.link)
+    const canRetryPreparation = interviewStatus === "PREPARATION_FAILED"
+    const canRetryEmail = interviewStatus === "EMAIL_FAILED"
+    const hasHiringActions =
+      canTakeAction || canChangeDecision || canViewSummary || canSendCandidateFeedback || canCopyLink || canRetryPreparation || canRetryEmail
+    const latestActivity = formatLatestActivity(getInterviewActivityValue(interview))
+
+    // Row-level notes sit in one strip under the row instead of
+    // wrapping inside narrow columns.
+    const rowNotes = [
+      faultNote?.party === "VERISNOVA"
+        ? { key: "fault", tone: "rose", icon: TriangleAlert, text: "Platform recording issue" }
+        : null,
+      interview.creditRefunded
+        ? {
+            key: "refund",
+            tone: "emerald",
+            icon: CircleCheck,
+            text: "Interview credit refunded",
+            title: "This interview was affected by a VerisNova recording issue. 1 interview credit has been returned to your account.",
+          }
+        : null,
+      evidenceIncomplete
+        ? {
+            key: "evidence",
+            tone: "amber",
+            icon: FileWarning,
+            text: evidenceCompleteness
+              ? `Evidence ${evidenceCompleteness.available}/${evidenceCompleteness.total} recovered · review manually before deciding`
+              : "Review manually before deciding",
+            title: incompleteEvidenceNote,
+          }
+        : null,
+    ].filter(Boolean)
+
+    return {
+      interview,
+      recruiterStatus,
+      faultNote,
+      evidenceIncomplete,
+      incompleteEvidenceNote,
+      isEarlyExit,
+      isCompleted,
+      canTakeAction,
+      canChangeDecision,
+      canViewSummary,
+      canSendCandidateFeedback,
+      candidateFeedbackActionLabel,
+      canCopyLink,
+      canRetryPreparation,
+      canRetryEmail,
+      hasHiringActions,
+      latestActivity,
+      rowNotes,
+      hasRowNotes: rowNotes.length > 0,
+    }
+  }
+
+  const renderRecording = (interview) =>
+    interview.hasRecording && interview.recordingUrl ? (
+      <Link
+        href={interview.recordingUrl}
+        target="_blank"
+        rel="noreferrer"
+        className={recordingAction}
+        aria-label={`View recording for ${interview.candidateName}`}
+      >
+        <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>View</span>
+      </Link>
+    ) : interview.recordingId ? (
+      <span className={tableProcessingChip}>
+        Processing
+      </span>
+    ) : (
+      <span className={tableMutedChip}>
+        Not available
+      </span>
+    )
+
+  const renderRecruiterDecision = (model) =>
+    model.interview.recruiterDecisionStatus ? (
+      <DecisionPill status={model.interview.recruiterDecisionStatus} />
+    ) : model.isCompleted && !model.isEarlyExit ? (
+      <span className="inline-flex whitespace-nowrap rounded-full border border-slate-700 bg-slate-950/30 px-2.5 py-0.5 text-[11px] font-semibold text-slate-400">
+        Awaiting decision
+      </span>
+    ) : (
+      <span className="text-slate-600">-</span>
+    )
+
+  const renderRowNotes = (model) =>
+    model.hasRowNotes ? (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {model.rowNotes.map(({ key, tone, icon: NoteIcon, text, title }) => (
+          <span key={key} className={`${rowNoteChip} ${ROW_NOTE_TONES[tone]}`} title={title}>
+            <NoteIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
+            {text}
+          </span>
+        ))}
+      </div>
+    ) : null
+
+  const renderActions = (model) => {
+    const { interview } = model
+    if (!model.hasHiringActions) {
+      return !model.isEarlyExit ? <span className="text-slate-600">-</span> : null
+    }
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="hv-interview-actions-trigger inline-flex h-8 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+            aria-label={`Open hiring actions for ${interview.candidateName || "candidate"}`}
+          >
+            <Ellipsis className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          sideOffset={6}
+          className="hv-interview-actions-menu hv-theme-popover min-w-48 border border-slate-700 bg-slate-900 p-1.5 text-slate-200 shadow-[0_18px_48px_rgba(2,6,23,0.55)] ring-0"
+        >
+          {model.canTakeAction || model.canChangeDecision ? (
+            <DropdownMenuItem
+              onSelect={() => setReviewInterview(interview)}
+              className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-cyan-100 focus:bg-cyan-400/10 focus:text-cyan-50"
+              data-tone="primary"
+            >
+              <FileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {model.canChangeDecision ? "Change Decision" : "Take Action"}
+            </DropdownMenuItem>
+          ) : null}
+          {model.canViewSummary ? (
+            <DropdownMenuItem
+              onSelect={() => openInterviewSummary(interview)}
+              className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-emerald-100 focus:bg-emerald-400/10 focus:text-emerald-50"
+              data-tone="success"
+            >
+              <FileText className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              View Summary
+            </DropdownMenuItem>
+          ) : null}
+          {model.canSendCandidateFeedback ? (
+            <DropdownMenuItem
+              onSelect={() => setFeedbackInterviewId(interview.interviewId)}
+              className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-sky-100 focus:bg-sky-400/10 focus:text-sky-50"
+            >
+              <MessageSquare className="h-4 w-4 text-sky-300" aria-hidden="true" />
+              {model.candidateFeedbackActionLabel}
+            </DropdownMenuItem>
+          ) : null}
+          {model.canCopyLink ? (
+            <DropdownMenuItem
+              onSelect={() => copyLink(interview)}
+              className="cursor-pointer gap-2.5 px-3 py-2.5 text-slate-100 focus:bg-slate-800 focus:text-white"
+            >
+              <Link2 className="h-4 w-4 text-slate-300" aria-hidden="true" />
+              {copiedInterviewId === interview.interviewId ? "Copied" : "Copy Link"}
+            </DropdownMenuItem>
+          ) : null}
+          {model.canRetryPreparation ? (
+            <DropdownMenuItem
+              onSelect={() => retryPreparation(interview)}
+              disabled={actionBusyId === interview.interviewId}
+              className="cursor-pointer gap-2.5 px-3 py-2.5 text-rose-100 focus:bg-rose-400/10 focus:text-rose-50"
+            >
+              <RotateCw className="h-4 w-4 text-rose-300" aria-hidden="true" />
+              {actionBusyId === interview.interviewId ? "Retrying..." : "Retry Preparation"}
+            </DropdownMenuItem>
+          ) : null}
+          {model.canRetryEmail ? (
+            <DropdownMenuItem
+              onSelect={() => retryEmail(interview)}
+              disabled={actionBusyId === interview.interviewId}
+              className="cursor-pointer gap-2.5 px-3 py-2.5 text-amber-100 focus:bg-amber-400/10 focus:text-amber-50"
+            >
+              <RotateCw className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              {actionBusyId === interview.interviewId ? "Sending..." : "Retry Email"}
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
+  const rowModels = filteredInterviews.map(buildRowModel)
+  const activeFilterCount = [statusFilter, jobFilter, accessFilter, evaluationFilter, recruiterDecisionFilter].filter(
+    (value) => value !== "ALL"
+  ).length
+  const emptyMessage =
+    interviews.length === 0
+      ? "No interviews available"
+      : filteredInterviews.length === 0
+        ? "No interviews match the current filters"
+        : null
+
   return (
     <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
-      <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="hv-elevated-section rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.22)] 2xl:p-8">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between 2xl:gap-8">
-            <div className="max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Interview Registry</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white 2xl:mt-4 2xl:text-4xl">All Interviews</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-400 2xl:mt-4 2xl:text-base 2xl:leading-7">
-                Current interview operations across flexible and scheduled access windows, with score and decision visibility where evaluation is complete.
-              </p>
-            </div>
+      <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <header className="max-w-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Interview Registry</p>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">All Interviews</h1>
+            <p className="mt-1 text-sm leading-6 text-slate-400">
+              Current interview operations across flexible and scheduled access windows, with score and decision visibility where evaluation is complete.
+            </p>
+          </header>
+          <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+        </div>
 
-            <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[600px] 2xl:min-w-[680px]">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
-                <p className="text-xs text-slate-500 2xl:text-sm">Total Interviews</p>
-                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.total}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
-                <p className="text-xs text-slate-500 2xl:text-sm">Active Queue</p>
-                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.active}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
-                <p className="text-xs text-slate-500 2xl:text-sm">Completed</p>
-                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.completed}</p>
-              </div>
-              <div className="rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-3.5 2xl:p-4">
-                <p className="text-xs text-slate-500 2xl:text-sm">Pending Review</p>
-                <p className="mt-2 text-2xl font-semibold text-cyan-100 2xl:mt-3 2xl:text-3xl">{stats.pendingReview}</p>
-              </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            ["Total Interviews", stats.total, false],
+            ["Active Queue", stats.active, false],
+            ["Completed", stats.completed, false],
+            ["Pending Review", stats.pendingReview, true],
+          ].map(([label, value, accent]) => (
+            <div
+              key={label}
+              className={`hv-elevated-section rounded-xl border px-4 py-3.5 shadow-[0_14px_44px_rgba(2,6,23,0.18)] ${
+                accent ? "border-cyan-300/25 bg-cyan-400/[0.06]" : "border-slate-800 bg-slate-900/80"
+              }`}
+            >
+              <p className="text-xs text-slate-400">{label}</p>
+              <p className={`mt-1.5 text-2xl font-semibold tabular-nums ${accent ? "text-cyan-100" : "text-white"}`}>{value}</p>
             </div>
-          </div>
-        </section>
+          ))}
+        </div>
 
         {liveEnabled ? (
-          <div role="tablist" aria-label="Interview type" className="mt-6 inline-flex rounded-2xl border border-slate-800 bg-slate-900/80 p-1 shadow-sm 2xl:mt-8">
+          <div role="tablist" aria-label="Interview type" className="inline-flex rounded-xl border border-slate-800 bg-slate-900/80 p-1 shadow-sm">
             {[
               ["ai", "VERIS AI Interviews", "AI-led"],
               ["live", "VERIS Live Interviews", "Human-led"],
@@ -1211,8 +1435,8 @@ export default function InterviewsPage() {
                 role="tab"
                 aria-selected={interviewView === key}
                 onClick={() => setInterviewView(key)}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-                  interviewView === key ? "hv-solid-action bg-[#2563eb] text-white shadow-sm" : "text-slate-400 hover:text-white"
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  interviewView === key ? "hv-solid-action bg-cyan-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
                 }`}
               >
                 {title}
@@ -1222,103 +1446,126 @@ export default function InterviewsPage() {
           </div>
         ) : null}
 
-        <section className={`hv-elevated-section overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)] ${liveEnabled ? "mt-4" : "mt-6 2xl:mt-8"} ${liveEnabled && interviewView === "live" ? "hidden" : ""}`}>
-          <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between 2xl:px-6 2xl:py-5">
+        <section
+          aria-label="Interview Register"
+          className={`hv-elevated-section overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)] ${liveEnabled && interviewView === "live" ? "hidden" : ""}`}
+        >
+          <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-5">
             <div>
-              <h2 className="text-lg font-semibold text-white">Interview Register</h2>
-              <p className="mt-1 text-sm text-slate-400">
+              <h2 className="text-base font-semibold text-white">Interview Register</h2>
+              <p className="mt-0.5 text-xs text-slate-400">
                 Showing {filteredInterviews.length} of {interviews.length} interviews under the current recruiter organization.
               </p>
             </div>
-
-            <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+            <button
+              type="button"
+              onClick={() => setShowStatusGuide((current) => !current)}
+              aria-expanded={showStatusGuide}
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-700 px-3.5 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white"
+            >
+              <Info className="h-4 w-4" aria-hidden="true" />
+              {showStatusGuide ? "Hide status guide" : "Status guide"}
+            </button>
           </div>
 
-          <div className="border-b border-slate-800 bg-slate-950/30 px-5 py-4 2xl:px-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Status guide</p>
-            <dl className="mt-2.5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {STATUS_GUIDE_KEYS.map((key) => (
-                <div key={key} className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
-                  <dt>
-                    <span className={`inline-flex whitespace-nowrap rounded-md border px-1.5 py-px text-[10.5px] font-semibold ${getStatusBadge(key)}`}>
-                      {RECRUITER_STATUS_DEFINITIONS[key].label}
-                    </span>
-                  </dt>
-                  <dd className="mt-1.5 text-[11px] leading-4 text-slate-400">
-                    {STATUS_GUIDE_TEXT[key] ?? RECRUITER_STATUS_DEFINITIONS[key].description}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+          {showStatusGuide ? (
+            <div className="border-b border-slate-800 bg-slate-950/30 px-4 py-4 lg:px-5">
+              <dl className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {STATUS_GUIDE_KEYS.map((key) => (
+                  <div key={key} className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+                    <dt>
+                      <span className={`inline-flex whitespace-nowrap rounded-md border px-1.5 py-px text-[10.5px] font-semibold ${getStatusBadge(key)}`}>
+                        {RECRUITER_STATUS_DEFINITIONS[key].label}
+                      </span>
+                    </dt>
+                    <dd className="mt-1.5 text-[11px] leading-4 text-slate-400">
+                      {STATUS_GUIDE_TEXT[key] ?? RECRUITER_STATUS_DEFINITIONS[key].description}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
 
-          <div className="grid gap-x-3 gap-y-2.5 border-b border-slate-800 bg-slate-950/20 px-5 py-3 lg:grid-cols-2 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto] 2xl:gap-x-4 2xl:px-6 2xl:py-4">
-            <label className="grid gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-slate-500 2xl:gap-1.5 2xl:text-[11px] 2xl:tracking-[0.14em]">
+          <div className="grid gap-x-3 gap-y-2.5 border-b border-slate-800 bg-slate-950/20 px-4 py-3.5 sm:grid-cols-2 lg:px-5 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto]">
+            <label className="grid gap-1.5 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-slate-500 sm:col-span-2 xl:col-span-1">
               Search
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search candidate, job, status"
-                className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 2xl:h-10 2xl:px-3"
+                className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
               />
             </label>
-            <FilterSelect
-              label="Status"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[{ value: "ALL", label: "All Statuses" }, ...filterOptions.statuses.map((value) => ({ value: value.toUpperCase(), label: formatStatusText(value) }))]}
-            />
-            <FilterSelect
-              label="Job"
-              value={jobFilter}
-              onChange={setJobFilter}
-              options={[{ value: "ALL", label: "All Jobs" }, ...filterOptions.jobs.map((value) => ({ value, label: value }))]}
-            />
-            <FilterSelect
-              label="Access"
-              value={accessFilter}
-              onChange={setAccessFilter}
-              options={[
-                { value: "ALL", label: "All Access" },
-                { value: "FLEXIBLE", label: "Flexible" },
-                { value: "SCHEDULED", label: "Scheduled" },
-              ]}
-            />
-            <FilterSelect
-              label="Evaluation"
-              value={evaluationFilter}
-              onChange={setEvaluationFilter}
-              options={[
-                { value: "ALL", label: "All Evaluations" },
-                { value: "COMPLETED", label: "Completed" },
-                { value: "SCORED", label: "Scored" },
-                { value: "PENDING", label: "Pending" },
-              ]}
-            />
-            <FilterSelect
-              label="Recruiter Decision"
-              value={recruiterDecisionFilter}
-              onChange={setRecruiterDecisionFilter}
-              options={[
-                { value: "ALL", label: "All Decisions" },
-                { value: "PROCEED", label: "Proceed" },
-                { value: "HOLD", label: "Hold" },
-                { value: "REJECT", label: "Reject" },
-                { value: "REVIEW_REQUIRED", label: "Escalate Review" },
-                { value: "PENDING", label: "Awaiting Decision" },
-              ]}
-            />
             <button
               type="button"
-              onClick={clearFilters}
-              disabled={!hasActiveFilters}
-              className="h-9 self-end rounded-lg border border-slate-700 px-3.5 text-[13px] 2xl:h-10 font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+              onClick={() => setShowFilters((current) => !current)}
+              aria-expanded={showFilters}
+              className="h-10 rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 sm:hidden"
             >
-              Clear
+              {showFilters ? "Hide filters" : "Filters"}
+              {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
             </button>
+            <div className={`${showFilters ? "grid" : "hidden"} gap-x-3 gap-y-2.5 sm:contents`}>
+              <FilterSelect
+                label="Status"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[{ value: "ALL", label: "All Statuses" }, ...filterOptions.statuses.map((value) => ({ value: value.toUpperCase(), label: formatStatusText(value) }))]}
+              />
+              <FilterSelect
+                label="Job"
+                value={jobFilter}
+                onChange={setJobFilter}
+                options={[{ value: "ALL", label: "All Jobs" }, ...filterOptions.jobs.map((value) => ({ value, label: value }))]}
+              />
+              <FilterSelect
+                label="Access"
+                value={accessFilter}
+                onChange={setAccessFilter}
+                options={[
+                  { value: "ALL", label: "All Access" },
+                  { value: "FLEXIBLE", label: "Flexible" },
+                  { value: "SCHEDULED", label: "Scheduled" },
+                ]}
+              />
+              <FilterSelect
+                label="Evaluation"
+                value={evaluationFilter}
+                onChange={setEvaluationFilter}
+                options={[
+                  { value: "ALL", label: "All Evaluations" },
+                  { value: "COMPLETED", label: "Completed" },
+                  { value: "SCORED", label: "Scored" },
+                  { value: "PENDING", label: "Pending" },
+                ]}
+              />
+              <FilterSelect
+                label="Recruiter Decision"
+                value={recruiterDecisionFilter}
+                onChange={setRecruiterDecisionFilter}
+                options={[
+                  { value: "ALL", label: "All Decisions" },
+                  { value: "PROCEED", label: "Proceed" },
+                  { value: "HOLD", label: "Hold" },
+                  { value: "REJECT", label: "Reject" },
+                  { value: "REVIEW_REQUIRED", label: "Escalate Review" },
+                  { value: "PENDING", label: "Awaiting Decision" },
+                ]}
+              />
+              <button
+                type="button"
+                onClick={clearFilters}
+                disabled={!hasActiveFilters}
+                className="h-10 self-end rounded-xl border border-slate-700 px-4 text-[13px] font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
-          <div className="max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain">
+          {/* Table from lg up. */}
+          <div className="hidden max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain lg:block">
             <table className="w-full table-fixed text-[13px] 2xl:text-sm">
               <colgroup>
                 <col className="w-[13%]" />
@@ -1332,283 +1579,172 @@ export default function InterviewsPage() {
                 <col className="w-[12%]" />
                 <col className="w-[7%]" />
               </colgroup>
-              <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
+              <thead className="sticky top-0 z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
                 <tr>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Candidate</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Recording</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Role</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Status</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Access</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Score</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">VERIS decision</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Recruiter decision</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em]">Last activity</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.08em]">Actions</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Candidate</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Recording</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Role</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Status</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Access</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Score</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">VERIS decision</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Recruiter decision</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Last activity</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.12em]">Actions</th>
                 </tr>
               </thead>
-                  {interviews.length === 0 ? (
-                  <tbody><tr>
-                    <td colSpan={10} className="p-10 text-center text-slate-400">No interviews available</td>
-                  </tr></tbody>
-                ) : filteredInterviews.length === 0 ? (
-                  <tbody><tr>
-                    <td colSpan={10} className="p-10 text-center text-slate-400">No interviews match the current filters</td>
-                  </tr></tbody>
-                ) : (
-                  filteredInterviews.map((interview) => {
-                    const recruiterStatus = getRecruiterStatus(interview)
-                    const faultNote = getFaultNote(interview, recruiterStatus.key)
-                    const evidenceIncomplete = hasIncompleteEvidence(interview, recruiterStatus.key)
-                    const evidenceCompleteness = evidenceIncomplete ? getEvidenceCompleteness(interview) : null
-                    const incompleteEvidenceNote = evidenceIncomplete
-                      ? `Incomplete evidence — ${pluralResponses(Number(interview.unrecoveredResponses ?? 0))} could not be recovered. Review manually before making a hiring decision.`
-                      : ""
-                    const interviewStatus = normalizeStatusKey(interview.status)
-                    const isEarlyExit = isEarlyExitInterview(interview)
-                    const isCompleted = isCompletedInterview(interview)
-                    const canTakeAction = isCompleted && !isEarlyExit && !interview.recruiterDecisionStatus
-                    const canChangeDecision = isCompleted && !isEarlyExit && Boolean(interview.recruiterDecisionStatus)
-                    const canViewSummary = isCompleted && !isEarlyExit
-                    const canSendCandidateFeedback = isCompleted && !isEarlyExit
-                    const candidateFeedbackActionLabel = interview.candidateFeedbackText
-                      ? "Send Candidate Feedback"
-                      : "Generate Candidate Feedback"
-                    const canCopyLink =
-                      !isCompleted &&
-                      !isEarlyExit &&
-                      ["READY", "EMAIL_FAILED"].includes(interviewStatus) &&
-                      Boolean(interview.link)
-                    const canRetryPreparation = interviewStatus === "PREPARATION_FAILED"
-                    const canRetryEmail = interviewStatus === "EMAIL_FAILED"
-                    const hasHiringActions =
-                      canTakeAction || canChangeDecision || canViewSummary || canSendCandidateFeedback || canCopyLink || canRetryPreparation || canRetryEmail
-                    const latestActivity = formatLatestActivity(getInterviewActivityValue(interview))
-
-                    // Row-level notes sit in one strip under the row instead of
-                    // wrapping inside narrow columns.
-                    const rowNotes = [
-                      faultNote?.party === "VERISNOVA"
-                        ? { key: "fault", tone: "rose", icon: TriangleAlert, text: "Platform recording issue" }
-                        : null,
-                      interview.creditRefunded
-                        ? {
-                            key: "refund",
-                            tone: "emerald",
-                            icon: CircleCheck,
-                            text: "Interview credit refunded",
-                            title: "This interview was affected by a VerisNova recording issue. 1 interview credit has been returned to your account.",
-                          }
-                        : null,
-                      evidenceIncomplete
-                        ? {
-                            key: "evidence",
-                            tone: "amber",
-                            icon: FileWarning,
-                            text: evidenceCompleteness
-                              ? `Evidence ${evidenceCompleteness.available}/${evidenceCompleteness.total} recovered · review manually before deciding`
-                              : "Review manually before deciding",
-                            title: incompleteEvidenceNote,
-                          }
-                        : null,
-                    ].filter(Boolean)
-                    const hasRowNotes = rowNotes.length > 0
-
-                    return (
+              {emptyMessage ? (
+                <tbody><tr>
+                  <td colSpan={10} className="p-10 text-center text-slate-400">{emptyMessage}</td>
+                </tr></tbody>
+              ) : (
+                rowModels.map((model) => {
+                  const { interview } = model
+                  return (
                     <tbody key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200 transition-colors hover:bg-slate-800/30">
-                    <tr className={`align-top ${hasRowNotes ? "[&>td]:pb-1.5" : ""}`}>
-                      <td className="px-3 py-4 font-medium text-white">
-                        <div className={cellLine}>
-                          <span className="block min-w-0 break-words font-semibold leading-snug" title={interview.candidateName || "Candidate"}>
-                            {interview.candidateName}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-4">
-                        <div className={cellLine}>
-                        {interview.hasRecording && interview.recordingUrl ? (
-                          <Link
-                            href={interview.recordingUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={recordingAction}
-                            aria-label={`View recording for ${interview.candidateName}`}
-                          >
-                            <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
-                            <span>View</span>
-                          </Link>
-                        ) : interview.recordingId ? (
-                          <span className={tableProcessingChip}>
-                            Processing
-                          </span>
-                        ) : (
-                          <span className={tableMutedChip}>
-                            Not available
-                          </span>
-                        )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4 text-slate-300">
-                        <div className={cellLine}>
-                          <span className="block truncate" title={interview.jobTitle || ""}>{interview.jobTitle}</span>
-                        </div>
-                      </td>
-                      <td className="overflow-hidden px-3 py-4">
-                        {/* Wraps rather than clips when the column is narrow (small windows). */}
-                        <div className={`${cellLine} flex-wrap gap-x-1.5 gap-y-1`}>
-                          <span
-                            className={`inline-flex max-w-full rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4 ${getStatusBadge(recruiterStatus.key)}`}
-                            title={recruiterStatus.description}
-                          >
-                            {recruiterStatus.label}
-                          </span>
-                          {faultNote ? <FaultNote note={faultNote} /> : null}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4 text-slate-300">
-                        <div className={cellLine}>
-                          <span className="block truncate">{getAccessLabel(interview)}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-4 text-slate-300">
-                        <div className={`${cellLine} whitespace-nowrap`}>
-                          {formatScore(interview.score)}
-                          {evidenceIncomplete ? (
-                            <span className="text-amber-300" title={incompleteEvidenceNote}>*</span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4 text-slate-300">
-                        <div className={cellLine}>
-                          <span className="block truncate">
-                            {interview.decision ?? "-"}
-                            {evidenceIncomplete && interview.decision ? (
-                              <span className="text-amber-300" title={incompleteEvidenceNote}>*</span>
-                            ) : null}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-4">
-                        <div className={cellLine}>
-                        {interview.recruiterDecisionStatus ? (
-                          <DecisionPill status={interview.recruiterDecisionStatus} />
-                        ) : isCompleted && !isEarlyExit ? (
-                          <span className="inline-flex whitespace-nowrap rounded-full border border-slate-700 bg-slate-950/30 px-2.5 py-0.5 text-[11px] font-semibold text-slate-400">
-                            Awaiting decision
-                          </span>
-                        ) : (
-                          <span className="text-slate-600">-</span>
-                        )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4 text-[13px] leading-snug text-slate-400">
-                        <div className={`${cellLine} whitespace-nowrap`}>{latestActivity.date}</div>
-                        <span className="block whitespace-nowrap text-xs text-slate-500">{latestActivity.time}</span>
-                      </td>
-                      <td className="px-3 py-4">
-                        <div className={`${cellLine} justify-end gap-2`}>
-                          {hasHiringActions ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="hv-interview-actions-trigger inline-flex h-7 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
-                                  aria-label={`Open hiring actions for ${interview.candidateName || "candidate"}`}
-                                >
-                                  <Ellipsis className="h-4 w-4" aria-hidden="true" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                sideOffset={6}
-                                className="hv-interview-actions-menu hv-theme-popover min-w-48 border border-slate-700 bg-slate-900 p-1.5 text-slate-200 shadow-[0_18px_48px_rgba(2,6,23,0.55)] ring-0"
-                              >
-                                {canTakeAction || canChangeDecision ? (
-                                  <DropdownMenuItem
-                                    onSelect={() => setReviewInterview(interview)}
-                                    className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-cyan-100 focus:bg-cyan-400/10 focus:text-cyan-50"
-                                    data-tone="primary"
-                                  >
-                                    <FileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                                    {canChangeDecision ? "Change Decision" : "Take Action"}
-                                  </DropdownMenuItem>
-                                ) : null}
-                                {canViewSummary ? (
-                                  <DropdownMenuItem
-                                    onSelect={() => openInterviewSummary(interview)}
-                                    className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-emerald-100 focus:bg-emerald-400/10 focus:text-emerald-50"
-                                    data-tone="success"
-                                  >
-                                    <FileText className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-                                    View Summary
-                                  </DropdownMenuItem>
-                                ) : null}
-                                {canSendCandidateFeedback ? (
-                                  <DropdownMenuItem
-                                    onSelect={() => setFeedbackInterviewId(interview.interviewId)}
-                                    className="hv-interview-action-item cursor-pointer gap-2.5 px-3 py-2.5 text-sky-100 focus:bg-sky-400/10 focus:text-sky-50"
-                                  >
-                                    <MessageSquare className="h-4 w-4 text-sky-300" aria-hidden="true" />
-                                    {candidateFeedbackActionLabel}
-                                  </DropdownMenuItem>
-                                ) : null}
-                                {canCopyLink ? (
-                                  <DropdownMenuItem
-                                    onSelect={() => copyLink(interview)}
-                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-slate-100 focus:bg-slate-800 focus:text-white"
-                                  >
-                                    <Link2 className="h-4 w-4 text-slate-300" aria-hidden="true" />
-                                    {copiedInterviewId === interview.interviewId ? "Copied" : "Copy Link"}
-                                  </DropdownMenuItem>
-                                ) : null}
-                                {canRetryPreparation ? (
-                                  <DropdownMenuItem
-                                    onSelect={() => retryPreparation(interview)}
-                                    disabled={actionBusyId === interview.interviewId}
-                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-rose-100 focus:bg-rose-400/10 focus:text-rose-50"
-                                  >
-                                    <RotateCw className="h-4 w-4 text-rose-300" aria-hidden="true" />
-                                    {actionBusyId === interview.interviewId ? "Retrying..." : "Retry Preparation"}
-                                  </DropdownMenuItem>
-                                ) : null}
-                                {canRetryEmail ? (
-                                  <DropdownMenuItem
-                                    onSelect={() => retryEmail(interview)}
-                                    disabled={actionBusyId === interview.interviewId}
-                                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-amber-100 focus:bg-amber-400/10 focus:text-amber-50"
-                                  >
-                                    <RotateCw className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                                    {actionBusyId === interview.interviewId ? "Sending..." : "Retry Email"}
-                                  </DropdownMenuItem>
-                                ) : null}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : !isEarlyExit ? (
-                            <span className="text-slate-600">-</span>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                    {hasRowNotes ? (
-                      <tr className="align-top">
-                        <td colSpan={3} aria-hidden="true" />
-                        <td colSpan={7} className="px-3 pb-4 pt-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {rowNotes.map(({ key, tone, icon: NoteIcon, text, title }) => (
-                              <span key={key} className={`${rowNoteChip} ${ROW_NOTE_TONES[tone]}`} title={title}>
-                                <NoteIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
-                                {text}
-                              </span>
-                            ))}
+                      <tr className={`align-top ${model.hasRowNotes ? "[&>td]:pb-1.5" : ""}`}>
+                        <td className="px-3 py-4 font-medium text-white">
+                          <div className={cellLine}>
+                            <span className="block min-w-0 break-words font-semibold leading-snug" title={interview.candidateName || "Candidate"}>
+                              {interview.candidateName}
+                            </span>
                           </div>
                         </td>
+                        <td className="px-3 py-4">
+                          <div className={cellLine}>{renderRecording(interview)}</div>
+                        </td>
+                        <td className="px-3 py-4 text-slate-300">
+                          <div className={cellLine}>
+                            <span className="block truncate" title={interview.jobTitle || ""}>{interview.jobTitle}</span>
+                          </div>
+                        </td>
+                        <td className="overflow-hidden px-3 py-4">
+                          {/* Wraps rather than clips when the column is narrow (small windows). */}
+                          <div className={`${cellLine} flex-wrap gap-x-1.5 gap-y-1`}>
+                            <span
+                              className={`inline-flex max-w-full rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4 ${getStatusBadge(model.recruiterStatus.key)}`}
+                              title={model.recruiterStatus.description}
+                            >
+                              {model.recruiterStatus.label}
+                            </span>
+                            {model.faultNote ? <FaultNote note={model.faultNote} /> : null}
+                          </div>
+                        </td>
+                        <td className="px-3 py-4 text-slate-300">
+                          <div className={cellLine}>
+                            <span className="block truncate">{getAccessLabel(interview)}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-4 text-slate-300">
+                          <div className={`${cellLine} whitespace-nowrap font-semibold tabular-nums text-white`}>
+                            {formatScore(interview.score)}
+                            {model.evidenceIncomplete ? (
+                              <span className="text-amber-300" title={model.incompleteEvidenceNote}>*</span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-3 py-4 text-slate-300">
+                          <div className={cellLine}>
+                            <span className="block truncate">
+                              {interview.decision ?? "-"}
+                              {model.evidenceIncomplete && interview.decision ? (
+                                <span className="text-amber-300" title={model.incompleteEvidenceNote}>*</span>
+                              ) : null}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-4">
+                          <div className={cellLine}>{renderRecruiterDecision(model)}</div>
+                        </td>
+                        <td className="px-3 py-4 text-[13px] leading-snug text-slate-400">
+                          <div className={`${cellLine} whitespace-nowrap`}>{model.latestActivity.date}</div>
+                          <span className="block whitespace-nowrap text-xs text-slate-500">{model.latestActivity.time}</span>
+                        </td>
+                        <td className="px-3 py-4">
+                          <div className={`${cellLine} justify-end gap-2`}>{renderActions(model)}</div>
+                        </td>
                       </tr>
-                    ) : null}
+                      {model.hasRowNotes ? (
+                        <tr className="align-top">
+                          <td colSpan={3} aria-hidden="true" />
+                          <td colSpan={7} className="px-3 pb-4 pt-0">
+                            {renderRowNotes(model)}
+                          </td>
+                        </tr>
+                      ) : null}
                     </tbody>
-                    )
-                  })
-                )}
+                  )
+                })
+              )}
             </table>
           </div>
+
+          {/* Stacked cards below lg: the same fields, labelled inline. */}
+          {emptyMessage ? (
+            <p className="px-4 py-10 text-center text-sm text-slate-400 lg:hidden">{emptyMessage}</p>
+          ) : (
+            <ul className="lg:hidden" aria-label="Interviews">
+              {rowModels.map((model) => {
+                const { interview } = model
+                return (
+                  <li key={interview.interviewId} className="border-t border-slate-800/80 px-4 py-4 first:border-t-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">{interview.candidateName}</p>
+                        <p className="truncate text-xs text-slate-400">{interview.jobTitle}</p>
+                      </div>
+                      <div className="flex flex-none items-center gap-2">
+                        <span
+                          className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4 ${getStatusBadge(model.recruiterStatus.key)}`}
+                          title={model.recruiterStatus.description}
+                        >
+                          {model.recruiterStatus.label}
+                        </span>
+                        {renderActions(model)}
+                      </div>
+                    </div>
+                    {model.faultNote ? (
+                      <div className="mt-2">
+                        <FaultNote note={model.faultNote} />
+                      </div>
+                    ) : null}
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                      <div>
+                        <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Score</dt>
+                        <dd className="mt-0.5 font-semibold tabular-nums text-white">
+                          {formatScore(interview.score)}
+                          {model.evidenceIncomplete ? <span className="text-amber-300" title={model.incompleteEvidenceNote}>*</span> : null}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">VERIS decision</dt>
+                        <dd className="mt-0.5 text-slate-300">{interview.decision ?? "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Recruiter decision</dt>
+                        <dd className="mt-0.5">{renderRecruiterDecision(model)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Access</dt>
+                        <dd className="mt-0.5 text-slate-300">{getAccessLabel(interview)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Last activity</dt>
+                        <dd className="mt-0.5 text-slate-300">
+                          {model.latestActivity.date} · {model.latestActivity.time}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Recording</dt>
+                        <dd className="mt-0.5 pl-2">{renderRecording(interview)}</dd>
+                      </div>
+                    </dl>
+                    {model.hasRowNotes ? <div className="mt-3">{renderRowNotes(model)}</div> : null}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </section>
 
         {!liveEnabled || interviewView === "live" ? <LiveInterviewsPanel /> : null}

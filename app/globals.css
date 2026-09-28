@@ -505,9 +505,9 @@ body {
 }
 
 :root[data-theme="light"] .hv-completed-summary-modal {
-  border-color: rgba(16, 185, 129, 0.28);
+  border-color: rgba(148, 163, 184, 0.38);
   background:
-    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.09), transparent 24rem),
+    radial-gradient(circle at 10% 0%, rgba(14, 165, 233, 0.07), transparent 26rem),
     linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 253, 0.99));
   box-shadow:
     0 34px 90px rgba(15, 23, 42, 0.2),
