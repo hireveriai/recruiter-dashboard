@@ -104,7 +104,7 @@ export default function AssessmentsPage() {
       <main className="mx-auto max-w-[1400px] px-4 py-7 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.34em] text-violet-300/75">VERIS Assessment</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-300">VERIS Assessment</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Assessments</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
               Scored skills tests, independent of Screening and the AI Interview. Create, generate questions, publish, and send.
@@ -150,7 +150,7 @@ export default function AssessmentsPage() {
               onClick={() => setStatus(tab.value)}
               className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${
                 status === tab.value
-                  ? "border-violet-400/60 bg-violet-500/20 text-white"
+                  ? "border-cyan-300/60 bg-cyan-400/15 text-white"
                   : "border-slate-700 bg-slate-900/70 text-slate-400 hover:text-white"
               }`}
             >
@@ -188,7 +188,7 @@ export default function AssessmentsPage() {
                       <td className="px-4 py-3">
                         <Link
                           href={buildAuthUrl(`/assessments/${assessment.id}/questions`, searchParams)}
-                          className="font-medium text-white underline-offset-4 hover:text-violet-200 hover:underline"
+                          className="font-medium text-white underline-offset-4 hover:text-cyan-200 hover:underline"
                         >
                           {assessment.title}
                         </Link>

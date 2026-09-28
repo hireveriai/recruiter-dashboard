@@ -9,11 +9,11 @@ import HorizontalWorkflow, { workflowActionClass } from "@/components/ui/Horizon
 // assessment's own build-and-send lifecycle instead of the org-wide pipeline.
 
 const THEME = {
-  border: "border-violet-400/35",
-  text: "text-violet-200",
-  indicator: "bg-violet-400",
-  background: "from-violet-500/18 via-fuchsia-500/8 to-slate-950/30",
-  glow: "shadow-[0_0_34px_rgba(139,92,246,0.18)]",
+  border: "border-cyan-400/35",
+  text: "text-cyan-200",
+  indicator: "bg-cyan-400",
+  background: "from-cyan-500/18 via-sky-500/8 to-slate-950/30",
+  glow: "shadow-[0_0_34px_rgba(34, 211, 238,0.18)]",
 };
 
 function CheckIcon() {
@@ -157,17 +157,17 @@ export function AssessmentWorkflowPanel({
     <div className={className}>
       <h3 className="text-[11px] font-medium uppercase tracking-[0.3em] text-slate-500">Assessment Workflow</h3>
 
-      <div className="hv-theme-intelligence-panel mt-3 overflow-hidden rounded-xl border border-violet-300/15 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(2,6,23,0.84))] p-3 shadow-[0_14px_44px_rgba(2,6,23,0.28)]">
+      <div className="hv-theme-intelligence-panel mt-3 overflow-hidden rounded-xl border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(34, 211, 238,0.12),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(2,6,23,0.84))] p-3 shadow-[0_14px_44px_rgba(2,6,23,0.28)]">
         <div className="flex items-start gap-2.5">
-          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-300/25 bg-violet-400/10 text-violet-100 shadow-[0_0_24px_rgba(139,92,246,0.16)]">
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100 shadow-[0_0_24px_rgba(34, 211, 238,0.16)]">
             <span className="text-sm font-semibold">V</span>
-            <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-violet-300 hiring-workflow-pulse" />
+            <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-cyan-300 hiring-workflow-pulse" />
           </div>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200/80">Next Step</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200/80">Next Step</p>
             <p className="mt-1.5 text-[13px] leading-5 text-white">{active.title}: {active.description}</p>
             <div className="mt-2.5 flex flex-wrap gap-2 text-[9px] font-semibold uppercase tracking-[0.14em]">
-              <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-2 py-0.5 text-violet-100">
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 text-cyan-100">
                 {completedCount} of {steps.length} workflow steps completed
               </span>
             </div>
@@ -177,7 +177,7 @@ export function AssessmentWorkflowPanel({
 
       <div className="relative mt-3.5 space-y-1.5 pl-2">
         <div className="absolute bottom-4 left-[21px] top-4 w-px overflow-hidden bg-slate-800/90">
-          <div className="h-1/2 w-full bg-gradient-to-b from-violet-400 via-fuchsia-400 to-violet-300 hiring-workflow-flow" />
+          <div className="h-1/2 w-full bg-gradient-to-b from-cyan-400 via-sky-400 to-cyan-300 hiring-workflow-flow" />
         </div>
         {steps.map((step, index) => (
           <div key={step.id} className="relative pl-6">
@@ -318,7 +318,7 @@ export function AssessmentFlowGuide({
   return (
     <HorizontalWorkflow
       className={className}
-      theme="violet"
+      theme="cyan"
       eyebrow="Assessment Flow · VERIS Recommendation"
       recommendation={state ? state.recommendation : "Checking your assessment progress…"}
       chips={
