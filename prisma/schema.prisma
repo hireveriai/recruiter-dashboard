@@ -312,22 +312,89 @@ model RecruiterUserPermissionOverride {
 /// how candidates already take assessments with no login) — see
 /// employee_identity_links note in the implementation report for the future
 /// phase where employee self-service login is added.
+///
+/// Departments/projects/employee_code/first+last name were added by
+/// db/migrations/20260929_employee_departments_projects_targeting.sql.
+/// fullName and the free-text department are still written on every save
+/// (fullName = first + last, department = the department's name) because
+/// the assessment app, invitation emails and results pages read them.
+/// departmentId is a plain scalar here; in the database it is a composite
+/// (organization_id, department_id) FK, so it can only point at a
+/// department of the same organization.
 model Employee {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
-  organizationId String   @db.Uuid @map("organization_id")
-  fullName       String   @map("full_name")
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  organizationId String    @db.Uuid @map("organization_id")
+  fullName       String    @map("full_name")
   email          String
-  managerUserId  String?  @db.Uuid @map("manager_user_id")
+  managerUserId  String?   @db.Uuid @map("manager_user_id")
   department     String?
   title          String?
+  status         String    @default("ACTIVE")
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime  @default(now()) @db.Timestamptz(6) @map("updated_at")
+  employeeCode   String?   @map("employee_code")
+  firstName      String?   @map("first_name")
+  lastName       String?   @map("last_name")
+  phone          String?
+  departmentId   String?   @db.Uuid @map("department_id")
+  joiningDate    DateTime? @db.Date @map("joining_date")
+
+  @@unique([organizationId, email], map: "uq_employees_org_email")
+  @@unique([organizationId, id], map: "uq_employees_org_id")
+  @@index([organizationId], map: "employees_organization_id_idx")
+  @@index([managerUserId], map: "employees_manager_user_id_idx")
+  @@index([organizationId, departmentId], map: "employees_org_department_idx")
+  @@map("employees")
+}
+
+/// Organization-level departments. An employee has one primary department
+/// (Employee.departmentId). Names are unique per organization,
+/// case-insensitively (expression index uq_departments_org_name on
+/// (organization_id, lower(name)), which Prisma cannot express). Never
+/// hard-deleted — deactivated instead, so historical targets keep resolving.
+model Department {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid @map("organization_id")
+  name           String
+  description    String?
   status         String   @default("ACTIVE")
   createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
   updatedAt      DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
 
-  @@unique([organizationId, email], map: "uq_employees_org_email")
-  @@index([organizationId], map: "employees_organization_id_idx")
-  @@index([managerUserId], map: "employees_manager_user_id_idx")
-  @@map("employees")
+  @@unique([organizationId, id], map: "uq_departments_org_id")
+  @@map("departments")
+}
+
+/// Organization-level projects. Employees join projects many-to-many through
+/// EmployeeProject. Name and code are unique per organization,
+/// case-insensitively (expression indexes uq_projects_org_name /
+/// uq_projects_org_code). Never hard-deleted — deactivated instead.
+model Project {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid @map("organization_id")
+  name           String
+  code           String?
+  description    String?
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime @default(now()) @db.Timestamptz(6) @map("updated_at")
+
+  @@unique([organizationId, id], map: "uq_projects_org_id")
+  @@map("projects")
+}
+
+/// Employee <-> Project membership. Both sides are composite
+/// (organization_id, id) FKs in the database (ON DELETE CASCADE), so a link
+/// can never cross organizations.
+model EmployeeProject {
+  organizationId String   @db.Uuid @map("organization_id")
+  employeeId     String   @db.Uuid @map("employee_id")
+  projectId      String   @db.Uuid @map("project_id")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  @@id([organizationId, projectId, employeeId], map: "employee_projects_pkey")
+  @@index([organizationId, employeeId], map: "employee_projects_org_employee_idx")
+  @@map("employee_projects")
 }
 
 model Candidate {
@@ -779,16 +846,46 @@ model AssessmentInvite {
   completedAt    DateTime?           @db.Timestamptz(6) @map("completed_at")
   createdBy      String?             @db.Uuid @map("created_by")
   createdAt      DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
+  // Set when the invite was created by a targeted send (department /
+  // project / both / individual selection). Null for every invite created
+  // before targeting existed and for candidate invites.
+  targetId       String?             @db.Uuid @map("target_id")
   assessment     Assessment          @relation(fields: [assessmentId], references: [id])
   version        AssessmentVersion   @relation(fields: [versionId], references: [id])
   attempt        AssessmentAttempt?
 
+  // Also in the database: partial unique index
+  // uq_assessment_invites_assessment_employee on (assessment_id, employee_id)
+  // WHERE employee_id IS NOT NULL AND status <> 'CANCELLED' — at most one live
+  // invite per employee per assessment. Prisma cannot express partial indexes.
   @@index([organizationId], map: "assessment_invites_organization_id_idx")
   @@index([jobId], map: "assessment_invites_job_id_idx")
   @@index([candidateId], map: "assessment_invites_candidate_id_idx")
   @@index([employeeId], map: "assessment_invites_employee_id_idx")
   @@index([status], map: "assessment_invites_status_idx")
   @@map("assessment_invites")
+}
+
+/// How one batch of employee invites was targeted. The invites themselves
+/// (assessment_invites, with targetId pointing here) remain the per-employee
+/// assignment records; this row is the audit trail and powers the "Target"
+/// shown on the assessment dashboard. Counts are a snapshot at send time.
+model AssessmentTarget {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String   @db.Uuid @map("organization_id")
+  assessmentId         String   @db.Uuid @map("assessment_id")
+  // INDIVIDUAL | DEPARTMENT | PROJECT | DEPARTMENT_PROJECT
+  targetType           String   @map("target_type")
+  departmentId         String?  @db.Uuid @map("department_id")
+  projectId            String?  @db.Uuid @map("project_id")
+  matchedCount         Int      @default(0) @map("matched_count")
+  alreadyAssignedCount Int      @default(0) @map("already_assigned_count")
+  assignedCount        Int      @default(0) @map("assigned_count")
+  createdBy            String?  @db.Uuid @map("created_by")
+  createdAt            DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  @@index([assessmentId], map: "assessment_targets_assessment_id_idx")
+  @@map("assessment_targets")
 }
 
 model AssessmentAttempt {

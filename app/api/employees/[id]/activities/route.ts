@@ -45,12 +45,14 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         activityType: assessment?.activityType ?? "ASSESSMENT",
         durationMinutes: assessment?.durationMinutes ?? null,
         inviteStatus: invite.status,
+        assignedAt: invite.createdAt,
         expiresAt: invite.expiresAt,
+        expired: invite.expiresAt.getTime() < Date.now(),
         attemptId: attempt?.id ?? null,
         attemptStatus: attempt?.status ?? "NOT_STARTED",
         percentage: result?.percentage ?? null,
         passed: result?.passed ?? null,
-        completedAt: result?.completedAt ?? null,
+        completedAt: result?.completedAt ?? invite.completedAt ?? null,
       }
     })
 

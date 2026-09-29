@@ -1,10 +1,11 @@
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { assertCanAssessment } from "@/lib/server/assessment/auth"
-import { assertCanEmployees } from "@/lib/server/employees/auth"
+import { assertCanEmployees, hasOrgWideEmployeeActivityAccess } from "@/lib/server/employees/auth"
 import { createAssessmentSchema, listAssessmentsQuerySchema } from "@/lib/server/assessment/validators"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse, successResponse } from "@/lib/server/response"
+import { getEmployeeAssessmentStats, getLatestTargets } from "@/lib/server/services/employee-targeting"
 
 async function checkPermission(fn: () => Promise<void>): Promise<boolean> {
   try {
@@ -83,10 +84,28 @@ export async function GET(request: Request) {
       : []
     const jobTitleById = new Map(jobs.map((j) => [j.jobId, j.jobTitle]))
 
+    // Employee assessments also carry their dashboard numbers (Assigned /
+    // Completed / Pending / Average / Pass rate) and latest target. Result
+    // numbers need employeeActivities.view_results and, like the results
+    // page, are limited to direct reports without employeeActivities.manage.
+    const employeeAssessmentIds = assessments.filter((a) => a.participantType === "EMPLOYEE").map((a) => a.id)
+    let statsById: Awaited<ReturnType<typeof getEmployeeAssessmentStats>> = new Map()
+    let targetById: Awaited<ReturnType<typeof getLatestTargets>> = new Map()
+    if (employeeAssessmentIds.length) {
+      targetById = await getLatestTargets(auth.organizationId, employeeAssessmentIds)
+      if (await checkPermission(() => assertCanEmployees(auth, "employeeActivities.view_results"))) {
+        const managerScope = (await hasOrgWideEmployeeActivityAccess(auth)) ? null : auth.userId
+        statsById = await getEmployeeAssessmentStats(auth.organizationId, employeeAssessmentIds, managerScope)
+      }
+    }
+
     return successResponse({
       assessments: assessments.map((a) => ({
         ...a,
         jobTitle: a.jobId ? jobTitleById.get(a.jobId) ?? null : null,
+        ...(a.participantType === "EMPLOYEE"
+          ? { stats: statsById.get(a.id) ?? null, target: targetById.get(a.id) ?? null }
+          : {}),
       })),
       meta: {
         page: query.page,

@@ -1,7 +1,8 @@
-import { randomBytes, createHash } from "crypto"
+import { Prisma } from "@prisma/client"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
 import { assertCanAssessment } from "@/lib/server/assessment/auth"
+import { buildAssessmentUrl, createInviteToken } from "@/lib/server/assessment/invite-link"
 import { assertCanEmployees } from "@/lib/server/employees/auth"
 import { inviteAssessmentSchema } from "@/lib/server/assessment/validators"
 import { ApiError } from "@/lib/server/errors"
@@ -10,9 +11,7 @@ import { errorResponse, successResponse } from "@/lib/server/response"
 import { getAssessmentCreditSnapshot } from "@/lib/server/services/assessment-credits"
 import { sendAssessmentInvitationEmail } from "@/lib/services/email.service"
 
-function hashToken(token: string) {
-  return createHash("sha256").update(token).digest("hex")
-}
+const ALREADY_ASSIGNED_MESSAGE = "This employee has already been assigned this assessment."
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -78,6 +77,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
       if (employeeRow.status !== "ACTIVE") {
         throw new ApiError(409, "EMPLOYEE_INACTIVE", "This employee is inactive and cannot be assigned an activity")
+      }
+      // One live invite per employee per assessment (also enforced by the
+      // uq_assessment_invites_assessment_employee partial unique index).
+      const liveInvite = await prisma.assessmentInvite.findFirst({
+        where: {
+          assessmentId: id,
+          organizationId: auth.organizationId,
+          employeeId: employeeRow.id,
+          status: { not: "CANCELLED" },
+        },
+        select: { id: true },
+      })
+      if (liveInvite) {
+        throw new ApiError(409, "ALREADY_ASSIGNED", ALREADY_ASSIGNED_MESSAGE)
       }
       employee = employeeRow
     } else {
@@ -151,36 +164,36 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       console.warn("Assessment credit pre-check failed", error)
     }
 
-    const token = randomBytes(32).toString("hex")
-    const tokenHash = hashToken(token)
+    const { token, tokenHash } = createInviteToken()
     const expiresAt = new Date(Date.now() + assessment.linkExpiryDays * 24 * 60 * 60 * 1000)
 
-    const invite = await prisma.assessmentInvite.create({
-      data: {
-        assessmentId: id,
-        versionId,
-        jobId: assessment.jobId,
-        candidateId: candidate ? candidate.candidateId : null,
-        employeeId: employee ? employee.id : null,
-        organizationId: auth.organizationId,
-        tokenHash,
-        status: "INVITED",
-        expiresAt,
-        sentAt: new Date(),
-        createdBy: auth.userId,
-      },
-    })
+    let invite
+    try {
+      invite = await prisma.assessmentInvite.create({
+        data: {
+          assessmentId: id,
+          versionId,
+          jobId: assessment.jobId,
+          candidateId: candidate ? candidate.candidateId : null,
+          employeeId: employee ? employee.id : null,
+          organizationId: auth.organizationId,
+          tokenHash,
+          status: "INVITED",
+          expiresAt,
+          sentAt: new Date(),
+          createdBy: auth.userId,
+        },
+      })
+    } catch (error) {
+      // A concurrent request assigned the same employee between the check
+      // above and this insert; the unique index kept it to one invite.
+      if (employee && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ApiError(409, "ALREADY_ASSIGNED", ALREADY_ASSIGNED_MESSAGE)
+      }
+      throw error
+    }
 
-    // Matches the fallback pattern in lib/server/interview-url.ts: prefer the
-    // configured env var, but degrade to the intended production domain
-    // rather than hard-failing invite creation when it isn't set yet. The
-    // token-based /a/{token} flow in the assessment app is participant-
-    // agnostic (it resolves everything from the invite row), so the same URL
-    // shape serves both candidate and employee invites.
-    const baseUrl =
-      (process.env.ASSESSMENT_APP_BASE_URL || "").trim().replace(/\/+$/, "") ||
-      "https://assessment.verisnova.com"
-    const assessmentUrl = `${baseUrl}/a/${token}`
+    const assessmentUrl = buildAssessmentUrl(token)
 
     let emailSent = false
     let emailError: string | null = null

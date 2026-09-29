@@ -7,6 +7,7 @@ import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import BackToDashboardLink from "@/components/BackToDashboardLink"
 import Navbar from "@/components/Navbar"
+import AssignAssessmentModal from "@/components/AssignAssessmentModal"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { showActionFeedback } from "@/lib/client/action-feedback"
 import { AssessmentWorkflowPanel } from "@/components/AssessmentWorkflowGuide"
@@ -97,6 +98,7 @@ export default function AssessmentQuestionsPage() {
   const [versions, setVersions] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [assignOpen, setAssignOpen] = useState(false)
   const [savedAt, setSavedAt] = useState("")
   const [preview, setPreview] = useState(false)
   const [genCount, setGenCount] = useState(5)
@@ -407,8 +409,15 @@ export default function AssessmentQuestionsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || "Publish failed")
-      showActionFeedback({ tone: "success", title: "Assessment published", message: "Ready to send to candidates." })
+      const forEmployees = assessment?.participantType === "EMPLOYEE"
+      showActionFeedback({
+        tone: "success",
+        title: "Assessment published",
+        message: forEmployees ? "Now choose who should receive it." : "Ready to send to candidates.",
+      })
       await load()
+      // Employee assessments go straight on to choosing recipients.
+      if (forEmployees) setAssignOpen(true)
     } catch (err) {
       showActionFeedback({ tone: "error", title: "Publish failed", message: err.message })
     } finally {
@@ -426,6 +435,7 @@ export default function AssessmentQuestionsPage() {
   }
 
   const isPublished = assessment?.status === "PUBLISHED"
+  const isEmployeeAssessment = assessment?.participantType === "EMPLOYEE"
   const targetCount = Number(assessment?.questionCount) || null
   const totalPoints = questions.reduce((sum, q) => sum + (Number(q.points) || 0), 0)
 
@@ -467,6 +477,15 @@ export default function AssessmentQuestionsPage() {
           </header>
           <div className="flex flex-wrap items-center gap-2">
             <BackToDashboardLink className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+            {isEmployeeAssessment && isPublished ? (
+              <button
+                type="button"
+                onClick={() => setAssignOpen(true)}
+                className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
+              >
+                Assign
+              </button>
+            ) : null}
             <div role="radiogroup" aria-label="View mode" className="flex rounded-xl border border-slate-700 bg-slate-900/70 p-1">
               {[
                 [false, "Edit"],
@@ -886,6 +905,9 @@ export default function AssessmentQuestionsPage() {
       </div>
 
       <ConfirmDialog state={confirmState} onAnswer={answerConfirm} />
+      {isEmployeeAssessment ? (
+        <AssignAssessmentModal open={assignOpen} assessment={assessment} onClose={() => setAssignOpen(false)} />
+      ) : null}
     </div>
   )
 }

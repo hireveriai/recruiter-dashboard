@@ -1183,13 +1183,7 @@ function getAssessmentEmailFrom() {
   return getEmailFrom();
 }
 
-/**
- * VERIS Assessment invitation email. Deliberately never calls this an "AI
- * Interview" - it is a separate product (a scored skills test), sent through
- * a separate app (ASSESSMENT_APP_BASE_URL), so the copy must not blur the two
- * in the candidate's mind.
- */
-export async function sendAssessmentInvitationEmail({
+function buildAssessmentInvitationEmail({
   to,
   candidateName,
   jobTitle,
@@ -1239,7 +1233,7 @@ export async function sendAssessmentInvitationEmail({
     ? `This VERIS ${activityLabel} is a scored evaluation assigned by your manager or HR team.`
     : "This VERIS Assessment is a scored skills test, separate from any interview you may also be asked to complete.";
 
-  return sendWithRetry({
+  return {
     from: getAssessmentEmailFrom(),
     to,
     subject,
@@ -1341,7 +1335,73 @@ export async function sendAssessmentInvitationEmail({
         </table>
       </div>
     `,
-  });
+  };
+}
+
+/**
+ * VERIS Assessment invitation email. Deliberately never calls this an "AI
+ * Interview" - it is a separate product (a scored skills test), sent through
+ * a separate app (ASSESSMENT_APP_BASE_URL), so the copy must not blur the two
+ * in the candidate's mind.
+ */
+export async function sendAssessmentInvitationEmail(params: SendAssessmentInvitationEmailParams) {
+  return sendWithRetry(buildAssessmentInvitationEmail(params));
+}
+
+// Resend's batch endpoint accepts at most 100 emails per call.
+const RESEND_BATCH_LIMIT = 100;
+
+/**
+ * The same invitation email as sendAssessmentInvitationEmail, for many
+ * recipients at once (department/project-targeted employee assessments).
+ * Goes through Resend's batch endpoint, 100 per call, with the same retry
+ * policy as single sends, so a 500-person department is 5 API calls rather
+ * than 500 rate-limited ones. Never throws: returns which indexes of
+ * `recipients` were accepted so the caller can record delivery per invite.
+ */
+export async function sendAssessmentInvitationEmailBatch(
+  recipients: SendAssessmentInvitationEmailParams[]
+): Promise<{ sentIndexes: number[]; failed: { index: number; error: string }[] }> {
+  const sentIndexes: number[] = [];
+  const failed: { index: number; error: string }[] = [];
+
+  for (let start = 0; start < recipients.length; start += RESEND_BATCH_LIMIT) {
+    const chunk = recipients.slice(start, start + RESEND_BATCH_LIMIT);
+    const indexes = chunk.map((_, offset) => start + offset);
+    let lastError: unknown = null;
+    let delivered = false;
+
+    try {
+      const payloads = chunk.map((recipient) => buildAssessmentInvitationEmail(recipient));
+
+      for (let attempt = 1; attempt <= MAX_EMAIL_ATTEMPTS; attempt += 1) {
+        try {
+          const response = await getResendClient().batch.send(payloads);
+          if (response.error) {
+            throw new Error(response.error.message || "Resend failed to send email batch");
+          }
+          delivered = true;
+          break;
+        } catch (error) {
+          lastError = error;
+          if (attempt === MAX_EMAIL_ATTEMPTS || !shouldRetryEmail(error)) break;
+          await sleep(350 * 2 ** (attempt - 1));
+        }
+      }
+    } catch (error) {
+      // Configuration errors (missing RESEND_API_KEY / sender) land here.
+      lastError = error;
+    }
+
+    if (delivered) {
+      sentIndexes.push(...indexes);
+    } else {
+      const message = getErrorMessage(lastError);
+      failed.push(...indexes.map((index) => ({ index, error: message })));
+    }
+  }
+
+  return { sentIndexes, failed };
 }
 
 export async function sendTrialDecisionEmail(params: TrialDecisionEmailParams) {
