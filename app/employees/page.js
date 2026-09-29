@@ -6,16 +6,12 @@ import { useEffect, useState } from "react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import BackToDashboardLink from "@/components/BackToDashboardLink"
+import AddEmployeeModal from "@/components/AddEmployeeModal"
 import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "@/components/Navbar"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatDate } from "@/lib/client/date-format"
 import { showActionFeedback } from "@/lib/client/action-feedback"
-
-const FIELD_CLASS =
-  "w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
-
-const DEFAULT_FORM = { fullName: "", email: "", department: "", title: "" }
 
 function statusTone(status) {
   return status === "INACTIVE"
@@ -33,8 +29,6 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [openCreate, setOpenCreate] = useState(false)
-  const [form, setForm] = useState(DEFAULT_FORM)
-  const [saving, setSaving] = useState(false)
   const [lockedFeature, setLockedFeature] = useState(null)
 
   const loadEmployees = () => {
@@ -57,41 +51,6 @@ export default function EmployeesPage() {
     loadEmployees()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const handleCreate = async () => {
-    if (!form.fullName.trim() || !form.email.trim()) {
-      showActionFeedback({ tone: "error", title: "Missing details", message: "Name and email are required." })
-      return
-    }
-
-    try {
-      setSaving(true)
-      const res = await fetch(buildAuthUrl("/api/employees", searchParams), {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: form.fullName.trim(),
-          email: form.email.trim(),
-          department: form.department?.trim() || null,
-          title: form.title?.trim() || null,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        showActionFeedback({ tone: "error", title: "Save failed", message: data?.error?.message || "Failed to add employee" })
-        return
-      }
-      showActionFeedback({ tone: "success", title: "Employee added", message: form.fullName })
-      setForm(DEFAULT_FORM)
-      setOpenCreate(false)
-      loadEmployees()
-    } catch (err) {
-      showActionFeedback({ tone: "error", title: "Save failed", message: err instanceof Error ? err.message : "Something went wrong" })
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const toggleStatus = async (employee) => {
     const nextStatus = employee.status === "INACTIVE" ? "ACTIVE" : "INACTIVE"
@@ -209,61 +168,7 @@ export default function EmployeesPage() {
         </div>
       </main>
 
-      {openCreate && (
-        <div
-          className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-md sm:py-6"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="hv-theme-modal relative w-full max-w-lg overflow-hidden rounded-[28px] border border-violet-500/20 bg-[#0a1020]/95 text-white shadow-[0_0_60px_rgba(139,92,246,0.18)]">
-            <div className="relative p-6">
-              <div className="mb-5 flex items-start justify-between gap-4 border-b border-slate-800/80 pb-4">
-                <h2 className="text-xl font-semibold tracking-tight text-white">Add Employee</h2>
-                <button
-                  onClick={() => setOpenCreate(false)}
-                  className="rounded-full border border-slate-700/80 bg-slate-900/80 px-3.5 py-1.5 text-sm text-slate-300 transition hover:border-violet-400/60 hover:text-white"
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="grid gap-4">
-                <div>
-                  <label className="mb-2 block text-sm text-slate-300">Full Name</label>
-                  <input value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} className={FIELD_CLASS} />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm text-slate-300">Email</label>
-                  <input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className={FIELD_CLASS} />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm text-slate-300">Department</label>
-                    <input value={form.department} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))} className={FIELD_CLASS} />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm text-slate-300">Title</label>
-                    <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className={FIELD_CLASS} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-800/80 pt-5">
-                <button onClick={() => setOpenCreate(false)} className="rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm text-slate-300 transition hover:text-white">
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreate}
-                  disabled={saving}
-                  className="rounded-full bg-violet-500/90 px-5 py-2 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(167,139,250,0.35)] transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving ? "Saving..." : "Add Employee"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddEmployeeModal open={openCreate} onClose={() => setOpenCreate(false)} onSaved={loadEmployees} />
     </div>
   )
 }

@@ -159,7 +159,7 @@ function CheckRow({ checked, onChange, title, detail }) {
   );
 }
 
-export default function CreateAssessmentModal({ open, onClose, initialAssessment, defaultJobId, onSuccess }) {
+export default function CreateAssessmentModal({ open, onClose, initialAssessment, defaultJobId, defaultParticipantType, onSuccess }) {
   const searchParams = useAuthSearchParams();
   const [form, setForm] = useState(DEFAULT_FORM);
   const [jobs, setJobs] = useState([]);
@@ -198,9 +198,11 @@ export default function CreateAssessmentModal({ open, onClose, initialAssessment
         skills: Array.isArray(initialAssessment.skills) ? initialAssessment.skills.join(", ") : "",
       });
     } else {
-      setForm({ ...DEFAULT_FORM, jobId: defaultJobId ?? "" });
+      // New assessments start as candidate ones unless the page asks otherwise
+      // (the Assessments page's Employees view).
+      setForm({ ...DEFAULT_FORM, jobId: defaultJobId ?? "", participantType: defaultParticipantType ?? DEFAULT_FORM.participantType });
     }
-  }, [open, initialAssessment, defaultJobId, searchParams]);
+  }, [open, initialAssessment, defaultJobId, defaultParticipantType, searchParams]);
 
   if (!open) return null;
 
