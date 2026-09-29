@@ -922,13 +922,16 @@ export default function CognitiveDock({
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.045, delayChildren: 0.12 } } }}
           >
-            {dockSections.map((section) => (
+            {dockSections.map((section, sectionIndex) => (
               <motion.div
                 key={section.label}
                 className="flex items-center gap-1.5 md:flex-col md:gap-1.5"
                 variants={{ hidden: { opacity: 0, y: 8, scale: 0.96 }, visible: { opacity: 1, y: 0, scale: 1 } }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
               >
+                {sectionIndex > 0 ? (
+                  <span aria-hidden="true" className="mx-0.5 h-6 w-px shrink-0 bg-white/10 md:mx-0 md:my-0.5 md:h-px md:w-6" />
+                ) : null}
                 <DockSection label={section.label}>
                   {section.items.map((item) => (
                     <DockItem key={item.label} {...item} />

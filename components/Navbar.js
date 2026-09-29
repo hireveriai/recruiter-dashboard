@@ -248,8 +248,8 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
   const isLightTheme = resolvedTheme === "light";
   const logoSrc = isLightTheme ? "/verisnova_logo_on_white.png" : "/verisnova_logo.png";
   const logoTileClass = isLightTheme
-    ? "border-slate-200 bg-white group-hover:border-slate-300"
-    : "border-slate-700 bg-slate-900 group-hover:border-slate-500";
+    ? "border-cyan-200 bg-white ring-2 ring-cyan-50 group-hover:border-cyan-300"
+    : "border-cyan-400/25 bg-slate-900 group-hover:border-cyan-300/45";
   const logoImageClass = isLightTheme
     ? "h-full w-full object-contain"
     : "h-[5.1rem] w-[5.1rem] max-w-none object-contain";
@@ -613,7 +613,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
   return (
     <>
       <header className="hv-navbar sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/92 text-white shadow-[0_8px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-slate-800/80" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-400/45 to-transparent" />
         <div className="relative mx-auto flex w-full max-w-[1840px] flex-nowrap items-center justify-between gap-3 px-3 py-4 sm:px-4 xl:px-6">
           <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 xl:gap-3">
             <Link
@@ -643,7 +643,8 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               </span>
             </Link>
 
-            <nav className="hidden min-w-0 flex-1 flex-nowrap items-center justify-center gap-0.5 overflow-visible md:flex xl:gap-1">
+            <nav className="hidden min-w-0 flex-1 flex-nowrap items-center justify-center overflow-visible md:flex">
+              <div className="hv-nav-tray flex flex-nowrap items-center gap-0.5 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
               {visibleNavItems.map((item) => {
                 const active = isActivePath(pathname, item.href);
 
@@ -653,21 +654,13 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                     href={item.href}
                     onClick={() => handleNavigationClick(item.href)}
                     className={[
-                      "hv-nav-link group relative inline-flex transform-gpu whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
+                      "hv-nav-link group relative inline-flex whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] tracking-[0.005em] transition-colors duration-200 xl:px-3.5 xl:text-sm",
                       active
-                        ? "hv-nav-link-active border-slate-700 bg-slate-900 font-semibold text-white shadow-sm"
-                        : "border-transparent text-slate-300/90 hover:border-slate-700 hover:bg-slate-900/70 hover:text-white",
+                        ? "hv-nav-link-active bg-slate-800 font-semibold text-cyan-100 shadow-sm"
+                        : "text-slate-300/90 hover:bg-slate-800/60 hover:text-white",
                     ].join(" ")}
                   >
                     <span className="relative z-10">{item.label}</span>
-                    <span
-                      className={[
-                        "pointer-events-none absolute inset-x-2 -bottom-px h-px rounded-full bg-sky-400 transition-all duration-200",
-                        active
-                          ? "opacity-100"
-                          : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-60",
-                      ].join(" ")}
-                    />
                   </Link>
                 );
               })}
@@ -680,19 +673,18 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                   aria-label="Alerts"
                   title="Alerts"
                   className={[
-                    "hv-nav-link group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-2 text-[13px] font-medium tracking-[0.005em] transition-all duration-200 will-change-transform xl:px-3 xl:text-sm",
+                    "hv-nav-link group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-medium tracking-[0.005em] transition-colors duration-200 xl:px-3 xl:text-sm",
                     alertsOpen
-                      ? "hv-nav-link-active border-slate-700 bg-slate-900 text-white shadow-sm"
-                      : "border-transparent text-slate-300/90 hover:border-slate-700 hover:bg-slate-900/70 hover:text-white",
+                      ? "hv-nav-link-active bg-slate-800 text-cyan-100 shadow-sm"
+                      : "text-slate-300/90 hover:bg-slate-800/60 hover:text-white",
                   ].join(" ")}
                 >
                   <Bell className="h-4 w-4" strokeWidth={1.8} />
                   {unreadAlerts.length > 0 ? (
-                    <span className="relative inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-sky-300/30 bg-sky-500/15 px-1 text-[10px] font-semibold leading-none text-sky-50">
+                    <span className="hv-solid-action relative inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-cyan-600 px-1 text-[10px] font-semibold leading-none text-white">
                       {unreadAlerts.length}
                     </span>
                   ) : null}
-                  <span className={["pointer-events-none absolute inset-x-2 -bottom-px h-px rounded-full bg-sky-400 transition-all duration-200", alertsOpen ? "opacity-100" : "scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-55"].join(" ")} />
                 </button>
 
                 {alertsOpen ? (
@@ -745,6 +737,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                 ) : null}
               </div>
               ) : null}
+              </div>
             </nav>
           </div>
 
@@ -753,7 +746,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               <button
                 type="button"
                 onClick={handleOpenVerisAi}
-                className="hv-veris-ai-trigger group relative -mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full border border-cyan-400/25 bg-[linear-gradient(135deg,rgba(8,145,178,0.22),rgba(56,189,248,0.1))] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.14)] transition-all duration-200 hover:border-cyan-300/45 hover:bg-cyan-400/20 hover:text-white hover:shadow-[0_0_20px_rgba(34,211,238,0.22)]"
+                className="hv-veris-ai-trigger group relative inline-flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border border-cyan-400/25 bg-[linear-gradient(135deg,rgba(8,145,178,0.22),rgba(56,189,248,0.1))] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.14)] transition-all duration-200 hover:border-cyan-300/45 hover:bg-cyan-400/20 hover:text-white hover:shadow-[0_0_20px_rgba(34,211,238,0.22)]"
                 aria-label="Open VERIS AI"
                 title="VERIS AI"
               >
@@ -766,14 +759,16 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               <button
                 type="button"
                 onClick={() => setProfileOpen((value) => !value)}
-                className="flex transform-gpu items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-2.5 py-2 shadow-sm transition-all duration-200 hover:border-slate-500 lg:gap-3 lg:px-3"
+                aria-label="Account menu"
+                aria-expanded={profileOpen}
+                className="flex h-10 items-center gap-2 rounded-full border border-slate-700 bg-slate-900 p-1 shadow-sm transition-colors duration-200 hover:border-cyan-300/45 2xl:pr-3"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-sm font-semibold text-slate-100 lg:h-10 lg:w-10">
+                <div className="hv-solid-action flex h-8 w-8 items-center justify-center rounded-full bg-cyan-600 text-xs font-semibold text-white">
                   {initials}
                 </div>
                 <div className="hidden min-w-0 text-left 2xl:block">
-                  <div className="max-w-[120px] truncate text-sm font-semibold text-white">{displayProfile?.name || "Recruiter"}</div>
-                  <div className="max-w-[140px] truncate text-xs text-slate-400">{displayProfile?.organization || "Workspace"}</div>
+                  <div className="max-w-[120px] truncate text-[13px] font-semibold leading-4 text-white">{displayProfile?.name || "Recruiter"}</div>
+                  <div className="max-w-[140px] truncate text-[11px] leading-4 text-slate-400">{displayProfile?.organization || "Workspace"}</div>
                 </div>
               </button>
 

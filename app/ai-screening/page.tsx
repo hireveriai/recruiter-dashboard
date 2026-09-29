@@ -502,7 +502,7 @@ function ScreeningAnalysisOverlay({ phase }: { phase: ScreeningLoaderPhase | nul
   )
 
   return (
-    <div className="fixed inset-x-0 bottom-0 top-[76px] z-[140] sm:top-[88px]">
+    <div className="fixed inset-x-0 bottom-0 top-[76px] z-[140]">
       <VerisGlobeLoader
         steps={screeningLoaderSteps}
         activeIndex={activeIndex}

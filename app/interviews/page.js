@@ -1747,7 +1747,7 @@ export default function InterviewsPage() {
 
           {/* Register from lg up: seven columns, notes tucked under the row.
               It scrolls with the page (paged below), and the column headings
-              stay pinned under the navbar (91px tall at lg and up). */}
+              stay pinned under the navbar (77px tall). */}
           <div className="relative hidden lg:block">
             <table className="w-full table-fixed text-[13px]">
               <colgroup>
@@ -1759,7 +1759,7 @@ export default function InterviewsPage() {
                 <col className="w-[11%]" />
                 <col className="w-[15%]" />
               </colgroup>
-              <thead className="sticky top-[91px] z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_var(--color-slate-800)]">
+              <thead className="sticky top-[77px] z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_var(--color-slate-800)]">
                 <tr className="[&>th]:whitespace-nowrap [&>th]:py-2.5 [&>th]:text-[10.5px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-[0.14em]">
                   <th className="pl-5 pr-3 text-left">Candidate</th>
                   <th className="px-3 text-left">Status</th>

@@ -61,7 +61,7 @@ function DockItem({
       ) : null}
 
       {active ? (
-        <span className="absolute -left-2.5 top-1/2 hidden h-6 w-1 -translate-y-1/2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.85)] md:block" />
+        <span className="absolute -bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-cyan-300 md:-left-2 md:bottom-auto md:top-1/2 md:h-1.5 md:w-1.5 md:-translate-x-0 md:-translate-y-1/2" />
       ) : null}
 
       {alert ? (
