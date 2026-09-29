@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { CircleCheck, Download, Ellipsis, FileText, FileWarning, Info, Link2, MessageSquare, RotateCw, TriangleAlert, Video } from "lucide-react"
+import { ChevronLeft, ChevronRight, CircleCheck, Download, Ellipsis, FileText, FileWarning, Info, Link2, MessageSquare, RotateCw, TriangleAlert, Video } from "lucide-react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -644,6 +644,36 @@ const recordingAction =
   "hv-recording-action inline-flex h-7 max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg border border-cyan-400/25 bg-cyan-400/[0.06] px-2.5 text-xs font-semibold leading-none transition"
 const rowNoteChip =
   "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4"
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500]
+const PAGE_SIZE_STORAGE_KEY = "verisnova-interviews-page-size"
+
+// Per-viewer convenience only: the register renders fine without it.
+function readStoredPageSize() {
+  try {
+    const stored = Number(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY))
+    return PAGE_SIZE_OPTIONS.includes(stored) ? stored : PAGE_SIZE_OPTIONS[0]
+  } catch {
+    return PAGE_SIZE_OPTIONS[0]
+  }
+}
+
+// First, last, and the pages either side of the current one; gaps between.
+function getPageItems(page, pageCount) {
+  if (pageCount <= 7) return Array.from({ length: pageCount }, (_, index) => index + 1)
+  const start = Math.max(2, page - 1)
+  const end = Math.min(pageCount - 1, page + 1)
+  const items = [1]
+  if (start > 2) items.push("gap-start")
+  for (let item = start; item <= end; item += 1) items.push(item)
+  if (end < pageCount - 1) items.push("gap-end")
+  items.push(pageCount)
+  return items
+}
+
+// Display is set by each use: the page numbers hide on phones.
+const pagerButton =
+  "h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-40"
+
 const ROW_NOTE_TONES = {
   rose: "border-rose-500/25 bg-rose-500/10 text-rose-300",
   emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
@@ -853,6 +883,13 @@ export default function InterviewsPage() {
   const [showStatusGuide, setShowStatusGuide] = useState(false)
   // Phones only: the five filters fold away behind a toggle.
   const [showFilters, setShowFilters] = useState(false)
+  // The register is rendered only after loading, so reading storage here
+  // cannot change the server-rendered markup.
+  const [pageSize, setPageSize] = useState(() => (typeof window === "undefined" ? PAGE_SIZE_OPTIONS[0] : readStoredPageSize()))
+  // The page belongs to one search/filter/page-size combination; changing any
+  // of them starts again from page 1.
+  const [pageState, setPageState] = useState({ key: "", page: 1 })
+  const registerRef = useRef(null)
 
   async function loadInterviews() {
     const response = await fetch(buildAuthUrl("/api/dashboard/interviews?includeAnswers=0", searchParams), {
@@ -1494,7 +1531,33 @@ export default function InterviewsPage() {
     </span>
   )
 
-  const rowModels = filteredInterviews.map(buildRowModel)
+  const pagingKey = [searchTerm, statusFilter, jobFilter, accessFilter, evaluationFilter, recruiterDecisionFilter, pageSize].join("|")
+  const pageCount = Math.max(1, Math.ceil(filteredInterviews.length / pageSize))
+  const currentPage = Math.min(pageState.key === pagingKey ? pageState.page : 1, pageCount)
+  const pageStart = (currentPage - 1) * pageSize
+  const pageEnd = Math.min(pageStart + pageSize, filteredInterviews.length)
+
+  const goToPage = (page) => {
+    setPageState({ key: pagingKey, page: Math.min(Math.max(1, page), pageCount) })
+    // Bring the first row of the new page into view.
+    const top = registerRef.current?.getBoundingClientRect().top
+    if (top !== undefined && top < 0) {
+      registerRef.current.scrollIntoView({ block: "start" })
+    }
+  }
+
+  const changePageSize = (value) => {
+    const next = Number(value)
+    if (!PAGE_SIZE_OPTIONS.includes(next)) return
+    setPageSize(next)
+    try {
+      window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(next))
+    } catch {
+      // Storage unavailable (private window, blocked site data): keep it for this visit only.
+    }
+  }
+
+  const rowModels = filteredInterviews.slice(pageStart, pageEnd).map(buildRowModel)
   const activeFilterCount = [statusFilter, jobFilter, accessFilter, evaluationFilter, recruiterDecisionFilter].filter(
     (value) => value !== "ALL"
   ).length
@@ -1564,8 +1627,9 @@ export default function InterviewsPage() {
         ) : null}
 
         <section
+          ref={registerRef}
           aria-label="Interview Register"
-          className={`hv-elevated-section overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)] ${liveEnabled && interviewView === "live" ? "hidden" : ""}`}
+          className={`hv-elevated-section scroll-mt-24 overflow-clip rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)] ${liveEnabled && interviewView === "live" ? "hidden" : ""}`}
         >
           <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-5">
             <div>
@@ -1681,8 +1745,10 @@ export default function InterviewsPage() {
             </div>
           </div>
 
-          {/* Register from lg up: seven columns, notes tucked under the row. */}
-          <div className="hidden max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain lg:block">
+          {/* Register from lg up: seven columns, notes tucked under the row.
+              It scrolls with the page (paged below), and the column headings
+              stay pinned under the navbar (91px tall at lg and up). */}
+          <div className="relative hidden lg:block">
             <table className="w-full table-fixed text-[13px]">
               <colgroup>
                 <col className="w-[25%]" />
@@ -1693,7 +1759,7 @@ export default function InterviewsPage() {
                 <col className="w-[11%]" />
                 <col className="w-[15%]" />
               </colgroup>
-              <thead className="sticky top-0 z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
+              <thead className="sticky top-[91px] z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_var(--color-slate-800)]">
                 <tr className="[&>th]:whitespace-nowrap [&>th]:py-2.5 [&>th]:text-[10.5px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-[0.14em]">
                   <th className="pl-5 pr-3 text-left">Candidate</th>
                   <th className="px-3 text-left">Status</th>
@@ -1848,6 +1914,81 @@ export default function InterviewsPage() {
               })}
             </ul>
           )}
+
+          {filteredInterviews.length > 0 ? (
+            <div className="flex flex-col gap-3 border-t border-slate-800 bg-slate-950/20 px-4 py-3 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between lg:px-5">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <p aria-live="polite">
+                  Showing{" "}
+                  <span className="font-semibold tabular-nums text-slate-200">
+                    {pageStart + 1}&ndash;{pageEnd}
+                  </span>{" "}
+                  of <span className="font-semibold tabular-nums text-slate-200">{filteredInterviews.length}</span>
+                </p>
+                <label className="inline-flex items-center gap-2">
+                  Rows per page
+                  <select
+                    value={pageSize}
+                    onChange={(event) => changePageSize(event.target.value)}
+                    className="h-8 rounded-lg border border-slate-700 bg-slate-950/70 px-2 text-xs font-semibold text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {pageCount > 1 ? (
+                <nav aria-label="Interview pages" className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    aria-label="Previous page"
+                    className={`${pagerButton} inline-flex border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white`}
+                  >
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  {getPageItems(currentPage, pageCount).map((item) =>
+                    typeof item === "number" ? (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => goToPage(item)}
+                        aria-label={`Page ${item}`}
+                        aria-current={item === currentPage ? "page" : undefined}
+                        className={`${pagerButton} hidden sm:inline-flex ${
+                          item === currentPage
+                            ? "hv-solid-action border-cyan-600 bg-cyan-600 text-white"
+                            : "border-transparent text-slate-300 hover:border-slate-700 hover:text-white"
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ) : (
+                      <span key={item} aria-hidden="true" className="hidden px-1 text-slate-500 sm:inline">
+                        &hellip;
+                      </span>
+                    )
+                  )}
+                  <span className="px-2 tabular-nums text-slate-300 sm:hidden">
+                    Page {currentPage} of {pageCount}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === pageCount}
+                    aria-label="Next page"
+                    className={`${pagerButton} inline-flex border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white`}
+                  >
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </nav>
+              ) : null}
+            </div>
+          ) : null}
         </section>
 
         {!liveEnabled || interviewView === "live" ? <LiveInterviewsPanel /> : null}
