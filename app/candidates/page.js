@@ -1,8 +1,8 @@
 ﻿"use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
-import { Pencil } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import BackToDashboardLink from "@/components/BackToDashboardLink"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
@@ -18,10 +18,57 @@ import { CandidateActionModal } from "../../components/dashboard/CandidateAction
 import { DecisionPill } from "../../components/dashboard/DecisionPill"
 import { VerisGlobeLoader } from "../../components/system/loaders"
 
-// Candidate table columns from lg up: candidate, role, status, VERIS score,
-// VERIS Assessment, hiring action. Below lg each row is a stacked card.
+// Candidate register columns from lg up: candidate (with role), status,
+// VERIS Screening score, VERIS Assessment, hiring action. Below lg each row
+// is a stacked card.
 const CANDIDATE_COLUMNS =
-  "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_8.5rem_6rem_10rem_minmax(0,1.1fr)]"
+  "lg:grid-cols-[minmax(0,1.7fr)_8.5rem_9.5rem_11rem_minmax(0,1.1fr)]"
+
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500]
+const PAGE_SIZE_STORAGE_KEY = "verisnova-candidates-page-size"
+
+// Per-viewer convenience only: the register renders fine without it.
+function readStoredPageSize() {
+  try {
+    const stored = Number(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY))
+    return PAGE_SIZE_OPTIONS.includes(stored) ? stored : PAGE_SIZE_OPTIONS[0]
+  } catch {
+    return PAGE_SIZE_OPTIONS[0]
+  }
+}
+
+// First, last, and the pages either side of the current one; gaps between.
+function getPageItems(page, pageCount) {
+  if (pageCount <= 7) return Array.from({ length: pageCount }, (_, index) => index + 1)
+  const start = Math.max(2, page - 1)
+  const end = Math.min(pageCount - 1, page + 1)
+  const items = [1]
+  if (start > 2) items.push("gap-start")
+  for (let item = start; item <= end; item += 1) items.push(item)
+  if (end < pageCount - 1) items.push("gap-end")
+  items.push(pageCount)
+  return items
+}
+
+// Display is set by each use: the page numbers hide on phones.
+const pagerButton =
+  "h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-40"
+
+// Names typed entirely in capitals (or lowercase) show in title case;
+// mixed-case names stay as entered.
+function displayCandidateName(name) {
+  const value = String(name ?? "").trim()
+  if (!value) return "Candidate"
+  if (value !== value.toUpperCase() && value !== value.toLowerCase()) return value
+  return value.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_, lead, letter) => lead + letter.toUpperCase())
+}
+
+// Bar colour, matching the score text colours below.
+function getScoreBar(score) {
+  if (score > 80) return "bg-emerald-400"
+  if (score >= 60) return "bg-amber-400"
+  return "bg-rose-400"
+}
 
 function candidateInitials(name) {
   const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean)
@@ -443,6 +490,12 @@ export default function CandidatesPage() {
   const [scoreFilter, setScoreFilter] = useState("ALL")
   // Phones only: the four filters fold away behind a toggle.
   const [showFilters, setShowFilters] = useState(false)
+  // The register renders only after loading, so reading storage here cannot
+  // change the server-rendered markup.
+  const [pageSize, setPageSize] = useState(() => (typeof window === "undefined" ? PAGE_SIZE_OPTIONS[0] : readStoredPageSize()))
+  // The page belongs to one search/filter/page-size combination.
+  const [pageState, setPageState] = useState({ key: "", page: 1 })
+  const registerRef = useRef(null)
 
   useEffect(() => {
     let isMounted = true
@@ -644,11 +697,37 @@ export default function CandidatesPage() {
   ).length
   const activeFilterCount = [statusFilter, jobFilter, decisionFilter, scoreFilter].filter((value) => value !== "ALL").length
   const statCards = [
-    ["Total Candidates", stats.total],
-    ["Completed", stats.completed],
-    ["Pending", stats.pending],
-    ["Awaiting your decision", awaitingDecision],
+    ["Total Candidates", stats.total, false],
+    ["Completed", stats.completed, false],
+    ["Pending", stats.pending, false],
+    ["Awaiting your decision", awaitingDecision, true],
   ]
+
+  const pagingKey = [searchTerm, statusFilter, jobFilter, decisionFilter, scoreFilter, pageSize].join("|")
+  const pageCount = Math.max(1, Math.ceil(filteredCandidates.length / pageSize))
+  const currentPage = Math.min(pageState.key === pagingKey ? pageState.page : 1, pageCount)
+  const pageStart = (currentPage - 1) * pageSize
+  const pageEnd = Math.min(pageStart + pageSize, filteredCandidates.length)
+  const pagedCandidates = filteredCandidates.slice(pageStart, pageEnd)
+
+  const goToPage = (page) => {
+    setPageState({ key: pagingKey, page: Math.min(Math.max(1, page), pageCount) })
+    const top = registerRef.current?.getBoundingClientRect().top
+    if (top !== undefined && top < 0) {
+      registerRef.current.scrollIntoView({ block: "start" })
+    }
+  }
+
+  const changePageSize = (value) => {
+    const next = Number(value)
+    if (!PAGE_SIZE_OPTIONS.includes(next)) return
+    setPageSize(next)
+    try {
+      window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(next))
+    } catch {
+      // Storage unavailable: keep it for this visit only.
+    }
+  }
 
   return (
     <>
@@ -668,15 +747,24 @@ export default function CandidatesPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {statCards.map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3.5 shadow-[0_14px_44px_rgba(2,6,23,0.18)]">
+            {statCards.map(([label, value, accent]) => (
+              <div
+                key={label}
+                className={`hv-elevated-section rounded-xl border px-4 py-3.5 shadow-[0_14px_44px_rgba(2,6,23,0.18)] ${
+                  accent ? "border-cyan-300/25 bg-cyan-400/[0.06]" : "border-slate-800 bg-slate-900/80"
+                }`}
+              >
                 <p className="text-xs text-slate-400">{label}</p>
-                <p className="mt-1.5 text-2xl font-semibold tabular-nums text-white">{value}</p>
+                <p className={`mt-1.5 text-2xl font-semibold tabular-nums ${accent ? "text-cyan-100" : "text-white"}`}>{value}</p>
               </div>
             ))}
           </div>
 
-          <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]" aria-label="Candidate Pipeline View">
+          <section
+            ref={registerRef}
+            className="hv-elevated-section scroll-mt-24 overflow-clip rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]"
+            aria-label="Candidate Pipeline View"
+          >
             <div className="flex flex-col gap-1 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-5">
               <h2 className="text-base font-semibold text-white">Candidate Pipeline View</h2>
               <p className="text-xs text-slate-400">
@@ -684,7 +772,7 @@ export default function CandidatesPage() {
               </p>
             </div>
 
-            <div className="grid gap-3 border-b border-slate-800 bg-slate-950/20 px-4 py-4 sm:grid-cols-2 lg:px-5 xl:grid-cols-[minmax(220px,1.3fr)_repeat(4,minmax(140px,0.7fr))_auto]">
+            <div className="grid gap-3 border-b border-slate-800 bg-slate-950/20 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-5 xl:grid-cols-[minmax(220px,1.3fr)_repeat(4,minmax(140px,0.7fr))_auto]">
               <label className="grid gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:col-span-2 xl:col-span-1">
                 Search
                 <input
@@ -738,22 +826,21 @@ export default function CandidatesPage() {
                 type="button"
                 onClick={clearFilters}
                 disabled={!hasActiveFilters}
-                className="h-10 self-end rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                className="h-10 self-end rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45 lg:w-24 xl:w-auto"
               >
                 Clear
               </button>
               </div>
             </div>
 
-            {/* Column headings: the table layout starts at lg; below it each
-                candidate is a stacked card with inline labels. */}
+            {/* Column headings (lg and up), pinned under the navbar while the
+                page scrolls. Below lg each candidate is a stacked card. */}
             <div
-              className={`hidden gap-4 border-b border-slate-800 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 lg:grid ${CANDIDATE_COLUMNS}`}
+              className={`sticky top-[77px] z-10 hidden gap-4 bg-slate-950 px-5 py-2.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-slate-500 shadow-[0_1px_0_var(--color-slate-800)] lg:grid ${CANDIDATE_COLUMNS}`}
             >
               <span>Candidate</span>
-              <span>Applied Role</span>
-              <span>Interview Status</span>
-              <span>VERIS Score</span>
+              <span>Status</span>
+              <span>VERIS Screening</span>
               <span>VERIS Assessment</span>
               <span>Hiring Action</span>
             </div>
@@ -765,68 +852,91 @@ export default function CandidatesPage() {
             ) : filteredCandidates.length === 0 ? (
               <p className="px-5 py-10 text-center text-sm text-slate-400">No candidates match the current filters</p>
             ) : (
-              <ul>
-                {filteredCandidates.map((candidate, index) => {
-                  const rowKey = candidate.interviewId || candidate.candidateId || `${candidate.candidateName}-${index}`
+              <ul aria-label="Candidates">
+                {pagedCandidates.map((candidate, index) => {
+                  const rowKey = candidate.interviewId || candidate.candidateId || `${candidate.candidateName}-${pageStart + index}`
                   const assessment = assessmentSummaries[candidate.candidateId]
                   const expanded = expandedCandidateId === rowKey
+                  const awaiting = isDecisionReady(candidate) && !candidate.recruiterDecisionStatus
+                  const score = candidate.verisScreeningScore
+                  const hasScore = score !== null && score !== undefined && Number.isFinite(Number(score))
 
                   return (
-                    <li key={rowKey} className="border-b border-slate-800/80 last:border-b-0">
+                    <li key={rowKey} className="relative border-b border-slate-800/80 last:border-b-0">
+                      {awaiting ? (
+                        <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[3px] rounded-r-full bg-cyan-400" />
+                      ) : null}
                       <div
-                        className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 px-4 py-4 transition-colors hover:bg-slate-800/30 lg:gap-4 lg:px-5 lg:py-3.5 ${CANDIDATE_COLUMNS}`}
+                        className={`grid grid-cols-2 items-center gap-x-4 gap-y-3 px-4 py-3.5 transition-colors hover:bg-slate-800/25 lg:gap-4 lg:px-5 ${CANDIDATE_COLUMNS}`}
                       >
-                        <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 lg:col-start-auto lg:row-start-auto">
-                          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-cyan-400/15 text-xs font-semibold text-cyan-200">
+                        <div className="col-span-2 flex min-w-0 items-center gap-3 lg:col-span-1">
+                          <span
+                            aria-hidden="true"
+                            className={`flex h-9 w-9 flex-none items-center justify-center rounded-full text-xs font-semibold ${
+                              awaiting ? "bg-cyan-400/15 text-cyan-200" : "bg-slate-800 text-slate-300"
+                            }`}
+                          >
                             {candidateInitials(candidate.candidateName)}
                           </span>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-white" title={candidate.candidateName || "Candidate"}>
-                              {candidate.candidateName}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-white" title={candidate.candidateName || "Candidate"}>
+                              {displayCandidateName(candidate.candidateName)}
                             </p>
-                            {candidate.aiSummaryFull && isCompletedCandidate(candidate) ? (
-                              <button
-                                type="button"
-                                onClick={() => setExpandedCandidateId((current) => current === rowKey ? "" : rowKey)}
-                                className="text-xs font-semibold text-cyan-300/90 transition hover:text-cyan-100"
-                                aria-expanded={expanded}
-                                aria-label={`View VERIS insight for ${candidate.candidateName}`}
-                              >
-                                {expanded ? "Hide insight" : "View insight"}
-                              </button>
-                            ) : null}
+                            <p className="truncate text-xs text-slate-400" title={candidate.jobTitle || ""}>
+                              {candidate.jobTitle || "No role"}
+                              {candidate.aiSummaryFull && isCompletedCandidate(candidate) ? (
+                                <>
+                                  <span className="mx-1.5 text-slate-600" aria-hidden="true">&middot;</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedCandidateId((current) => (current === rowKey ? "" : rowKey))}
+                                    className="font-semibold text-cyan-300 transition hover:text-cyan-100"
+                                    aria-expanded={expanded}
+                                    aria-label={`View VERIS insight for ${candidate.candidateName}`}
+                                  >
+                                    {expanded ? "Hide insight" : "View insight"}
+                                  </button>
+                                </>
+                              ) : null}
+                            </p>
                           </div>
-                        </div>
-
-                        <p className="col-span-2 row-start-2 truncate text-sm text-slate-300 lg:col-span-1 lg:row-start-auto">
-                          {candidate.jobTitle || "-"}
-                        </p>
-
-                        <div className="col-start-2 row-start-1 justify-self-end lg:col-start-auto lg:row-start-auto lg:justify-self-start">
-                          <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium ${getStatusBadge(candidate.status)}`}>
+                          <span className={`inline-flex flex-none whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium lg:hidden ${getStatusBadge(candidate.status)}`}>
                             {formatStatusText(candidate.status)}
                           </span>
                         </div>
 
-                        <div className="col-start-1 row-start-3 lg:col-start-auto lg:row-start-auto">
-                          <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500 lg:hidden">VERIS Score</p>
-                          <p className={`mt-0.5 text-sm font-semibold tabular-nums lg:mt-0 ${getScoreColor(candidate.verisScreeningScore)}`}>
-                            {formatScore(candidate.verisScreeningScore)}
-                          </p>
+                        <div className="hidden lg:block">
+                          <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${getStatusBadge(candidate.status)}`}>
+                            {formatStatusText(candidate.status)}
+                          </span>
                         </div>
 
-                        <div className="col-start-2 row-start-3 justify-self-end text-right lg:col-start-auto lg:row-start-auto lg:justify-self-start lg:text-left">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500 lg:hidden">VERIS Screening</p>
+                          {hasScore ? (
+                            <div className="mt-1 w-full max-w-[84px] lg:mt-0">
+                              <p className={`text-sm font-semibold tabular-nums leading-none ${getScoreColor(score)}`}>{formatScore(score)}</p>
+                              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+                                <div className={`h-full rounded-full ${getScoreBar(score)}`} style={{ width: `${Math.max(3, Math.min(100, Math.round(score)))}%` }} />
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="mt-0.5 text-sm text-slate-600 lg:mt-0" title="Not scored yet">&ndash;</p>
+                          )}
+                        </div>
+
+                        <div className="justify-self-end text-right lg:justify-self-start lg:text-left">
                           <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500 lg:hidden">VERIS Assessment</p>
                           {assessment ? (
-                            <p className="mt-0.5 text-sm lg:mt-0">
+                            <p className="mt-0.5 flex items-center justify-end gap-2 text-sm lg:mt-0 lg:justify-start">
                               <span className="font-semibold tabular-nums text-white">{formatScore(assessment.percentage)}</span>
                               <span
-                                className={`ml-2 text-xs font-medium ${
+                                className={`rounded-full border px-2 py-px text-[10.5px] font-semibold ${
                                   assessment.passed === true
-                                    ? "text-emerald-300"
+                                    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
                                     : assessment.passed === false
-                                      ? "text-rose-300"
-                                      : "text-slate-400"
+                                      ? "border-rose-400/30 bg-rose-500/10 text-rose-300"
+                                      : "border-slate-700 text-slate-400"
                                 }`}
                               >
                                 {assessment.passed === true ? "Passed" : assessment.passed === false ? "Failed" : "Pending"}
@@ -842,7 +952,7 @@ export default function CandidatesPage() {
                                   candidateEmail: candidate.candidateEmail || "",
                                 })
                               }
-                              className="mt-1 inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg border border-slate-700 bg-slate-900/80 px-3 text-xs font-semibold text-slate-200 transition hover:border-cyan-300/50 hover:text-white lg:mt-0"
+                              className="mt-1 inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-xs font-semibold text-slate-200 transition hover:border-cyan-400/40 hover:text-cyan-100 lg:mt-0"
                               aria-label={`Send VERIS Assessment to ${candidate.candidateName}`}
                             >
                               Send Assessment
@@ -850,7 +960,7 @@ export default function CandidatesPage() {
                           )}
                         </div>
 
-                        <div className="col-span-2 row-start-4 lg:col-span-1 lg:row-start-auto">
+                        <div className="col-span-2 lg:col-span-1">
                           <div className="flex flex-wrap items-center gap-2">
                             {isDecisionReady(candidate) ? (
                               candidate.recruiterDecisionStatus ? (
@@ -859,14 +969,14 @@ export default function CandidatesPage() {
                                 <button
                                   type="button"
                                   onClick={() => setReviewCandidate(candidate)}
-                                  className="hv-solid-action inline-flex h-9 items-center justify-center whitespace-nowrap rounded-xl bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-500"
+                                  className="hv-solid-action inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg bg-cyan-600 px-3.5 text-xs font-semibold text-white transition hover:bg-cyan-500"
                                   aria-label={`Take hiring action for ${candidate.candidateName}`}
                                 >
                                   Take Action
                                 </button>
                               )
                             ) : (
-                              <span className="inline-flex max-w-full rounded-full border border-slate-600/70 bg-slate-950/30 px-3 py-1 text-xs font-medium leading-5 text-slate-400">
+                              <span className="inline-flex max-w-full rounded-full border border-dashed border-slate-700 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
                                 After completion
                               </span>
                             )}
@@ -874,11 +984,11 @@ export default function CandidatesPage() {
                               <button
                                 type="button"
                                 onClick={() => setReviewCandidate(candidate)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 transition hover:border-cyan-300/50 hover:text-white"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/60 text-slate-300 transition hover:border-cyan-400/40 hover:text-cyan-100"
                                 aria-label={`Edit hiring action for ${candidate.candidateName}`}
                                 title="Edit hiring action"
                               >
-                                <Pencil className="h-4 w-4" aria-hidden="true" />
+                                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                               </button>
                             ) : null}
                           </div>
@@ -895,6 +1005,81 @@ export default function CandidatesPage() {
                 })}
               </ul>
             )}
+
+            {filteredCandidates.length > 0 ? (
+              <div className="flex flex-col gap-3 border-t border-slate-800 bg-slate-950/20 px-4 py-3 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between lg:px-5">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <p aria-live="polite">
+                    Showing{" "}
+                    <span className="font-semibold tabular-nums text-slate-200">
+                      {pageStart + 1}&ndash;{pageEnd}
+                    </span>{" "}
+                    of <span className="font-semibold tabular-nums text-slate-200">{filteredCandidates.length}</span>
+                  </p>
+                  <label className="inline-flex items-center gap-2">
+                    Rows per page
+                    <select
+                      value={pageSize}
+                      onChange={(event) => changePageSize(event.target.value)}
+                      className="h-8 rounded-lg border border-slate-700 bg-slate-950/70 px-2 text-xs font-semibold text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+                    >
+                      {PAGE_SIZE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                {pageCount > 1 ? (
+                  <nav aria-label="Candidate pages" className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      aria-label="Previous page"
+                      className={`${pagerButton} inline-flex border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white`}
+                    >
+                      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    {getPageItems(currentPage, pageCount).map((item) =>
+                      typeof item === "number" ? (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => goToPage(item)}
+                          aria-label={`Page ${item}`}
+                          aria-current={item === currentPage ? "page" : undefined}
+                          className={`${pagerButton} hidden sm:inline-flex ${
+                            item === currentPage
+                              ? "hv-solid-action border-cyan-600 bg-cyan-600 text-white"
+                              : "border-transparent text-slate-300 hover:border-slate-700 hover:text-white"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      ) : (
+                        <span key={item} aria-hidden="true" className="hidden px-1 text-slate-500 sm:inline">
+                          &hellip;
+                        </span>
+                      )
+                    )}
+                    <span className="px-2 tabular-nums text-slate-300 sm:hidden">
+                      Page {currentPage} of {pageCount}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === pageCount}
+                      aria-label="Next page"
+                      className={`${pagerButton} inline-flex border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white`}
+                    >
+                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </nav>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         </main>
       </div>

@@ -715,12 +715,12 @@ export default function JobsPage() {
           <div className="relative hidden lg:block">
             <table className="w-full table-fixed text-[13px]">
               <colgroup>
-                <col className="w-[36%]" />
+                <col className="w-[33%]" />
                 <col className="w-[10%]" />
                 <col className="w-[15%]" />
                 <col className="w-[18%]" />
-                <col className="w-[8%]" />
-                <col className="w-[13%]" />
+                <col className="w-[9%]" />
+                <col className="w-[15%]" />
               </colgroup>
               <thead className="sticky top-[77px] z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_var(--color-slate-800)]">
                 <tr className="[&>th]:whitespace-nowrap [&>th]:py-2.5 [&>th]:text-[10.5px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-[0.14em]">
@@ -728,7 +728,7 @@ export default function JobsPage() {
                   <th className="px-3 text-left">Status</th>
                   <th className="px-3 text-left">Interview mode</th>
                   <th className="px-3 text-left">Core skills</th>
-                  <th className="px-3 text-right">Interviews</th>
+                  <th className="px-3 text-center">Interviews</th>
                   <th className="pl-3 pr-5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -771,12 +771,12 @@ export default function JobsPage() {
                       <td className="px-3 py-3">
                         <JobSkillsCell skills={job.coreSkills} />
                       </td>
-                      <td className="px-3 py-3 text-right">
+                      <td className="px-3 py-3 text-center">
                         <span className={`text-base font-semibold tabular-nums ${(job._count?.interviews ?? 0) > 0 ? "text-white" : "text-slate-600"}`}>
                           {job._count?.interviews ?? 0}
                         </span>
                       </td>
-                      <td className="py-3 pl-3 pr-5">{renderActions(job, true)}</td>
+                      <td className="py-3 pl-4 pr-5">{renderActions(job, true)}</td>
                     </tr>
                   ))
                 )}
