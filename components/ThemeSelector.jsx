@@ -24,7 +24,7 @@ export default function ThemeSelector() {
       </span>
 
       <div
-        className={`inline-flex rounded-full p-0.5 ${isLight ? "bg-[#e5e7eb]" : "bg-[#1e293b]"}`}
+        className={`inline-flex h-10 items-center rounded-full p-1 ${isLight ? "bg-[#e5e7eb]" : "bg-[#1e293b]"}`}
         role="group"
         aria-label="Color theme"
       >
@@ -37,7 +37,7 @@ export default function ThemeSelector() {
               key={option.value}
               type="button"
               onClick={() => setTheme(option.value)}
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0891b2] focus-visible:ring-offset-2 ${
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0891b2] focus-visible:ring-offset-2 ${
                 isSelected
                   ? isLight
                     ? "bg-white text-[#0f172a] shadow-sm focus-visible:ring-offset-[#e5e7eb]"
