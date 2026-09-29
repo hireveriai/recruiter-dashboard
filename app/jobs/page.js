@@ -1,8 +1,7 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
@@ -54,7 +53,7 @@ function InterviewModeCell({ mode, questionnaireStatus, versionNumber, hasDraft 
   return (
     <div className="flex flex-col gap-1.5">
       <span
-        className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-medium ${
+        className={`inline-flex w-fit rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
           standard
             ? "border-violet-500/20 bg-violet-500/10 text-violet-200"
             : "border-slate-700 bg-slate-800/60 text-slate-300"
@@ -88,6 +87,20 @@ function InterviewModeCell({ mode, questionnaireStatus, versionNumber, hasDraft 
   )
 }
 
+const menuItem =
+  "hv-interview-action-item flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+
+function formatDifficulty(profile) {
+  const value = String(profile ?? "MID").toLowerCase()
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function roleInitials(title) {
+  const words = String(title ?? "").replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean)
+  if (words.length === 0) return "J"
+  return (words[0].charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : "")).toUpperCase()
+}
+
 function getStatusTone(isActive) {
   return isActive
     ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
@@ -118,12 +131,12 @@ function uniqueSorted(values) {
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label className="grid gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-slate-500 2xl:gap-1.5 2xl:text-[11px] 2xl:tracking-[0.14em]">
+    <label className="grid gap-1.5 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-slate-500">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 text-[13px] font-medium 2xl:px-3 normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+        className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -138,14 +151,11 @@ function FilterSelect({ label, value, onChange, options }) {
 function JobDescriptionCell({ description }) {
   const value = String(description || "").trim()
   const fallback = "No job description provided"
-  const preview =
-    value.length > 44
-      ? `${value.slice(0, 44).trimEnd()}...`
-      : value || fallback
+  const preview = value || fallback
 
   return (
     <div className="group relative max-w-full">
-      <div className="cursor-help break-words leading-6 text-slate-400">
+      <div className={`truncate leading-5 ${value ? "cursor-help text-slate-400" : "text-slate-600"}`}>
         {preview}
       </div>
 
@@ -162,24 +172,23 @@ function JobDescriptionCell({ description }) {
 
 function JobSkillsCell({ skills }) {
   const items = Array.isArray(skills) ? skills.filter(Boolean) : []
-  const value = items.join(", ")
-  const preview =
-    value.length > 46
-      ? `${value.slice(0, 46).trimEnd()}...`
-      : value || "-"
+
+  if (items.length === 0) {
+    return <span className="text-xs text-slate-600">&ndash;</span>
+  }
+
+  const shown = items.slice(0, 3)
+  const remaining = items.length - shown.length
 
   return (
-    <div className="group relative max-w-full">
-      <div className="cursor-help break-words leading-6 text-slate-300">
-        {preview}
-      </div>
-
-      {value ? (
-        <div className="hv-preserve-dark pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-[460px] max-w-[38vw] rounded-2xl border border-slate-700 bg-[#1f2937] px-4 py-3 text-sm leading-7 text-slate-100 shadow-[0_18px_48px_rgba(2,6,23,0.45)] group-hover:block">
-          <div className="line-clamp-[20] whitespace-pre-wrap break-words">
-            {value}
-          </div>
-        </div>
+    <div className="flex flex-wrap items-center gap-1" title={items.join(", ")}>
+      {shown.map((skill) => (
+        <span key={skill} className="max-w-full truncate rounded-md border border-slate-700 bg-slate-950/40 px-1.5 py-0.5 text-[11px] text-slate-300">
+          {skill}
+        </span>
+      ))}
+      {remaining > 0 ? (
+        <span className="rounded-md px-1 py-0.5 text-[11px] font-semibold text-cyan-300">+{remaining}</span>
       ) : null}
     </div>
   )
@@ -206,7 +215,8 @@ export default function JobsPage() {
   const [activityFilter, setActivityFilter] = useState("ALL")
   const [experienceLevels, setExperienceLevels] = useState([])
   const [lockedFeature, setLockedFeature] = useState(null)
-  const actionMenuRef = useRef(null)
+  // Phones only: the four filters fold away behind a toggle.
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -317,7 +327,9 @@ export default function JobsPage() {
 
   useEffect(() => {
     function handlePointerDown(event) {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target)) {
+      // Table rows and phone cards both render a menu for a job, so the
+      // check is by attribute rather than a single ref.
+      if (!event.target.closest?.("[data-job-menu]")) {
         setOpenActionMenuJobId("")
       }
     }
@@ -457,191 +469,298 @@ export default function JobsPage() {
     return <FeatureLockedNotice feature={lockedFeature} />
   }
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
+  const activeFilterCount = [statusFilter, difficultyFilter, experienceFilter, activityFilter].filter((value) => value !== "ALL").length
+  const emptyMessage = jobs.length === 0 ? "No jobs available" : filteredJobs.length === 0 ? "No jobs match the current filters" : null
 
-      <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.22)] 2xl:p-8">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between 2xl:gap-8">
-            <div className="max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Role Portfolio</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white 2xl:mt-4 2xl:text-4xl">All Jobs</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-400 2xl:mt-4 2xl:text-base 2xl:leading-7">
-                Live role inventory for your hiring organization, including experience band, evaluation depth, and current interview activity.
-              </p>
-            </div>
+  // Same actions for the table row and the phone card.
+  const renderActions = (job, showToggleButton) => {
+    const isActive = job.isActive !== false
+    const pending = pendingJobId === job.jobId
+    const toggleLabel = pending ? "Saving..." : isActive ? "Mark Inactive" : "Mark Active"
+    const menuOpen = openActionMenuJobId === job.jobId
 
-            <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[600px] 2xl:min-w-[680px]">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
-                <p className="text-xs text-slate-500 2xl:text-sm">Total Jobs</p>
-                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.total}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
-                <p className="text-xs text-slate-500 2xl:text-sm">Active Jobs</p>
-                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.activeJobs}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
-                <p className="text-xs text-slate-500 2xl:text-sm">Active Interview Tracks</p>
-                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.totalInterviews}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3.5 2xl:p-4">
-                <p className="text-xs text-slate-500 2xl:text-sm">Senior Roles</p>
-                <p className="mt-2 text-2xl font-semibold text-white 2xl:mt-3 2xl:text-3xl">{stats.seniorRoles}</p>
-              </div>
-            </div>
-          </div>
-        </section>
+    return (
+      <div className="flex items-center justify-end gap-2" data-job-menu={job.jobId}>
+        {supportsJobActiveState && showToggleButton ? (
+          <button
+            type="button"
+            onClick={() => handleToggleActive(job)}
+            disabled={pending}
+            className="hidden h-8 min-w-[104px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-xs font-semibold text-slate-200 transition hover:border-cyan-400/40 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 min-[1200px]:inline-flex"
+          >
+            {toggleLabel}
+          </button>
+        ) : null}
 
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)] 2xl:mt-8">
-          <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between 2xl:px-6 2xl:py-5">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Created Job Roles</h2>
-              <p className="mt-1 text-[13px] text-slate-400 2xl:text-sm">
-                Showing {filteredJobs.length} of {jobs.length} jobs created under the current recruiter organization.
-              </p>
-            </div>
+        <div className="relative flex items-center">
+          <button
+            type="button"
+            onClick={() => setOpenActionMenuJobId((current) => (current === job.jobId ? "" : job.jobId))}
+            className="hv-interview-actions-trigger inline-flex h-8 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-100"
+            aria-label={`Open actions for ${job.jobTitle}`}
+            aria-expanded={menuOpen}
+          >
+            <KebabIcon />
+          </button>
 
-            <div className="flex w-fit items-center gap-2">
-              <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
-
+          {menuOpen ? (
+            <div className="hv-interview-actions-menu hv-theme-popover absolute right-0 top-[calc(100%+6px)] z-30 w-48 overflow-hidden rounded-xl border border-slate-700 bg-slate-900 p-1.5 text-left shadow-[0_18px_48px_rgba(2,6,23,0.45)]">
+              {supportsJobActiveState ? (
+                <button
+                  type="button"
+                  onClick={() => handleToggleActive(job)}
+                  disabled={pending}
+                  className={`${menuItem} ${showToggleButton ? "min-[1200px]:hidden" : ""}`}
+                >
+                  {toggleLabel}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedJob(null)
-                  setOpenCreateJob(true)
+                  setOpenActionMenuJobId("")
+                  router.push(buildAuthUrl(`/jobs/${job.jobId}/questionnaire`, searchParams))
                 }}
-                className="hv-solid-action inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(8,145,178,0.22)] transition hover:bg-cyan-500"
+                className={menuItem}
               >
-                Create Job
+                Interview questions
+              </button>
+              <button type="button" onClick={() => handleEdit(job)} className={menuItem}>
+                Edit job
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenActionMenuJobId("")
+                  setOpenSendInterview(true)
+                }}
+                className={menuItem}
+              >
+                Send interview link
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenActionMenuJobId("")
+                  setSendAssessmentJobId(job.jobId)
+                  setOpenSendAssessment(true)
+                }}
+                className={menuItem}
+              >
+                Send assessment
               </button>
             </div>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+
+  const renderStatus = (job) => {
+    const isActive = job.isActive !== false
+    return (
+      <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${getStatusTone(isActive)}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-amber-400"}`} aria-hidden="true" />
+        {isActive ? "Active" : "Inactive"}
+      </span>
+    )
+  }
+
+  const renderRoleMeta = (job) => (
+    <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-400">
+      <span className={`inline-flex rounded-md border px-1.5 py-px text-[10.5px] font-semibold ${getDifficultyTone(job.difficultyProfile)}`}>
+        {formatDifficulty(job.difficultyProfile)}
+      </span>
+      <span>Experience: {getExperienceLabel(job.experienceLevelId)}</span>
+      <span className="text-slate-600" aria-hidden="true">&middot;</span>
+      <span>{job.interviewDurationMinutes ?? 30} min</span>
+    </p>
+  )
+
+  const renderRoleIcon = (job) => (
+    <span
+      aria-hidden="true"
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
+        job.isActive !== false ? "bg-cyan-400/15 text-cyan-200" : "bg-slate-800 text-slate-400"
+      }`}
+    >
+      {roleInitials(job.jobTitle)}
+    </span>
+  )
+
+  return (
+    <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
+      <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
+
+      <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <header className="max-w-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Role Portfolio</p>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">All Jobs</h1>
+            <p className="mt-1 text-sm leading-6 text-slate-400">
+              Live role inventory for your hiring organization, including experience band, evaluation depth, and current interview activity.
+            </p>
+          </header>
+          <div className="flex flex-wrap items-center gap-2">
+            <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedJob(null)
+                setOpenCreateJob(true)
+              }}
+              className="hv-solid-action inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500"
+            >
+              <span aria-hidden="true" className="text-base leading-none">+</span>
+              Create Job
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            ["Total Jobs", stats.total, false],
+            ["Active Jobs", stats.activeJobs, true],
+            ["Active Interview Tracks", stats.totalInterviews, false],
+            ["Senior Roles", stats.seniorRoles, false],
+          ].map(([label, value, accent]) => (
+            <div
+              key={label}
+              className={`hv-elevated-section rounded-xl border px-4 py-3.5 shadow-[0_14px_44px_rgba(2,6,23,0.18)] ${
+                accent ? "border-cyan-300/25 bg-cyan-400/[0.06]" : "border-slate-800 bg-slate-900/80"
+              }`}
+            >
+              <p className="text-xs text-slate-400">{label}</p>
+              <p className={`mt-1.5 text-2xl font-semibold tabular-nums ${accent ? "text-cyan-100" : "text-white"}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <section
+          aria-label="Job Roles"
+          className="hv-elevated-section rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]"
+        >
+          <div className="border-b border-slate-800 px-4 py-4 lg:px-5">
+            <h2 className="text-base font-semibold text-white">Created Job Roles</h2>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Showing {filteredJobs.length} of {jobs.length} jobs created under the current recruiter organization.
+            </p>
           </div>
 
-          <div className="grid gap-4 border-b border-slate-800 bg-slate-950/20 px-6 py-5 xl:grid-cols-[minmax(220px,1.2fr)_repeat(4,minmax(150px,0.7fr))_auto]">
-            <label className="grid gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-slate-500 2xl:gap-1.5 2xl:text-[11px] 2xl:tracking-[0.14em]">
+          <div className="grid gap-x-3 gap-y-2.5 border-b border-slate-800 bg-slate-950/20 px-4 py-3.5 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1.3fr)_repeat(4,minmax(130px,0.7fr))_auto] lg:px-5">
+            <label className="grid gap-1.5 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-slate-500 sm:col-span-2 lg:col-span-1">
               Search
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search title, skills, description"
-                className="h-9 min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 text-[13px] font-medium 2xl:px-3 normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+                className="h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-[13px] font-medium normal-case tracking-normal text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
               />
             </label>
-            <FilterSelect
-              label="Status"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { value: "ALL", label: "All Statuses" },
-                { value: "ACTIVE", label: "Active" },
-                { value: "INACTIVE", label: "Inactive" },
-              ]}
-            />
-            <FilterSelect
-              label="Difficulty"
-              value={difficultyFilter}
-              onChange={setDifficultyFilter}
-              options={[{ value: "ALL", label: "All Difficulties" }, ...filterOptions.difficulties.map((value) => ({ value: value.toUpperCase(), label: value }))]}
-            />
-            <FilterSelect
-              label="Experience"
-              value={experienceFilter}
-              onChange={setExperienceFilter}
-              options={[{ value: "ALL", label: "All Levels" }, ...filterOptions.experienceLevels.map((value) => ({ value, label: getExperienceLabel(value) }))]}
-            />
-            <FilterSelect
-              label="Activity"
-              value={activityFilter}
-              onChange={setActivityFilter}
-              options={[
-                { value: "ALL", label: "All Activity" },
-                { value: "WITH_INTERVIEWS", label: "With Interviews" },
-                { value: "NO_INTERVIEWS", label: "No Interviews" },
-              ]}
-            />
             <button
               type="button"
-              onClick={clearFilters}
-              disabled={!hasActiveFilters}
-              className="h-9 self-end rounded-lg border border-slate-700 px-3.5 text-[13px] font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+              onClick={() => setShowFilters((current) => !current)}
+              aria-expanded={showFilters}
+              className="h-10 rounded-xl border border-slate-700 px-4 text-sm font-semibold text-slate-300 transition hover:border-slate-500 sm:hidden"
             >
-              Clear
+              {showFilters ? "Hide filters" : "Filters"}
+              {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
             </button>
+            <div className={`${showFilters ? "grid" : "hidden"} gap-x-3 gap-y-2.5 sm:contents`}>
+              <FilterSelect
+                label="Status"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { value: "ALL", label: "All Statuses" },
+                  { value: "ACTIVE", label: "Active" },
+                  { value: "INACTIVE", label: "Inactive" },
+                ]}
+              />
+              <FilterSelect
+                label="Difficulty"
+                value={difficultyFilter}
+                onChange={setDifficultyFilter}
+                options={[{ value: "ALL", label: "All Difficulties" }, ...filterOptions.difficulties.map((value) => ({ value: value.toUpperCase(), label: value }))]}
+              />
+              <FilterSelect
+                label="Experience"
+                value={experienceFilter}
+                onChange={setExperienceFilter}
+                options={[{ value: "ALL", label: "All Levels" }, ...filterOptions.experienceLevels.map((value) => ({ value, label: getExperienceLabel(value) }))]}
+              />
+              <FilterSelect
+                label="Activity"
+                value={activityFilter}
+                onChange={setActivityFilter}
+                options={[
+                  { value: "ALL", label: "All Activity" },
+                  { value: "WITH_INTERVIEWS", label: "With Interviews" },
+                  { value: "NO_INTERVIEWS", label: "No Interviews" },
+                ]}
+              />
+              <button
+                type="button"
+                onClick={clearFilters}
+                disabled={!hasActiveFilters}
+                className="h-10 self-end rounded-xl border border-slate-700 px-4 text-[13px] font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
-          <div className="hv-table-scroll">
-            <table className="w-full table-fixed text-[13px] 2xl:text-sm" style={{ minWidth: "1610px" }}>
-                {/*
-                  Column widths live here as real inline widths rather than
-                  utility classes. The table is table-fixed, so these are the
-                  only thing deciding column size, and a colgroup is honoured
-                  by the browser directly with no dependency on CSS generation.
-                  They sum to the table min-width so nothing is squeezed.
-                */}
-                <colgroup>
-                  {[220, 260, 110, 110, 130, 100, 150, 200, 140, 190].map((width, index) => (
-                    <col key={index} style={{ width: `${width}px` }} />
-                  ))}
-                </colgroup>
-              <thead className="bg-slate-950/20 text-slate-400">
-                <tr>
-                  {/*
-                    The table is table-fixed, so these widths are the only thing
-                    deciding column size - cell content is ignored. Every column
-                    needs one, or the browser splits the remaining space evenly
-                    and narrow-looking columns like Job Title get crushed.
-                  */}
-                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Job Title</th>
-                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Description</th>
-                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-left font-medium">Status</th>
-                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-left font-medium">Difficulty</th>
-                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Experience Level</th>
-                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-left font-medium">Timeline</th>
-                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-left font-medium">Interview Mode</th>
-                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Core Skills</th>
-                  <th className="px-4 py-3 2xl:py-4 text-left font-medium">Open Interviews</th>
-                  <th className="whitespace-nowrap px-4 py-3 2xl:py-4 text-right font-medium">Actions</th>
+          {/* Register from lg up: six columns; description, difficulty,
+              experience and duration sit under the role title. */}
+          <div className="relative hidden lg:block">
+            <table className="w-full table-fixed text-[13px]">
+              <colgroup>
+                <col className="w-[36%]" />
+                <col className="w-[10%]" />
+                <col className="w-[15%]" />
+                <col className="w-[18%]" />
+                <col className="w-[8%]" />
+                <col className="w-[13%]" />
+              </colgroup>
+              <thead className="sticky top-[77px] z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_var(--color-slate-800)]">
+                <tr className="[&>th]:whitespace-nowrap [&>th]:py-2.5 [&>th]:text-[10.5px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-[0.14em]">
+                  <th className="pl-5 pr-3 text-left">Role</th>
+                  <th className="px-3 text-left">Status</th>
+                  <th className="px-3 text-left">Interview mode</th>
+                  <th className="px-3 text-left">Core skills</th>
+                  <th className="px-3 text-right">Interviews</th>
+                  <th className="pl-3 pr-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {jobs.length === 0 ? (
+                {emptyMessage ? (
                   <tr>
-                    <td colSpan={10} className="p-10 text-center text-slate-400">No jobs available</td>
-                  </tr>
-                ) : filteredJobs.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="p-10 text-center text-slate-400">No jobs match the current filters</td>
+                    <td colSpan={6} className="p-10 text-center text-slate-400">{emptyMessage}</td>
                   </tr>
                 ) : (
                   filteredJobs.map((job) => (
-                    <tr key={job.jobId} className="border-t border-slate-800/80 align-top text-slate-200">
-                      <td className="px-4 py-3 2xl:py-4 align-top">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(job)}
-                          title={`Edit ${job.jobTitle}`}
-                          className="block w-full break-words rounded text-left font-medium leading-6 text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
-                        >
-                          {job.jobTitle}
-                        </button>
+                    <tr key={job.jobId} className="border-t border-slate-800/80 align-middle text-slate-200 transition-colors first:border-t-0 hover:bg-slate-800/25">
+                      <td className="py-3 pl-5 pr-3">
+                        <div className="flex min-w-0 items-start gap-3">
+                          {renderRoleIcon(job)}
+                          <div className="min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(job)}
+                              title={`Edit ${job.jobTitle}`}
+                              className="block max-w-full truncate rounded text-left text-sm font-semibold text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
+                            >
+                              {job.jobTitle}
+                            </button>
+                            {renderRoleMeta(job)}
+                            <div className="mt-1 text-xs">
+                              <JobDescriptionCell description={job.jobDescription} />
+                            </div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-3 2xl:py-4 text-slate-400">
-                        <JobDescriptionCell description={job.jobDescription} />
-                      </td>
-                      <td className="px-4 py-3 2xl:py-4">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${getStatusTone(job.isActive !== false)}`}>
-                          {job.isActive !== false ? "ACTIVE" : "INACTIVE"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 2xl:py-4">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${getDifficultyTone(job.difficultyProfile)}`}>
-                          {job.difficultyProfile ?? "MID"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 2xl:py-4 text-slate-300">{getExperienceLabel(job.experienceLevelId)}</td>
-                      <td className="px-4 py-3 2xl:py-4 text-slate-300">{job.interviewDurationMinutes ?? 30} min</td>
-                      <td className="px-4 py-3 2xl:py-4">
+                      <td className="px-3 py-3">{renderStatus(job)}</td>
+                      <td className="px-3 py-3">
                         <InterviewModeCell
                           mode={job.interviewMode}
                           questionnaireStatus={job.questionnaireStatus}
@@ -649,121 +768,74 @@ export default function JobsPage() {
                           hasDraft={job.questionnaireHasDraft}
                         />
                       </td>
-                      <td className="px-4 py-3 2xl:py-4 text-slate-300">
+                      <td className="px-3 py-3">
                         <JobSkillsCell skills={job.coreSkills} />
                       </td>
-                      <td className="px-4 py-3 2xl:py-4 text-slate-300">{job._count?.interviews ?? 0}</td>
-                      <td className="whitespace-nowrap px-3 py-3 2xl:py-4 text-right">
-                        <div className="flex justify-end">
-                          <div
-                            className="flex w-full items-center justify-end gap-2"
-                            ref={openActionMenuJobId === job.jobId ? actionMenuRef : null}
-                          >
-                            {supportsJobActiveState ? (
-                              <button
-                                type="button"
-                                onClick={() => handleToggleActive(job)}
-                                disabled={pendingJobId === job.jobId}
-                                className="hidden min-w-[108px] items-center justify-center rounded-xl border border-cyan-400/30 bg-[linear-gradient(135deg,rgba(34,211,238,0.2),rgba(59,130,246,0.18))] px-3 py-2 text-xs font-semibold text-cyan-100 shadow-[0_10px_24px_rgba(8,145,178,0.16)] transition hover:border-cyan-300/50 hover:text-white hover:shadow-[0_14px_28px_rgba(8,145,178,0.24)] disabled:cursor-not-allowed disabled:opacity-60 lg:inline-flex"
-                              >
-                                {pendingJobId === job.jobId
-                                  ? "Saving..."
-                                  : job.isActive !== false
-                                    ? "Mark Inactive"
-                                    : "Mark Active"}
-                              </button>
-                            ) : null}
-
-                            <div className="relative flex items-center">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setOpenActionMenuJobId((current) =>
-                                    current === job.jobId ? "" : job.jobId
-                                  )
-                                }
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/85 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white"
-                                aria-label={`Open actions for ${job.jobTitle}`}
-                                aria-expanded={openActionMenuJobId === job.jobId}
-                              >
-                                <KebabIcon />
-                              </button>
-
-                              {openActionMenuJobId === job.jobId ? (
-                                <div className="absolute right-0 top-[calc(100%+10px)] z-30 w-44 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-[0_20px_60px_rgba(2,6,23,0.42)]">
-                                  {supportsJobActiveState ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleActive(job)}
-                                      disabled={pendingJobId === job.jobId}
-                                      className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 lg:hidden"
-                                    >
-                                      {pendingJobId === job.jobId
-                                        ? "Saving..."
-                                        : job.isActive !== false
-                                          ? "Mark Inactive"
-                                          : "Mark Active"}
-                                    </button>
-                                  ) : null}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuJobId("")
-                                      router.push(
-                                        buildAuthUrl(`/jobs/${job.jobId}/questionnaire`, searchParams)
-                                      )
-                                    }}
-                                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white"
-                                  >
-                                    Interview questions
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuJobId("")
-                                      handleEdit(job)
-                                    }}
-                                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white"
-                                  >
-                                    Edit job
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuJobId("")
-                                      setOpenSendInterview(true)
-                                    }}
-                                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white"
-                                  >
-                                    Send interview link
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionMenuJobId("")
-                                      setSendAssessmentJobId(job.jobId)
-                                      setOpenSendAssessment(true)
-                                    }}
-                                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-800/80 hover:text-white"
-                                  >
-                                    Send assessment
-                                  </button>
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
+                      <td className="px-3 py-3 text-right">
+                        <span className={`text-base font-semibold tabular-nums ${(job._count?.interviews ?? 0) > 0 ? "text-white" : "text-slate-600"}`}>
+                          {job._count?.interviews ?? 0}
+                        </span>
                       </td>
+                      <td className="py-3 pl-3 pr-5">{renderActions(job, true)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Cards below lg: the same fields, labelled inline. */}
+          {emptyMessage ? (
+            <p className="px-4 py-10 text-center text-sm text-slate-400 lg:hidden">{emptyMessage}</p>
+          ) : (
+            <ul className="lg:hidden" aria-label="Jobs">
+              {filteredJobs.map((job) => (
+                <li key={job.jobId} className="border-t border-slate-800/80 px-4 py-4 first:border-t-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      {renderRoleIcon(job)}
+                      <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(job)}
+                          title={`Edit ${job.jobTitle}`}
+                          className="block max-w-full truncate text-left text-sm font-semibold text-white"
+                        >
+                          {job.jobTitle}
+                        </button>
+                        {renderRoleMeta(job)}
+                      </div>
+                    </div>
+                    {renderStatus(job)}
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                    <div>
+                      <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Interview mode</dt>
+                      <dd className="mt-1">
+                        <InterviewModeCell
+                          mode={job.interviewMode}
+                          questionnaireStatus={job.questionnaireStatus}
+                          versionNumber={job.questionnaireVersionNumber}
+                          hasDraft={job.questionnaireHasDraft}
+                        />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Open interviews</dt>
+                      <dd className="mt-1 text-sm font-semibold tabular-nums text-white">{job._count?.interviews ?? 0}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Core skills</dt>
+                      <dd className="mt-1">
+                        <JobSkillsCell skills={job.coreSkills} />
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="mt-3 flex justify-end border-t border-slate-800/80 pt-3">{renderActions(job, false)}</div>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </main>
 
