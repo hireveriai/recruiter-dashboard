@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import BackToDashboardLink from "@/components/BackToDashboardLink"
+import AddEmployeeModal from "@/components/AddEmployeeModal"
 import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "@/components/Navbar"
 import CreateAssessmentModal from "@/components/CreateAssessmentModal"
@@ -65,6 +66,13 @@ export default function AssessmentsPage() {
   const [flowLoading, setFlowLoading] = useState(true)
   // Client-side search over the loaded list; the status tabs still filter on the server.
   const [searchTerm, setSearchTerm] = useState("")
+  // Candidate assessments (hiring) or employee assessments (development).
+  // Employee ones need the employeeActivities permission; without it the API
+  // answers 403 and the view says so.
+  const [audience, setAudience] = useState("CANDIDATE")
+  const [audienceError, setAudienceError] = useState("")
+  const [openAddEmployee, setOpenAddEmployee] = useState(false)
+  const isEmployeeView = audience === "EMPLOYEE"
 
   // Org-wide progress for the Assessment Flow strip. Cache-busted because the
   // endpoint allows a short private cache and this refreshes right after the
@@ -86,14 +94,30 @@ export default function AssessmentsPage() {
 
   const loadAssessments = () => {
     setLoading(true)
+    setAudienceError("")
     const query = status
-      ? `?status=${status}&pageSize=100&participantType=CANDIDATE`
-      : "?pageSize=100&participantType=CANDIDATE"
+      ? `?status=${status}&pageSize=100&participantType=${audience}`
+      : `?pageSize=100&participantType=${audience}`
     fetch(buildAuthUrl(`/api/assessments${query}`, searchParams), { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         if (data?.error?.code === "FEATURE_NOT_IN_PLAN") {
+          if (audience === "EMPLOYEE") {
+            setAssessments([])
+            setAudienceError("Employee assessments are not included in your current plan.")
+            return
+          }
           setLockedFeature(data.error.entitlement || "ASSESSMENT")
+          return
+        }
+
+        if (data?.error?.code === "INSUFFICIENT_PERMISSION" || data?.error?.code === "FORBIDDEN") {
+          setAssessments([])
+          setAudienceError(
+            audience === "EMPLOYEE"
+              ? "You don't have access to employee assessments. Ask an admin for Employee Activities access."
+              : "You don't have access to candidate assessments."
+          )
           return
         }
 
@@ -106,7 +130,7 @@ export default function AssessmentsPage() {
   useEffect(() => {
     loadAssessments()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status])
+  }, [status, audience])
 
   const tabs = useMemo(() => STATUS_TABS, [])
 
@@ -116,8 +140,12 @@ export default function AssessmentsPage() {
     : assessments
   const emptyMessage = loading
     ? "Loading assessments..."
+    : audienceError
+      ? audienceError
     : assessments.length === 0
-      ? "No assessments yet. Create one to get started."
+      ? isEmployeeView
+        ? "No employee assessments yet. Create one, then assign it from an employee's page."
+        : "No assessments yet. Create one to get started."
       : visibleAssessments.length === 0
         ? "No assessments match your search."
         : null
@@ -191,12 +219,29 @@ export default function AssessmentsPage() {
           </header>
           <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
             <BackToDashboardLink className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
-            <button
-              onClick={() => setOpenSend(true)}
-              className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
-            >
-              Send Assessment
-            </button>
+            {isEmployeeView ? (
+              <>
+                <Link
+                  href={buildAuthUrl("/employees", searchParams)}
+                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                >
+                  Employees
+                </Link>
+                <button
+                  onClick={() => setOpenAddEmployee(true)}
+                  className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
+                >
+                  + Add Employee
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setOpenSend(true)}
+                className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
+              >
+                Send Assessment
+              </button>
+            )}
             <button
               onClick={() => {
                 setEditing(null)
@@ -210,6 +255,42 @@ export default function AssessmentsPage() {
           </div>
         </div>
 
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div role="tablist" aria-label="Assessment audience" className="inline-flex w-fit rounded-xl border border-slate-800 bg-slate-900/80 p-1 shadow-sm">
+            {[
+              ["CANDIDATE", "Candidates", "Hiring"],
+              ["EMPLOYEE", "Employees", "Development"],
+            ].map(([value, label, hint]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={audience === value}
+                onClick={() => {
+                  setAudience(value)
+                  setSearchTerm("")
+                }}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  audience === value ? "hv-solid-action bg-cyan-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {label}
+                <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-semibold sm:inline ${audience === value ? "bg-white/20" : "bg-slate-800/60"}`}>{hint}</span>
+              </button>
+            ))}
+          </div>
+          {isEmployeeView ? (
+            <p className="text-xs text-slate-400">
+              Create an assessment here, then assign it from an employee&apos;s page in{" "}
+              <Link href={buildAuthUrl("/employees", searchParams)} className="font-semibold text-cyan-300 hover:text-cyan-200">
+                Employees
+              </Link>
+              .
+            </p>
+          ) : null}
+        </div>
+
+        {isEmployeeView ? null : (
         <AssessmentFlowGuide
           summary={flowSummary}
           loading={flowLoading}
@@ -221,6 +302,7 @@ export default function AssessmentsPage() {
           onSend={() => setOpenSend(true)}
           onShowDrafts={() => setStatus("DRAFT")}
         />
+        )}
 
         <section
           aria-label="Assessment Library"
@@ -228,7 +310,7 @@ export default function AssessmentsPage() {
         >
           <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
             <div>
-              <h2 className="text-base font-semibold text-white">Assessment Library</h2>
+              <h2 className="text-base font-semibold text-white">{isEmployeeView ? "Employee assessments" : "Assessment Library"}</h2>
               <p className="mt-0.5 text-xs text-slate-400">
                 {loading ? "Loading assessments..." : `Showing ${visibleAssessments.length} of ${assessments.length} assessments`}
               </p>
@@ -327,11 +409,13 @@ export default function AssessmentsPage() {
         open={openCreate}
         onClose={() => setOpenCreate(false)}
         initialAssessment={editing}
+        defaultParticipantType={audience}
         onSuccess={() => {
           loadAssessments()
           loadFlowSummary()
         }}
       />
+      <AddEmployeeModal open={openAddEmployee} onClose={() => setOpenAddEmployee(false)} />
       <SendAssessmentModal
         isOpen={openSend}
         onClose={() => {
