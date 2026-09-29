@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { use, useEffect, useState } from "react"
 
 import Navbar from "@/components/Navbar"
@@ -9,7 +10,7 @@ import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 // Colors use the dashboard's dark-scale classes; its light theme remaps them.
 // White text on colored fills carries hv-solid-action.
-const CARD = "rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-sm sm:p-6"
+const CARD = "rounded-xl border border-slate-800 bg-slate-900/80 p-4 shadow-[0_14px_44px_rgba(2,6,23,0.18)] sm:p-5"
 
 function clock(ms) {
   if (ms === null || ms === undefined) return ""
@@ -33,12 +34,19 @@ const COVERAGE_TONE = {
   NOT_ASKED: "bg-slate-800/60 text-slate-400",
 }
 
+const LIVE_STATUS_TONE = {
+  IN_PROGRESS: "border-emerald-400/40 bg-emerald-500/10 text-emerald-300",
+  COMPLETED: "border-cyan-300/30 bg-cyan-400/10 text-cyan-200",
+  CANCELLED: "border-rose-400/40 bg-rose-500/10 text-rose-300",
+  EXPIRED: "border-amber-400/40 bg-amber-500/10 text-amber-300",
+}
+
 function Avatar({ name, candidate, size = "h-9 w-9 text-xs" }) {
   return (
     <span
       aria-hidden="true"
-      className={`hv-solid-action flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white ${size} ${
-        candidate ? "from-cyan-500 to-blue-600" : "from-slate-500 to-slate-600"
+      className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${size} ${
+        candidate ? "bg-cyan-400/15 text-cyan-200" : "bg-slate-800 text-slate-300"
       }`}
     >
       {initials(name)}
@@ -58,9 +66,9 @@ function SectionTitle({ eyebrow, title, hint }) {
 
 function Stat({ value, label: text, tone = "text-white" }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
-      <p className={`text-2xl font-semibold ${tone}`}>{value}</p>
+    <div className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3">
       <p className="text-xs text-slate-400">{text}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${tone}`}>{value}</p>
     </div>
   )
 }
@@ -116,8 +124,11 @@ export default function LiveInterviewReportPage({ params }) {
   return (
     <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
       <Navbar onSendInterviewClick={() => setOpenSend(true)} />
-      <main className="mx-auto max-w-[1200px] space-y-6 px-4 py-8 sm:px-6">
-        {error ? <p className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-rose-300">{error}</p> : null}
+      <main className="mx-auto max-w-[1200px] space-y-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
+        <Link href={buildAuthUrl("/interviews", searchParams)} className="inline-block text-sm text-slate-400 hover:text-white">
+          &larr; Back to Interviews
+        </Link>
+        {error ? <p className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-rose-300">{error}</p> : null}
         {!report && !error ? (
           <div className="space-y-4">
             {[0, 1, 2].map((i) => (
@@ -129,14 +140,10 @@ export default function LiveInterviewReportPage({ params }) {
         {report ? (
           <>
             {/* Hero */}
-            <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-sm sm:p-8">
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_120%_at_0%_0%,rgba(34,211,238,0.12),transparent_60%),radial-gradient(40%_100%_at_100%_0%,rgba(37,99,235,0.10),transparent_60%)]"
-              />
-              <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <section className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 shadow-[0_14px_44px_rgba(2,6,23,0.18)] sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
-                  <span className="hv-solid-action flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-200">
                     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="6" width="12" height="12" rx="2.5" />
                       <path d="M15 10.5 21 7v10l-6-3.5" />
@@ -144,12 +151,12 @@ export default function LiveInterviewReportPage({ params }) {
                   </span>
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">VERIS Live Interview Report</p>
-                    <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{report.interview.candidateName || "Candidate"}</h1>
+                    <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[1.75rem]">{report.interview.candidateName || "Candidate"}</h1>
                     <p className="mt-1 text-sm text-slate-400">{report.interview.jobTitle}</p>
                   </div>
                 </div>
                 <div className="text-right text-sm">
-                  <span className="inline-flex rounded-full border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-xs font-semibold text-slate-200">
+                  <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${LIVE_STATUS_TONE[report.interview.liveStatus] ?? "border-slate-700 bg-slate-800/60 text-slate-200"}`}>
                     {label(report.interview.liveStatus)}
                   </span>
                   <p className="mt-2 text-slate-400">
@@ -159,14 +166,14 @@ export default function LiveInterviewReportPage({ params }) {
                 </div>
               </div>
 
-              <div className="relative mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
                 <Stat value={`${covered}/${report.questions.length}`} label="Questions covered" tone="text-emerald-300" />
                 <Stat value={report.scorecards.length} label="Interviewers" />
                 <Stat value={`${submitted}/${report.scorecards.length}`} label="Scorecards submitted" tone="text-cyan-300" />
                 <Stat value={recorded ? "Yes" : "No"} label="Recorded" />
               </div>
 
-              <div className="relative mt-5 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 {report.participants.map((p) => (
                   <div key={p.participantId} className="flex items-center gap-2.5 rounded-full border border-slate-800 bg-slate-900/80 py-1 pl-1 pr-3">
                     <Avatar name={p.displayName} candidate={p.role === "CANDIDATE"} size="h-7 w-7 text-[10px]" />
@@ -193,7 +200,7 @@ export default function LiveInterviewReportPage({ params }) {
               />
               <div className="grid gap-4 md:grid-cols-2">
                 {report.scorecards.map((card) => (
-                  <div key={card.participantId} className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                  <div key={card.participantId} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
                     <div className="flex items-center gap-3">
                       <Avatar name={card.interviewer} />
                       <div className="min-w-0 flex-1">
@@ -268,7 +275,7 @@ export default function LiveInterviewReportPage({ params }) {
               <p className="mt-4 text-xs text-slate-400">Copilot suggestions requested by interviewers: {report.copilotSuggestions}</p>
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
               {/* Transcript */}
               <section className={CARD}>
                 <SectionTitle eyebrow="VERIS evidence" title="Transcript" />
@@ -285,7 +292,7 @@ export default function LiveInterviewReportPage({ params }) {
                       return (
                         <li key={i} className="flex items-start gap-2.5">
                           <Avatar name={s.speaker} candidate={isCandidate} size="h-7 w-7 text-[10px]" />
-                          <div className={`min-w-0 flex-1 rounded-2xl px-3 py-2 ${isCandidate ? "bg-cyan-400/[0.07] ring-1 ring-cyan-400/20" : "bg-slate-800/60"}`}>
+                          <div className={`min-w-0 flex-1 rounded-xl px-3 py-2 ${isCandidate ? "bg-cyan-400/[0.07] ring-1 ring-cyan-400/20" : "bg-slate-800/60"}`}>
                             <p className="text-[11px] text-slate-400">
                               <span className={`font-semibold ${isCandidate ? "text-cyan-300" : "text-white"}`}>{s.speaker}</span>
                               <span className="ml-2 font-mono">{clock(s.startMs)}</span>
@@ -299,7 +306,7 @@ export default function LiveInterviewReportPage({ params }) {
                 )}
               </section>
 
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {/* Recordings */}
                 <section className={CARD}>
                   <SectionTitle eyebrow="VERIS evidence" title="Recordings" />
@@ -336,7 +343,7 @@ export default function LiveInterviewReportPage({ params }) {
                             <button
                               type="button"
                               onClick={() => play(r.recordingId)}
-                              className="hv-solid-action inline-flex items-center gap-1 rounded-lg bg-[#2563eb] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#1d4ed8]"
+                              className="hv-solid-action inline-flex items-center gap-1 rounded-lg bg-cyan-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-cyan-500"
                             >
                               <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
                                 <path d="M7 5v14l12-7z" />

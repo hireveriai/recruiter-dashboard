@@ -56,11 +56,11 @@ function initials(value) {
 }
 
 function DateBlock({ iso }) {
-  if (!iso) return <div className="h-14 w-14 shrink-0 rounded-2xl border border-slate-800 bg-slate-800/60" />
+  if (!iso) return <div className="h-14 w-14 shrink-0 rounded-xl border border-slate-800 bg-slate-800/60" />
   const date = new Date(iso)
   return (
-    <div className="flex w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 text-center shadow-sm">
-      <span className="hv-solid-action w-full bg-gradient-to-r from-cyan-500 to-blue-600 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+    <div className="flex w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-800 bg-slate-900 text-center">
+      <span className="hv-solid-action w-full bg-cyan-600 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
         {date.toLocaleString(undefined, { month: "short" })}
       </span>
       <span className="pt-0.5 text-lg font-semibold leading-6 text-white">{date.getDate()}</span>
@@ -73,8 +73,8 @@ function Avatar({ name, candidate }) {
   return (
     <span
       aria-hidden="true"
-      className={`hv-solid-action flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-semibold text-white ${
-        candidate ? "from-cyan-500 to-blue-600" : "from-slate-500 to-slate-600"
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+        candidate ? "bg-cyan-400/15 text-cyan-200" : "bg-slate-800 text-slate-300"
       }`}
     >
       {initials(name)}
@@ -88,6 +88,42 @@ const Chevron = ({ open }) => (
   </svg>
 )
 
+function ConfirmDialog({ state, onAnswer }) {
+  if (!state) return null
+  return (
+    <div
+      className="hv-theme-dialog-backdrop fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="live-confirm-title"
+    >
+      <div className="hv-theme-modal w-full max-w-md rounded-[20px] border border-slate-700/70 bg-[#0a1020] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
+        <h2 id="live-confirm-title" className="text-lg font-semibold text-white">
+          {state.title}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-300">{state.message}</p>
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => onAnswer(false)}
+            className="rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500"
+          >
+            Keep
+          </button>
+          <button
+            type="button"
+            autoFocus
+            onClick={() => onAnswer(true)}
+            className="hv-solid-action rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500"
+          >
+            {state.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /**
  * VERIS Live Interview sessions (Upcoming / In Progress / Completed). Renders
  * nothing when the feature is off for this organization (the API 404s).
@@ -100,6 +136,14 @@ export default function LiveInterviewsPanel() {
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(null)
   const [detail, setDetail] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
+
+  // Resolves true when the recruiter confirms.
+  const askConfirm = (options) => new Promise((resolve) => setConfirmState({ ...options, resolve }))
+  const answerConfirm = (answer) => {
+    confirmState?.resolve(answer)
+    setConfirmState(null)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -160,22 +204,22 @@ export default function LiveInterviewsPanel() {
   if (enabled === false) return null
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-sm 2xl:mt-8">
-      <div className="relative flex flex-col gap-4 overflow-hidden border-b border-slate-800 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_120%_at_0%_0%,rgba(34,211,238,0.10),transparent_60%)]" />
-        <div className="relative flex items-center gap-3">
-          <span className="hv-solid-action flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20">
+    <section aria-label="VERIS Live Interviews" className="hv-elevated-section overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+      <div className="flex flex-col gap-4 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-200">
             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="6" width="12" height="12" rx="2.5" />
               <path d="M15 10.5 21 7v10l-6-3.5" />
             </svg>
           </span>
           <div>
-            <h2 className="text-lg font-semibold text-white">VERIS Live Interviews</h2>
-            <p className="text-sm text-slate-400">Human-led video interviews with your interviewer or panel.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Human-led</p>
+            <h2 className="text-base font-semibold text-white">VERIS Live Interviews</h2>
+            <p className="text-xs text-slate-400">Human-led video interviews with your interviewer or panel.</p>
           </div>
         </div>
-        <div role="tablist" aria-label="Live interview status" className="relative flex gap-1 rounded-xl border border-slate-800 bg-slate-800/60 p-1">
+        <div role="tablist" aria-label="Live interview status" className="flex gap-1 rounded-xl border border-slate-700 bg-slate-900/70 p-1">
           {TABS.map((item) => (
             <button
               key={item.key}
@@ -183,7 +227,7 @@ export default function LiveInterviewsPanel() {
               aria-selected={tab === item.key}
               onClick={() => setTab(item.key)}
               className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                tab === item.key ? "bg-slate-900 text-cyan-300 shadow-sm" : "text-slate-400 hover:text-white"
+                tab === item.key ? "bg-cyan-400/15 text-cyan-100 shadow-[inset_0_0_0_1px_rgba(103,232,249,0.45)]" : "text-slate-400 hover:text-white"
               }`}
             >
               {item.label}
@@ -192,11 +236,11 @@ export default function LiveInterviewsPanel() {
         </div>
       </div>
 
-      <div className="space-y-2.5 p-4 sm:p-5">
+      <div className="space-y-2.5 p-4 lg:p-5">
         {loading && rows.length === 0
           ? [0, 1].map((i) => (
-              <div key={i} className="flex animate-pulse items-center gap-4 rounded-2xl border border-slate-800 p-4">
-                <div className="h-14 w-14 rounded-2xl bg-slate-800/60" />
+              <div key={i} className="flex animate-pulse items-center gap-4 rounded-xl border border-slate-800 p-4">
+                <div className="h-14 w-14 rounded-xl bg-slate-800/60" />
                 <div className="flex-1 space-y-2">
                   <div className="h-3.5 w-1/3 rounded bg-slate-800/60" />
                   <div className="h-3 w-1/2 rounded bg-slate-800/60" />
@@ -206,8 +250,8 @@ export default function LiveInterviewsPanel() {
           : null}
 
         {!loading && rows.length === 0 ? (
-          <div className="flex flex-col items-center rounded-2xl border border-dashed border-slate-700 px-6 py-10 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-300">
+          <div className="flex flex-col items-center rounded-xl border border-dashed border-slate-700 px-6 py-10 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
               <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3.5" y="5" width="17" height="15" rx="2" />
                 <path d="M8 3v4M16 3v4M3.5 10h17" />
@@ -228,7 +272,7 @@ export default function LiveInterviewsPanel() {
           return (
             <div
               key={row.interviewId}
-              className={`overflow-hidden rounded-2xl border transition-colors ${open ? "border-cyan-400/40 bg-slate-900" : "border-slate-800 bg-slate-900/60 hover:border-slate-700"}`}
+              className={`overflow-hidden rounded-xl border transition-colors ${open ? "border-cyan-300/50 bg-slate-900" : "border-slate-800 bg-slate-900/60 hover:border-slate-700"}`}
             >
               <button
                 type="button"
@@ -306,8 +350,16 @@ export default function LiveInterviewsPanel() {
                                     <button
                                       type="button"
                                       className="rounded-lg border border-rose-400/40 px-2.5 py-1 text-xs font-medium text-rose-300 transition hover:bg-rose-500/10"
-                                      onClick={() => {
-                                        if (detail.liveStatus === "IN_PROGRESS" && !window.confirm(`Remove ${p.displayName} from the live interview now?`)) return
+                                      onClick={async () => {
+                                        if (
+                                          detail.liveStatus === "IN_PROGRESS" &&
+                                          !(await askConfirm({
+                                            title: "Remove from the interview?",
+                                            message: `Remove ${p.displayName} from the live interview now?`,
+                                            confirmLabel: "Remove",
+                                          }))
+                                        )
+                                          return
                                         act(
                                           `/api/live-interviews/${row.interviewId}/invitations`,
                                           { method: "DELETE", body: JSON.stringify({ participantId: p.participantId }) },
@@ -329,8 +381,13 @@ export default function LiveInterviewsPanel() {
                           <button
                             type="button"
                             className="rounded-xl border border-rose-400/40 px-3.5 py-2 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10"
-                            onClick={() => {
-                              if (window.confirm("Cancel this live interview? All invitation links will stop working.")) {
+                            onClick={async () => {
+                              const confirmed = await askConfirm({
+                                title: "Cancel this live interview?",
+                                message: "Cancel this live interview? All invitation links will stop working.",
+                                confirmLabel: "Cancel interview",
+                              })
+                              if (confirmed) {
                                 act(`/api/live-interviews/${row.interviewId}/cancel`, { method: "POST" }, "Interview cancelled")
                               }
                             }}
@@ -341,7 +398,7 @@ export default function LiveInterviewsPanel() {
                         {["IN_PROGRESS", "COMPLETED"].includes(detail.liveStatus) ? (
                           <Link
                             href={buildAuthUrl(`/live-interviews/${row.interviewId}`, searchParams)}
-                            className="hv-solid-action inline-flex items-center gap-1.5 rounded-xl bg-[#2563eb] px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#1d4ed8]"
+                            className="hv-solid-action inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cyan-500"
                           >
                             View report
                             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -358,6 +415,7 @@ export default function LiveInterviewsPanel() {
           )
         })}
       </div>
+      <ConfirmDialog state={confirmState} onAnswer={answerConfirm} />
     </section>
   )
 }
