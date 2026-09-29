@@ -1329,6 +1329,27 @@ export default function InterviewsPage() {
       </span>
     )
 
+  // The candidate name opens the recording (same link and new tab as Watch);
+  // without a recording it stays plain text.
+  const renderCandidateName = (interview) => {
+    const name = displayCandidateName(interview.candidateName)
+    return interview.hasRecording && interview.recordingUrl ? (
+      <Link
+        href={interview.recordingUrl}
+        target="_blank"
+        rel="noreferrer"
+        title={`Open recording for ${interview.candidateName || "candidate"}`}
+        className="block truncate text-sm font-semibold text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50"
+      >
+        {name}
+      </Link>
+    ) : (
+      <p className="truncate text-sm font-semibold text-white" title={interview.candidateName || "Candidate"}>
+        {name}
+      </p>
+    )
+  }
+
   const renderRecruiterDecision = (model) =>
     model.interview.recruiterDecisionStatus ? (
       <DecisionPill status={model.interview.recruiterDecisionStatus} />
@@ -1788,9 +1809,7 @@ export default function InterviewsPage() {
                           <div className="flex min-w-0 items-center gap-3">
                             {renderAvatar(model)}
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-white" title={interview.candidateName || "Candidate"}>
-                                {displayCandidateName(interview.candidateName)}
-                              </p>
+                              {renderCandidateName(interview)}
                               <p className="truncate text-xs text-slate-400" title={interview.jobTitle || ""}>
                                 {interview.jobTitle || "No role"}
                               </p>
@@ -1858,9 +1877,7 @@ export default function InterviewsPage() {
                       <div className="flex min-w-0 items-center gap-3">
                         {renderAvatar(model)}
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white" title={interview.candidateName || "Candidate"}>
-                            {displayCandidateName(interview.candidateName)}
-                          </p>
+                          {renderCandidateName(interview)}
                           <p className="truncate text-xs text-slate-400">{interview.jobTitle}</p>
                         </div>
                       </div>
