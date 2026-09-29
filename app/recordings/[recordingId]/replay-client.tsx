@@ -1,7 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AlertTriangle, Download, FileText, Gauge, Maximize2, Minimize2, Pause, Play, ShieldCheck, Video } from "lucide-react"
+import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Download, Maximize2, Minimize2, Pause, Play, ShieldCheck } from "lucide-react"
+
+import { buildAuthUrl } from "@/lib/client/auth-query"
 
 type RiskLevel = "low" | "medium" | "high"
 
@@ -81,6 +83,20 @@ function formatDate(value: string | null) {
   }).format(new Date(value))
 }
 
+// Names typed entirely in capitals (or lowercase) show in title case;
+// mixed-case names stay as entered.
+function displayName(name: string) {
+  const value = String(name ?? "").trim()
+  if (!value) return "Candidate"
+  if (value !== value.toUpperCase() && value !== value.toLowerCase()) return value
+  return value.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_, lead: string, letter: string) => lead + letter.toUpperCase())
+}
+
+function formatStatus(value: string) {
+  const text = value.replace(/_/g, " ").toLowerCase()
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
 function scoreLabel(value: number | null) {
   return value === null ? "-" : `${value}%`
 }
@@ -134,6 +150,8 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
   const [videoMode, setVideoMode] = useState<"raw" | "mirror">("raw")
   const [isPlaying, setIsPlaying] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  // The question whose long answer is shown in full.
+  const [expandedId, setExpandedId] = useState("")
 
   // The frame — video plus its own controls — goes fullscreen rather than the
   // bare <video>, so the scrubber and orientation toggle stay reachable.
@@ -307,44 +325,56 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
     )
   }
 
+  const timeline = data.timeline
+  const activeIndex = activeItem ? timeline.findIndex((item) => item.id === activeItem.id) : -1
+  const answerExpanded = Boolean(activeItem && expandedId === activeItem.id)
+  const answerIsLong = (activeItem?.answer.length ?? 0) > 520
+  const backHref = buildAuthUrl("/interviews", new URLSearchParams(typeof window !== "undefined" ? window.location.search : ""))
+  const markerLeft = (ms: number) => `${Math.min(98, Math.max(2, (ms / durationMs) * 100))}%`
+
+  const stats: Array<[string, string, string]> = [
+    ["Questions", String(data.summary.questionCount), "text-white"],
+    ["Video", formatStatus(data.recording.status ?? "ready"), "text-white"],
+    ["Review flags", String(data.summary.signalCount), data.summary.signalCount > 0 ? "text-amber-200" : "text-white"],
+    [
+      "Highest integrity risk",
+      `${data.summary.maxFraudScore}%`,
+      data.summary.maxFraudScore >= 60 ? "text-rose-200" : data.summary.maxFraudScore >= 30 ? "text-amber-200" : "text-emerald-200",
+    ],
+  ]
+
   return (
     <main className="hv-surface-page min-h-screen text-white">
-      <section className="border-b border-slate-800 hv-surface-header px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-[1500px] flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/75">Enterprise Interview Replay</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">{data.recording.candidateName}</h1>
-            <p className="mt-2 text-sm text-slate-400">{data.recording.jobTitle} / Captured {formatDate(data.recording.createdAt)}</p>
+      <section className="border-b border-slate-800 hv-surface-header px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1500px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <a href={backHref} className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 transition hover:text-white">
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              Back to Interviews
+            </a>
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Interview Replay</p>
+            <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]" title={data.recording.candidateName}>
+              {displayName(data.recording.candidateName)}
+            </h1>
+            <p className="mt-1 text-sm text-slate-400">
+              {data.recording.jobTitle} <span className="text-slate-600">&middot;</span> Captured {formatDate(data.recording.createdAt)}
+            </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[720px]">
-            <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-              <FileText className="h-4 w-4 text-cyan-200" />
-              <p className="mt-3 text-xs text-slate-500">VERIS Questions</p>
-              <p className="mt-1 text-2xl font-semibold">{data.summary.questionCount}</p>
-            </div>
-            <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-              <Video className="h-4 w-4 text-blue-200" />
-              <p className="mt-3 text-xs text-slate-500">Video Status</p>
-              <p className="mt-1 truncate text-lg font-semibold capitalize">{data.recording.status ?? "ready"}</p>
-            </div>
-            <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-              <AlertTriangle className="h-4 w-4 text-amber-200" />
-              <p className="mt-3 text-xs text-slate-500">Review Flags</p>
-              <p className="mt-1 text-2xl font-semibold">{data.summary.signalCount}</p>
-            </div>
-            <div className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-              <Gauge className="h-4 w-4 text-rose-200" />
-              <p className="mt-3 text-xs text-slate-500">Highest Integrity Risk</p>
-              <p className="mt-1 text-2xl font-semibold">{data.summary.maxFraudScore}%</p>
-            </div>
-          </div>
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[640px]">
+            {stats.map(([label, value, tone]) => (
+              <div key={label} className="hv-surface-inset-soft rounded-xl border border-slate-800 bg-slate-950/35 px-3.5 py-2.5">
+                <dt className="text-[11px] text-slate-500">{label}</dt>
+                <dd className={`mt-0.5 truncate text-lg font-semibold tabular-nums ${tone}`}>{value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
       {transcriptNeedsReview ? (
         <section className="mx-auto max-w-[1500px] px-4 pt-5 sm:px-6 lg:px-8">
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-amber-100">
+          <div className="flex items-start gap-3 rounded-xl border border-amber-300/30 bg-amber-400/10 p-4 text-amber-100">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
               <p className="font-semibold">Transcript recovery required</p>
@@ -356,41 +386,12 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
         </section>
       ) : null}
 
-      <section className="mx-auto grid max-w-[1500px] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(390px,0.75fr)] lg:px-8">
-        <div className="min-w-0">
-          <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-slate-800 hv-surface-raised px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-white">Video orientation</p>
-              <p className="mt-1 text-xs leading-5 text-slate-400">
-                RAW is the original recording. Mirror flips only the video frame for review.
-              </p>
-            </div>
-            <div className="inline-grid h-10 shrink-0 grid-cols-2 rounded-xl border border-slate-700 bg-slate-950/50 p-1">
-              {[
-                ["mirror", "Mirror"],
-                ["raw", "RAW"],
-              ].map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setVideoMode(mode as "raw" | "mirror")}
-                  aria-pressed={videoMode === mode}
-                  className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition ${
-                    videoMode === mode
-                      ? "bg-cyan-400/15 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.12)]"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <Video className="h-4 w-4" />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
+      <section className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.8fr)] lg:items-start lg:px-8">
+        {/* On tall screens the player stays in view while the review column scrolls. */}
+        <div className="min-w-0 space-y-4 lg:[@media(min-height:860px)]:sticky lg:[@media(min-height:860px)]:top-4">
           <div
             ref={videoFrameRef}
-            className="hv-replay-frame overflow-hidden rounded-2xl border border-slate-800 hv-surface-media shadow-[0_22px_80px_rgba(2,6,23,0.42)]"
+            className="hv-replay-frame overflow-hidden rounded-xl border border-slate-800 hv-surface-media shadow-[0_22px_80px_rgba(2,6,23,0.42)]"
           >
             <video
               ref={videoRef}
@@ -407,11 +408,11 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
               }}
               onDurationChange={(event) => updateVideoDuration(event.currentTarget)}
             />
-            <div className="hv-surface-inset-soft flex flex-col gap-3 border-t border-slate-800 bg-slate-950 px-4 py-3 sm:flex-row sm:items-center">
+            <div className="hv-surface-inset-soft flex flex-wrap items-center gap-x-3 gap-y-2.5 border-t border-slate-800 bg-slate-950 px-3 py-2.5 sm:px-4">
               <button
                 type="button"
                 onClick={togglePlayback}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-300/25 bg-cyan-400/10 text-cyan-100 transition hover:bg-cyan-400/20"
+                className="hv-solid-action inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan-600 text-white transition hover:bg-cyan-500"
                 aria-label={isPlaying ? "Pause recording" : "Play recording"}
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -422,13 +423,36 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                 max={Math.max(videoDurationMs, fallbackDurationMs, currentTimeMs, 1)}
                 value={Math.min(currentTimeMs, Math.max(videoDurationMs, fallbackDurationMs, currentTimeMs, 1))}
                 onChange={(event) => seekFromRange(event.target.value)}
-                className="h-2 min-w-0 flex-1 accent-cyan-300"
+                className="h-2 min-w-[120px] flex-1 accent-cyan-500"
                 aria-label="Recording playback position"
               />
-              <p className="shrink-0 font-mono text-xs text-slate-400">
+              <p className="shrink-0 font-mono text-xs tabular-nums text-slate-400">
                 {formatTime(currentTimeMs)} / {formatTime(videoDurationMs || fallbackDurationMs)}
               </p>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
+                <div
+                  role="group"
+                  aria-label="Video orientation"
+                  title="RAW is the original recording. Mirror flips only the video frame for review."
+                  className="inline-grid h-9 grid-cols-2 rounded-lg border border-slate-700 bg-slate-900/60 p-0.5"
+                >
+                  {[
+                    ["mirror", "Mirror"],
+                    ["raw", "RAW"],
+                  ].map(([mode, label]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setVideoMode(mode as "raw" | "mirror")}
+                      aria-pressed={videoMode === mode}
+                      className={`inline-flex items-center justify-center rounded-md px-2.5 text-xs font-semibold transition ${
+                        videoMode === mode ? "bg-cyan-400/15 text-cyan-100" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <button
                   type="button"
                   onClick={toggleFullscreen}
@@ -437,7 +461,7 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                   title={isFullscreen ? "Exit full screen" : "Watch full screen"}
                 >
                   {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                  <span className="hidden sm:inline">{isFullscreen ? "Exit" : "Full screen"}</span>
+                  <span className="hidden xl:inline">{isFullscreen ? "Exit" : "Full screen"}</span>
                 </button>
                 <a
                   href={downloadUrl}
@@ -447,47 +471,73 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                   title="Download recording"
                 >
                   <Download className="h-4 w-4" />
-                  <span className="hidden sm:inline">Download</span>
+                  <span className="hidden xl:inline">Download</span>
                 </a>
               </div>
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-slate-800 hv-surface-raised p-5">
-            <div className="flex items-center justify-between gap-4">
+          <div className="rounded-xl border border-slate-800 hv-surface-raised p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-base font-semibold">Integrity Risk Timeline</h2>
-                <p className="mt-1 text-sm text-slate-500">Click any marker to jump to the evidence moment.</p>
+                <h2 className="text-sm font-semibold">Integrity Risk Timeline</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Click any marker to jump to that moment.</p>
               </div>
-              <p className="font-mono text-sm text-cyan-100">{formatTime(currentTimeMs)}</p>
+              <p className="font-mono text-sm tabular-nums text-cyan-200">{formatTime(currentTimeMs)}</p>
             </div>
 
-            <div className="hv-surface-inset-soft relative mt-6 h-16 rounded-xl border border-slate-800 bg-slate-950/55 px-3">
-              <div className="absolute left-3 right-3 top-1/2 h-px bg-slate-700" />
-              <div
-                className="absolute top-4 h-8 w-px bg-cyan-200"
-                style={{ left: `${Math.min(98, Math.max(2, (currentTimeMs / durationMs) * 100))}%` }}
-              />
-              {data.timeline.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => seekTo(item.offsetMs, item.id)}
-                  className={`absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-950 ${markerClass(item.riskLevel)}`}
-                  style={{ left: `${Math.min(98, Math.max(2, (item.offsetMs / durationMs) * 100))}%` }}
-                  title={`Q${item.index} / ${formatTime(item.offsetMs)} / Integrity risk ${scoreLabel(item.scores.fraud)}`}
+            {/* Two lanes: questions on top, review flags below, so markers at
+                the same moment no longer sit on top of each other. */}
+            <div className="hv-surface-inset-soft relative mt-4 h-[76px] rounded-lg border border-slate-800 bg-slate-950/55">
+              <div className="absolute left-3 right-3 top-[26px] h-px bg-slate-700" aria-hidden="true" />
+              <div className="absolute left-3 right-3 top-[56px] h-px border-t border-dashed border-slate-700/70" aria-hidden="true" />
+              <div className="absolute inset-x-3 inset-y-0">
+                <div
+                  className="absolute top-1.5 bottom-1.5 w-0.5 -translate-x-1/2 rounded-full bg-cyan-400"
+                  style={{ left: markerLeft(currentTimeMs) }}
+                  aria-hidden="true"
                 />
-              ))}
-              {data.signals.map((signal) => (
-                <button
-                  key={signal.id}
-                  type="button"
-                  onClick={() => seekTo(signal.offsetMs)}
-                  className={`absolute top-[18px] h-3 w-3 -translate-x-1/2 rounded-sm border border-slate-950 ${markerClass(signal.severity)}`}
-                  style={{ left: `${Math.min(98, Math.max(2, (signal.offsetMs / durationMs) * 100))}%` }}
-                  title={`${signal.label} / ${formatTime(signal.offsetMs)}`}
-                />
-              ))}
+                {timeline.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => seekTo(item.offsetMs, item.id)}
+                    className={`absolute top-[26px] flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-slate-950 text-[9px] font-bold text-slate-950 transition hover:scale-125 ${markerClass(item.riskLevel)} ${
+                      activeItem?.id === item.id ? "ring-2 ring-cyan-300/70 ring-offset-1 ring-offset-slate-950" : ""
+                    }`}
+                    style={{ left: markerLeft(item.offsetMs) }}
+                    aria-label={`Question ${item.index} at ${formatTime(item.offsetMs)}, integrity risk ${scoreLabel(item.scores.fraud)}`}
+                    title={`Q${item.index} / ${formatTime(item.offsetMs)} / Integrity risk ${scoreLabel(item.scores.fraud)}`}
+                  >
+                    {item.index}
+                  </button>
+                ))}
+                {data.signals.map((signal) => (
+                  <button
+                    key={signal.id}
+                    type="button"
+                    onClick={() => seekTo(signal.offsetMs)}
+                    className={`absolute top-[56px] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2px] border border-slate-950 transition hover:scale-125 ${markerClass(signal.severity)}`}
+                    style={{ left: markerLeft(signal.offsetMs) }}
+                    aria-label={`${signal.label} at ${formatTime(signal.offsetMs)}`}
+                    title={`${signal.label} / ${formatTime(signal.offsetMs)}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" aria-hidden="true" /> Question
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rotate-45 rounded-[1px] bg-slate-400" aria-hidden="true" /> Review flag
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-amber-300" aria-hidden="true" /> Medium
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-rose-400" aria-hidden="true" /> High
+              </span>
             </div>
 
             <div className="mt-4 grid gap-2 md:grid-cols-2">
@@ -497,19 +547,17 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                     key={signal.id}
                     type="button"
                     onClick={() => seekTo(signal.offsetMs)}
-                    className={`flex items-start justify-between rounded-xl border px-3 py-3 text-left text-sm ${riskClass(signal.severity)}`}
+                    className={`flex items-start justify-between rounded-lg border px-3 py-2.5 text-left text-sm ${riskClass(signal.severity)}`}
                   >
                     <span className="min-w-0">
                       <span className="block font-medium">{signal.label}</span>
-                      <span className="mt-1 block text-xs leading-5 opacity-75">
-                        {signal.description}
-                      </span>
+                      <span className="mt-0.5 block text-xs leading-5 opacity-75">{signal.description}</span>
                     </span>
                     <span className="ml-3 font-mono text-xs">{formatTime(signal.offsetMs)}</span>
                   </button>
                 ))
               ) : (
-                <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-3 text-sm text-emerald-100 md:col-span-2">
+                <div className="rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-3 py-2.5 text-sm text-emerald-100 md:col-span-2">
                   No integrity risks were detected for this recording.
                 </div>
               )}
@@ -517,44 +565,127 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
           </div>
         </div>
 
-        <aside className="min-w-0 rounded-2xl border border-slate-800 hv-surface-raised p-5">
-          <div className="flex items-start justify-between gap-4">
+        <aside className="min-w-0 rounded-xl border border-slate-800 hv-surface-raised p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Synchronized Review</p>
-              <h2 className="mt-2 text-xl font-semibold">Question, Transcript, Result</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Synchronized Review</p>
+              <h2 className="mt-1 text-base font-semibold">
+                {activeItem ? `Question ${activeItem.index} of ${timeline.length}` : "Question, Transcript, Result"}
+              </h2>
             </div>
-            <ShieldCheck className="h-5 w-5 text-emerald-200" />
+            {timeline.length > 1 ? (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const previous = timeline[activeIndex - 1]
+                    if (previous) seekTo(previous.offsetMs, previous.id)
+                  }}
+                  disabled={activeIndex <= 0}
+                  aria-label="Previous question"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = timeline[activeIndex + 1]
+                    if (next) seekTo(next.offsetMs, next.id)
+                  }}
+                  disabled={activeIndex >= timeline.length - 1}
+                  aria-label="Next question"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <ShieldCheck className="h-5 w-5 text-emerald-200" />
+            )}
           </div>
 
+          {timeline.length > 0 ? (
+            <div role="list" aria-label="Questions" className="mt-4 grid grid-cols-5 gap-1.5">
+              {timeline.map((item) => {
+                const selected = activeItem?.id === item.id
+                return (
+                  <button
+                    key={item.id}
+                    role="listitem"
+                    type="button"
+                    onClick={() => seekTo(item.offsetMs, item.id)}
+                    aria-current={selected ? "true" : undefined}
+                    title={item.question}
+                    className={`relative rounded-lg border px-1 py-1.5 text-center transition ${
+                      selected
+                        ? "border-cyan-300/50 bg-cyan-400/15 text-cyan-100"
+                        : "hv-surface-inset-soft border-slate-800 bg-slate-950/25 text-slate-300 hover:border-slate-600"
+                    }`}
+                  >
+                    {item.riskLevel !== "low" ? (
+                      <span
+                        className={`absolute right-1 top-1 h-1.5 w-1.5 rounded-full ${item.riskLevel === "high" ? "bg-rose-400" : "bg-amber-300"}`}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    <span className="block text-xs font-semibold">Q{item.index}</span>
+                    <span className="block font-mono text-[10px] text-slate-500">{formatTime(item.offsetMs)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
+
           {activeItem ? (
-            <article className="hv-surface-inset-soft mt-5 rounded-xl border border-slate-800 bg-slate-950/35 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${riskClass(activeItem.riskLevel)}`}>
-                  Integrity Risk {scoreLabel(activeItem.scores.fraud)}
+            <article className="hv-surface-inset-soft mt-4 rounded-xl border border-slate-800 bg-slate-950/35 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${riskClass(activeItem.riskLevel)}`}>
+                  Integrity risk {scoreLabel(activeItem.scores.fraud)}
                 </span>
                 <button
                   type="button"
                   onClick={() => seekTo(activeItem.offsetMs, activeItem.id)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-100"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-300/25 bg-cyan-400/10 px-2.5 py-1 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/20"
                 >
                   <Play className="h-3.5 w-3.5" />
-                  {formatTime(activeItem.offsetMs)}
+                  Play from {formatTime(activeItem.offsetMs)}
                 </button>
               </div>
-              <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">VERIS Asking</p>
-              <p className="mt-2 text-base leading-7 text-white">{activeItem.question || "Question unavailable."}</p>
-              <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/70">Candidate Transcript</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300">{activeItem.answer || "No candidate response recorded."}</p>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                {[
+              <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300/80">VERIS asked</p>
+              <p className="mt-1.5 text-[15px] font-medium leading-6 text-white">{activeItem.question || "Question unavailable."}</p>
+              <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300/80">Candidate answer</p>
+              <p className={`mt-1.5 whitespace-pre-wrap text-sm leading-6 text-slate-300 ${answerIsLong && !answerExpanded ? "line-clamp-[9]" : ""}`}>
+                {activeItem.answer || "No candidate response recorded."}
+              </p>
+              {answerIsLong ? (
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(answerExpanded ? "" : activeItem.id)}
+                  aria-expanded={answerExpanded}
+                  className="mt-1.5 text-xs font-semibold text-cyan-300 transition hover:text-cyan-200"
+                >
+                  {answerExpanded ? "Show less" : "Show full answer"}
+                </button>
+              ) : null}
+
+              <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
+                {([
                   ["Skill", activeItem.scores.skill],
                   ["Clarity", activeItem.scores.clarity],
                   ["Depth", activeItem.scores.depth],
                   ["Confidence", activeItem.scores.confidence],
-                ].map(([label, value]) => (
-                  <div key={label as string} className="hv-surface-inset-soft rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2">
-                    <p className="text-slate-500">{label}</p>
-                    <p className="mt-1 font-semibold text-slate-100">{scoreLabel(value as number | null)}</p>
+                ] as Array<[string, number | null]>).map(([label, value]) => (
+                  <div key={label}>
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="text-slate-500">{label}</span>
+                      <span className="font-semibold tabular-nums text-slate-100">{scoreLabel(value)}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+                      {value !== null ? (
+                        <div className="h-full rounded-full bg-cyan-500" style={{ width: `${Math.max(2, Math.min(100, value))}%` }} />
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -562,63 +693,61 @@ export default function ReplayClient({ recordingId }: { recordingId: string }) {
                 <p className="mt-4 rounded-lg border border-slate-800 hv-surface-sunken p-3 text-sm leading-6 text-slate-300">{activeItem.feedback}</p>
               ) : null}
             </article>
-          ) : null}
-
-          <div className="mt-4 max-h-[310px] space-y-2 overflow-auto pr-1">
-            {data.timeline.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => seekTo(item.offsetMs, item.id)}
-                className={`w-full rounded-xl border px-3 py-3 text-left transition ${
-                  activeItem?.id === item.id
-                    ? "border-cyan-300/35 bg-cyan-300/10"
-                    : "hv-surface-inset-soft border-slate-800 bg-slate-950/25 hover:border-slate-700"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Q{item.index}</span>
-                  <span className="font-mono text-xs text-slate-500">{formatTime(item.offsetMs)}</span>
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-200">{item.question}</p>
-              </button>
-            ))}
-          </div>
+          ) : (
+            <p className="mt-4 rounded-xl border border-slate-800 px-4 py-6 text-center text-sm text-slate-400">No questions were recorded for this interview.</p>
+          )}
         </aside>
       </section>
 
       <section className="mx-auto max-w-[1500px] px-4 pb-8 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-slate-800 hv-surface-raised p-5">
+        <div className="rounded-xl border border-slate-800 hv-surface-raised p-4 sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-base font-semibold">Complete Transcript</h2>
-            {data.timeline.length > 0 ? (
-              <p className="text-xs text-slate-500">Selecting a question above jumps to it here.</p>
+            {timeline.length > 0 ? (
+              <p className="text-xs text-slate-500">Selecting a question jumps to it here. Click a question time to play from there.</p>
             ) : null}
           </div>
-          {data.timeline.length > 0 ? (
+          {timeline.length > 0 ? (
             <div
               ref={transcriptScrollRef}
-              className="hv-surface-inset-soft relative mt-4 max-h-[420px] overflow-auto rounded-xl border border-slate-800 bg-slate-950/45 p-4"
+              className="hv-surface-inset-soft relative mt-4 max-h-[560px] space-y-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/45 p-2 sm:p-3"
             >
-              {data.timeline.map((item) => (
+              {timeline.map((item) => (
                 <div
                   key={item.id}
                   data-transcript-id={item.id}
-                  className={`scroll-mt-4 rounded-lg px-3 py-2 ${
-                    activeItem?.id === item.id ? "hv-transcript-active" : ""
-                  }`}
+                  className={`scroll-mt-4 rounded-lg px-3 py-3 sm:px-4 ${activeItem?.id === item.id ? "hv-transcript-active" : ""}`}
                 >
-                  <p className="whitespace-pre-wrap font-mono text-sm leading-7 text-slate-300">
-                    VERIS Q{item.index}: {item.question || "Question unavailable"}
-                  </p>
-                  <p className="whitespace-pre-wrap font-mono text-sm leading-7 text-slate-300">
-                    Candidate A{item.index}: {item.answer || "No candidate response recorded."}
-                  </p>
+                  <div className="grid gap-x-4 gap-y-2 md:grid-cols-[112px_minmax(0,1fr)]">
+                    <button
+                      type="button"
+                      onClick={() => seekTo(item.offsetMs, item.id)}
+                      className="inline-flex h-fit w-fit items-center gap-1.5 rounded-md border border-slate-700 px-2 py-0.5 text-[11px] font-semibold text-slate-300 transition hover:border-cyan-300/40 hover:text-cyan-100"
+                      aria-label={`Play question ${item.index} from ${formatTime(item.offsetMs)}`}
+                    >
+                      Q{item.index}
+                      <span className="font-mono font-normal text-slate-500">{formatTime(item.offsetMs)}</span>
+                    </button>
+                    <div className="min-w-0 max-w-[90ch] space-y-2.5">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-300/80">VERIS</p>
+                        <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium leading-6 text-white">
+                          {item.question || "Question unavailable"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-300/80">Candidate</p>
+                        <p className="mt-0.5 whitespace-pre-wrap text-sm leading-6 text-slate-300">
+                          {item.answer || "No candidate response recorded."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <pre className="hv-surface-inset-soft mt-4 max-h-[420px] whitespace-pre-wrap overflow-auto rounded-xl border border-slate-800 bg-slate-950/45 p-4 text-sm leading-7 text-slate-300">{mergedTranscript}</pre>
+            <pre className="hv-surface-inset-soft mt-4 max-h-[560px] overflow-auto whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950/45 p-4 font-sans text-sm leading-7 text-slate-300">{mergedTranscript}</pre>
           )}
         </div>
       </section>
