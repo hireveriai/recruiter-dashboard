@@ -1,130 +1,259 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
-import { buildAuthUrl } from "@/lib/client/auth-query"
 import { showActionFeedback } from "@/lib/client/action-feedback"
+import {
+  FIELD_CLASS,
+  LABEL_CLASS,
+  ModalShell,
+  PRIMARY_BUTTON,
+  SECONDARY_BUTTON,
+  apiRequest,
+} from "@/components/employees/shared"
 
-const FIELD_CLASS =
-  "h-11 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
+const EMPTY_FORM = {
+  employeeCode: "",
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  title: "",
+  departmentId: "",
+  projectIds: [],
+  managerUserId: "",
+  joiningDate: "",
+  status: "ACTIVE",
+}
 
-const DEFAULT_FORM = { fullName: "", email: "", department: "", title: "" }
+function formFromEmployee(employee) {
+  if (!employee) return EMPTY_FORM
+  return {
+    employeeCode: employee.employeeCode ?? "",
+    firstName: employee.firstName ?? employee.fullName ?? "",
+    lastName: employee.lastName ?? "",
+    email: employee.email ?? "",
+    phone: employee.phone ?? "",
+    title: employee.title ?? "",
+    departmentId: employee.departmentId ?? "",
+    projectIds: (employee.projects ?? []).map((project) => project.id),
+    managerUserId: employee.managerUserId ?? "",
+    joiningDate: employee.joiningDate ? String(employee.joiningDate).slice(0, 10) : "",
+    status: employee.status ?? "ACTIVE",
+  }
+}
 
 /**
- * Add Employee, shared by the Employees page and the Assessments page (so
- * employees can be added where employee assessments are created). Same
- * request as before: POST /api/employees with fullName, email, department
- * and title.
+ * Add or edit an employee. Shared by the Employees pages and the Assessments
+ * page (so employees can be added where employee assessments are created).
+ * Pass `employee` to edit; omit it to add.
  */
-export default function AddEmployeeModal({ open, onClose, onSaved }) {
+export default function AddEmployeeModal({ open, onClose, onSaved, employee = null }) {
   const searchParams = useAuthSearchParams()
-  const [form, setForm] = useState(DEFAULT_FORM)
+  const isEdit = Boolean(employee)
+  const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [departments, setDepartments] = useState([])
+  const [projects, setProjects] = useState([])
+  const [managers, setManagers] = useState([])
 
   useEffect(() => {
-    if (!open) return undefined
+    if (!open) return
+    setForm(formFromEmployee(employee))
+    Promise.all([
+      apiRequest("/api/departments", searchParams),
+      apiRequest("/api/projects", searchParams),
+      apiRequest("/api/employees/managers", searchParams),
+    ]).then(([departmentRes, projectRes, managerRes]) => {
+      setDepartments(departmentRes.data?.departments ?? [])
+      setProjects(projectRes.data?.projects ?? [])
+      setManagers(managerRes.data?.managers ?? [])
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, employee])
 
-    const handleEscape = (event) => {
-      if (event.key === "Escape" && !saving) onClose()
-    }
-    document.addEventListener("keydown", handleEscape)
-    return () => document.removeEventListener("keydown", handleEscape)
-  }, [open, saving, onClose])
-
-  if (!open) return null
+  // Inactive departments/projects can't take new people, but an employee
+  // already in one keeps seeing it selected.
+  const departmentOptions = useMemo(
+    () => departments.filter((d) => d.status === "ACTIVE" || d.id === employee?.departmentId),
+    [departments, employee]
+  )
+  const currentProjectIds = useMemo(() => new Set((employee?.projects ?? []).map((p) => p.id)), [employee])
+  const projectOptions = useMemo(
+    () => projects.filter((p) => p.status === "ACTIVE" || currentProjectIds.has(p.id)),
+    [projects, currentProjectIds]
+  )
 
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+  const toggleProject = (projectId) =>
+    setForm((current) => ({
+      ...current,
+      projectIds: current.projectIds.includes(projectId)
+        ? current.projectIds.filter((id) => id !== projectId)
+        : [...current.projectIds, projectId],
+    }))
 
-  const handleCreate = async () => {
-    if (!form.fullName.trim() || !form.email.trim()) {
-      showActionFeedback({ tone: "error", title: "Missing details", message: "Name and email are required." })
+  const handleClose = () => {
+    if (!saving) onClose()
+  }
+
+  const handleSave = async () => {
+    if (!form.firstName.trim() || !form.email.trim()) {
+      showActionFeedback({ tone: "error", title: "Missing details", message: "First name and email are required." })
       return
     }
 
-    try {
-      setSaving(true)
-      const res = await fetch(buildAuthUrl("/api/employees", searchParams), {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: form.fullName.trim(),
-          email: form.email.trim(),
-          department: form.department?.trim() || null,
-          title: form.title?.trim() || null,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        showActionFeedback({ tone: "error", title: "Save failed", message: data?.error?.message || "Failed to add employee" })
-        return
-      }
-      showActionFeedback({ tone: "success", title: "Employee added", message: form.fullName })
-      setForm(DEFAULT_FORM)
-      onClose()
-      onSaved?.(data?.data ?? null)
-    } catch (err) {
-      showActionFeedback({ tone: "error", title: "Save failed", message: err instanceof Error ? err.message : "Something went wrong" })
-    } finally {
-      setSaving(false)
+    const body = {
+      employeeCode: form.employeeCode.trim() || null,
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim() || null,
+      email: form.email.trim(),
+      phone: form.phone.trim() || null,
+      title: form.title.trim() || null,
+      departmentId: form.departmentId || null,
+      projectIds: form.projectIds,
+      managerUserId: form.managerUserId || null,
+      joiningDate: form.joiningDate || null,
+      status: form.status,
     }
+
+    setSaving(true)
+    const res = await apiRequest(isEdit ? `/api/employees/${employee.id}` : "/api/employees", searchParams, {
+      method: isEdit ? "PATCH" : "POST",
+      body,
+    })
+    setSaving(false)
+
+    if (!res.ok) {
+      showActionFeedback({
+        tone: "error",
+        title: "Save failed",
+        message: res.error?.message || (isEdit ? "Failed to update employee" : "Failed to add employee"),
+      })
+      return
+    }
+
+    showActionFeedback({
+      tone: "success",
+      title: isEdit ? "Employee updated" : "Employee added",
+      message: res.data?.fullName ?? `${body.firstName} ${body.lastName ?? ""}`.trim(),
+    })
+    onClose()
+    onSaved?.(res.data ?? null)
   }
 
   return (
-    <div
-      className="hv-theme-dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 px-4 py-4 backdrop-blur-sm sm:py-10"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="add-employee-title"
-    >
-      <div className="hv-theme-modal w-full max-w-lg rounded-[20px] border border-slate-700/70 bg-[#0a1020] p-6 text-white shadow-[0_24px_80px_rgba(2,6,23,0.55)]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Employees</p>
-        <h2 id="add-employee-title" className="mt-1 text-lg font-semibold text-white">
-          Add employee
-        </h2>
-        <p className="mt-1 text-sm text-slate-400">They can then be assigned employee assessments, challenges and tasks.</p>
-
-        <div className="mt-5 grid gap-4">
-          <label className="grid gap-1.5 text-sm text-slate-300">
-            Full name
-            <input value={form.fullName} onChange={update("fullName")} className={FIELD_CLASS} autoFocus />
-          </label>
-          <label className="grid gap-1.5 text-sm text-slate-300">
-            Email
-            <input type="email" value={form.email} onChange={update("email")} className={FIELD_CLASS} />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm text-slate-300">
-              Department <span className="sr-only">(optional)</span>
-              <input value={form.department} onChange={update("department")} placeholder="Optional" className={FIELD_CLASS} />
-            </label>
-            <label className="grid gap-1.5 text-sm text-slate-300">
-              Title <span className="sr-only">(optional)</span>
-              <input value={form.title} onChange={update("title")} placeholder="Optional" className={FIELD_CLASS} />
-            </label>
-          </div>
-        </div>
-
-        <div className="mt-6 flex items-center justify-end gap-2 border-t border-slate-800 pt-5">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500 disabled:opacity-60"
-          >
+    <ModalShell
+      open={open}
+      onClose={handleClose}
+      busy={saving}
+      labelledBy="employee-form-title"
+      eyebrow="Employees"
+      title={isEdit ? "Edit employee" : "Add employee"}
+      description={isEdit ? undefined : "They can then be assigned employee assessments, challenges and tasks."}
+      maxWidth="max-w-2xl"
+      footer={
+        <>
+          <button type="button" onClick={handleClose} disabled={saving} className={SECONDARY_BUTTON}>
             Cancel
           </button>
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={saving}
-            className="hv-solid-action rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Add employee"}
+          <button type="button" onClick={handleSave} disabled={saving} className={PRIMARY_BUTTON}>
+            {saving ? "Saving..." : isEdit ? "Save changes" : "Add employee"}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className={LABEL_CLASS}>
+          First name
+          <input value={form.firstName} onChange={update("firstName")} className={FIELD_CLASS} autoFocus />
+        </label>
+        <label className={LABEL_CLASS}>
+          Last name
+          <input value={form.lastName} onChange={update("lastName")} className={FIELD_CLASS} />
+        </label>
+        <label className={LABEL_CLASS}>
+          Email
+          <input type="email" value={form.email} onChange={update("email")} className={FIELD_CLASS} />
+        </label>
+        <label className={LABEL_CLASS}>
+          Employee ID
+          <input value={form.employeeCode} onChange={update("employeeCode")} placeholder="Optional, e.g. EMP-1024" className={FIELD_CLASS} />
+        </label>
+        <label className={LABEL_CLASS}>
+          Designation
+          <input value={form.title} onChange={update("title")} placeholder="e.g. Software Engineer" className={FIELD_CLASS} />
+        </label>
+        <label className={LABEL_CLASS}>
+          Phone
+          <input type="tel" value={form.phone} onChange={update("phone")} placeholder="Optional" className={FIELD_CLASS} />
+        </label>
+        <label className={LABEL_CLASS}>
+          Department
+          <select value={form.departmentId} onChange={update("departmentId")} className={FIELD_CLASS}>
+            <option value="">No department</option>
+            {departmentOptions.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+                {department.status === "INACTIVE" ? " (inactive)" : ""}
+              </option>
+            ))}
+          </select>
+          {departments.length === 0 ? (
+            <span className="text-xs text-slate-500">Create departments under Employees → Departments.</span>
+          ) : null}
+        </label>
+        <label className={LABEL_CLASS}>
+          Manager
+          <select value={form.managerUserId} onChange={update("managerUserId")} className={FIELD_CLASS}>
+            <option value="">No manager</option>
+            {managers.map((manager) => (
+              <option key={manager.userId} value={manager.userId}>
+                {manager.fullName || manager.email}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={LABEL_CLASS}>
+          Joining date
+          <input type="date" value={form.joiningDate} onChange={update("joiningDate")} className={FIELD_CLASS} />
+        </label>
+        <label className={LABEL_CLASS}>
+          Status
+          <select value={form.status} onChange={update("status")} className={FIELD_CLASS}>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </label>
       </div>
-    </div>
+
+      <fieldset className="mt-5">
+        <legend className="text-sm text-slate-300">
+          Projects <span className="text-xs text-slate-500">({form.projectIds.length} selected)</span>
+        </legend>
+        {projectOptions.length === 0 ? (
+          <p className="mt-2 text-xs text-slate-500">No projects yet. Create them under Employees → Projects.</p>
+        ) : (
+          <div className="mt-2 grid max-h-44 gap-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/40 p-2 sm:grid-cols-2">
+            {projectOptions.map((project) => (
+              <label key={project.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-200 hover:bg-slate-800/50">
+                <input
+                  type="checkbox"
+                  checked={form.projectIds.includes(project.id)}
+                  onChange={() => toggleProject(project.id)}
+                  className="h-4 w-4 accent-cyan-500"
+                />
+                <span className="truncate">
+                  {project.name}
+                  {project.code ? <span className="text-slate-500"> · {project.code}</span> : null}
+                  {project.status === "INACTIVE" ? <span className="text-slate-500"> (inactive)</span> : null}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </fieldset>
+    </ModalShell>
   )
 }

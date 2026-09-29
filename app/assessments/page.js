@@ -2,7 +2,7 @@
 import { formatLabel } from "@/lib/client/format-label"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 import BackToDashboardLink from "@/components/BackToDashboardLink"
@@ -11,6 +11,8 @@ import FeatureLockedNotice from "@/components/FeatureLockedNotice"
 import Navbar from "@/components/Navbar"
 import CreateAssessmentModal from "@/components/CreateAssessmentModal"
 import SendAssessmentModal from "@/components/SendAssessmentModal"
+import AssignAssessmentModal from "@/components/AssignAssessmentModal"
+import { formatPercent } from "@/components/employees/shared"
 import { AssessmentFlowGuide } from "@/components/AssessmentWorkflowGuide"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatDate } from "@/lib/client/date-format"
@@ -72,6 +74,8 @@ export default function AssessmentsPage() {
   const [audience, setAudience] = useState("CANDIDATE")
   const [audienceError, setAudienceError] = useState("")
   const [openAddEmployee, setOpenAddEmployee] = useState(false)
+  const [assigning, setAssigning] = useState(null)
+  const latestLoadRef = useRef(0)
   const isEmployeeView = audience === "EMPLOYEE"
 
   // Org-wide progress for the Assessment Flow strip. Cache-busted because the
@@ -93,6 +97,9 @@ export default function AssessmentsPage() {
   }, [])
 
   const loadAssessments = () => {
+    // Switching Candidates/Employees or status quickly leaves an earlier
+    // request in flight; only the latest one may update the list.
+    const requestId = ++latestLoadRef.current
     setLoading(true)
     setAudienceError("")
     const query = status
@@ -101,6 +108,7 @@ export default function AssessmentsPage() {
     fetch(buildAuthUrl(`/api/assessments${query}`, searchParams), { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
+        if (requestId !== latestLoadRef.current) return
         if (data?.error?.code === "FEATURE_NOT_IN_PLAN") {
           if (audience === "EMPLOYEE") {
             setAssessments([])
@@ -123,8 +131,12 @@ export default function AssessmentsPage() {
 
         setAssessments(Array.isArray(data?.data?.assessments) ? data.data.assessments : [])
       })
-      .catch(() => setAssessments([]))
-      .finally(() => setLoading(false))
+      .catch(() => {
+        if (requestId === latestLoadRef.current) setAssessments([])
+      })
+      .finally(() => {
+        if (requestId === latestLoadRef.current) setLoading(false)
+      })
   }
 
   useEffect(() => {
@@ -144,7 +156,7 @@ export default function AssessmentsPage() {
       ? audienceError
     : assessments.length === 0
       ? isEmployeeView
-        ? "No employee assessments yet. Create one, then assign it from an employee's page."
+        ? "No employee assessments yet. Create one, publish it, then assign it to employees, a department or a project."
         : "No assessments yet. Create one to get started."
       : visibleAssessments.length === 0
         ? "No assessments match your search."
@@ -175,17 +187,33 @@ export default function AssessmentsPage() {
         >
           {assessment.title}
         </Link>
-        <p className="truncate text-xs text-slate-400">{assessment.jobTitle ?? "No linked job"}</p>
+        <p className="truncate text-xs text-slate-400">
+          {isEmployeeView ? formatLabel(assessment.activityType ?? "ASSESSMENT") : assessment.jobTitle ?? "No linked job"}
+        </p>
       </div>
     </div>
   )
 
   const renderActions = (assessment) => (
     <div className="flex items-center justify-end gap-2">
+      {isEmployeeView ? (
+        <button
+          type="button"
+          onClick={() => setAssigning(assessment)}
+          disabled={assessment.status !== "PUBLISHED"}
+          title={assessment.status !== "PUBLISHED" ? "Publish this assessment before assigning it" : undefined}
+          className={`${rowAction} disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          Assign
+        </button>
+      ) : null}
       <Link href={buildAuthUrl(`/assessments/${assessment.id}/questions`, searchParams)} className={rowAction}>
         Questions
       </Link>
-      <Link href={buildAuthUrl(`/assessments/${assessment.id}/results`, searchParams)} className={rowAction}>
+      <Link
+        href={buildAuthUrl(`/assessments/${assessment.id}/${isEmployeeView ? "assignments" : "results"}`, searchParams)}
+        className={rowAction}
+      >
         Results
       </Link>
       <button
@@ -281,7 +309,8 @@ export default function AssessmentsPage() {
           </div>
           {isEmployeeView ? (
             <p className="text-xs text-slate-400">
-              Create an assessment here, then assign it from an employee&apos;s page in{" "}
+              Create and publish an assessment, then <span className="font-semibold text-slate-200">Assign</span> it to employees, a
+              department, a project or both. Manage people in{" "}
               <Link href={buildAuthUrl("/employees", searchParams)} className="font-semibold text-cyan-300 hover:text-cyan-200">
                 Employees
               </Link>
@@ -342,6 +371,63 @@ export default function AssessmentsPage() {
           </div>
 
           {/* Register from lg up; cards below. */}
+          {isEmployeeView ? (
+          <div className="relative hidden lg:block">
+            <table className="w-full table-fixed text-[13px]">
+              <colgroup>
+                <col className="w-[19%]" />
+                <col className="w-[8%]" />
+                <col className="w-[12%]" />
+                <col className="w-[6%]" />
+                <col className="w-[7%]" />
+                <col className="w-[6%]" />
+                <col className="w-[6%]" />
+                <col className="w-[6%]" />
+                <col className="w-[8%]" />
+                <col className="w-[22%]" />
+              </colgroup>
+              <thead className="sticky top-[77px] z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_var(--color-slate-800)]">
+                <tr className="[&>th]:whitespace-nowrap [&>th]:py-2.5 [&>th]:text-[10.5px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-[0.14em]">
+                  <th className="pl-5 pr-3 text-left">Assessment</th>
+                  <th className="px-3 text-left">Status</th>
+                  <th className="px-3 text-left">Target</th>
+                  <th className="px-2 text-right">Assigned</th>
+                  <th className="px-2 text-right">Completed</th>
+                  <th className="px-2 text-right">Pending</th>
+                  <th className="px-2 text-right">Avg</th>
+                  <th className="px-2 text-right">Pass rate</th>
+                  <th className="px-3 text-left">Created</th>
+                  <th className="pl-3 pr-5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emptyMessage ? (
+                  <tr>
+                    <td colSpan={10} className="p-10 text-center text-slate-400">{emptyMessage}</td>
+                  </tr>
+                ) : (
+                  visibleAssessments.map((assessment) => (
+                    <tr key={assessment.id} className="border-t border-slate-800/80 align-middle text-slate-200 transition-colors first:border-t-0 hover:bg-slate-800/25">
+                      <td className="py-3 pl-5 pr-3">{renderTitle(assessment)}</td>
+                      <td className="px-3 py-3">{renderStatus(assessment.status)}</td>
+                      <td className="truncate px-3 py-3 text-slate-300" title={assessment.target?.label ?? ""}>
+                        {assessment.target?.label ?? <span className="text-slate-500">Not assigned</span>}
+                        {assessment.target?.sends > 1 ? <span className="text-xs text-slate-500"> +{assessment.target.sends - 1}</span> : null}
+                      </td>
+                      <td className="px-2 py-3 text-right tabular-nums">{assessment.stats?.assigned ?? "-"}</td>
+                      <td className="px-2 py-3 text-right tabular-nums">{assessment.stats?.completed ?? "-"}</td>
+                      <td className="px-2 py-3 text-right tabular-nums">{assessment.stats?.pending ?? "-"}</td>
+                      <td className="px-2 py-3 text-right tabular-nums">{formatPercent(assessment.stats?.averageScore)}</td>
+                      <td className="px-2 py-3 text-right tabular-nums">{formatPercent(assessment.stats?.passRate)}</td>
+                      <td className="px-3 py-3 text-slate-400">{formatDate(assessment.createdAt)}</td>
+                      <td className="py-3 pl-3 pr-5">{renderActions(assessment)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          ) : (
           <div className="relative hidden lg:block">
             <table className="w-full table-fixed text-[13px]">
               <colgroup>
@@ -382,6 +468,7 @@ export default function AssessmentsPage() {
               </tbody>
             </table>
           </div>
+          )}
 
           {emptyMessage ? (
             <p className="px-4 py-10 text-center text-sm text-slate-400 lg:hidden">{emptyMessage}</p>
@@ -397,6 +484,20 @@ export default function AssessmentsPage() {
                     {assessment.durationMinutes} min <span className="text-slate-600">&middot;</span> Pass mark {Number(assessment.passingPercentage)}%{" "}
                     <span className="text-slate-600">&middot;</span> Created {formatDate(assessment.createdAt)}
                   </p>
+                  {isEmployeeView ? (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Target: <span className="text-slate-200">{assessment.target?.label ?? "Not assigned"}</span>
+                      {assessment.stats ? (
+                        <>
+                          {" "}<span className="text-slate-600">&middot;</span> Assigned {assessment.stats.assigned}{" "}
+                          <span className="text-slate-600">&middot;</span> Completed {assessment.stats.completed}{" "}
+                          <span className="text-slate-600">&middot;</span> Pending {assessment.stats.pending}{" "}
+                          <span className="text-slate-600">&middot;</span> Avg {formatPercent(assessment.stats.averageScore)}{" "}
+                          <span className="text-slate-600">&middot;</span> Pass rate {formatPercent(assessment.stats.passRate)}
+                        </>
+                      ) : null}
+                    </p>
+                  ) : null}
                   <div className="mt-3 border-t border-slate-800/80 pt-3">{renderActions(assessment)}</div>
                 </li>
               ))}
@@ -416,6 +517,12 @@ export default function AssessmentsPage() {
         }}
       />
       <AddEmployeeModal open={openAddEmployee} onClose={() => setOpenAddEmployee(false)} />
+      <AssignAssessmentModal
+        open={Boolean(assigning)}
+        assessment={assigning}
+        onClose={() => setAssigning(null)}
+        onAssigned={() => loadAssessments()}
+      />
       <SendAssessmentModal
         isOpen={openSend}
         onClose={() => {
