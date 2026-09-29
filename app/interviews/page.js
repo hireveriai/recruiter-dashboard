@@ -453,6 +453,31 @@ function formatScore(score) {
   return score === null || score === undefined ? "-" : `${Math.round(score)}%`
 }
 
+// Names typed entirely in capitals (or lowercase) read as shouting in a long
+// list, so they are shown in title case. Mixed-case names stay as entered.
+function displayCandidateName(name) {
+  const value = String(name ?? "").trim()
+  if (!value) return "Candidate"
+  if (value !== value.toUpperCase() && value !== value.toLowerCase()) return value
+  return value.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_, lead, letter) => lead + letter.toUpperCase())
+}
+
+function candidateInitials(name) {
+  const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return "?"
+  const first = parts[0].charAt(0)
+  const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : ""
+  return (first + last).toUpperCase()
+}
+
+// Colour for the score bar only; the hiring decision stays with the recruiter.
+function scoreTone(score) {
+  if (score === null || score === undefined || !Number.isFinite(Number(score))) return null
+  if (score >= 70) return { text: "text-emerald-300", bar: "bg-emerald-400" }
+  if (score >= 40) return { text: "text-amber-300", bar: "bg-amber-400" }
+  return { text: "text-rose-300", bar: "bg-rose-400" }
+}
+
 function normalizeSearch(value) {
   return String(value ?? "").trim().toLowerCase()
 }
@@ -612,16 +637,13 @@ function formatLatestActivity(value) {
 }
 
 const tableMutedChip =
-  "inline-flex max-w-full items-center rounded-lg py-1 text-xs font-medium leading-none text-slate-500"
+  "inline-flex max-w-full items-center rounded-lg py-1 text-xs font-medium leading-none text-slate-600"
 const tableProcessingChip =
   "inline-flex max-w-full items-center rounded-lg py-1 text-xs font-medium leading-none text-amber-100"
 const recordingAction =
-  "hv-recording-action -ml-2 inline-flex h-7 max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[13px] font-semibold leading-none transition"
-// First line of every register cell: one fixed-height, vertically centred line
-// so plain text, chips and buttons share the same baseline across the row.
-const cellLine = "flex min-h-7 min-w-0 items-center"
+  "hv-recording-action inline-flex h-7 max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg border border-cyan-400/25 bg-cyan-400/[0.06] px-2.5 text-xs font-semibold leading-none transition"
 const rowNoteChip =
-  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4"
+  "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4"
 const ROW_NOTE_TONES = {
   rose: "border-rose-500/25 bg-rose-500/10 text-rose-300",
   emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
@@ -1256,16 +1278,17 @@ export default function InterviewsPage() {
         className={recordingAction}
         aria-label={`View recording for ${interview.candidateName}`}
       >
-        <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>View</span>
+        <Video className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <span>Watch</span>
       </Link>
     ) : interview.recordingId ? (
       <span className={tableProcessingChip}>
         Processing
       </span>
     ) : (
-      <span className={tableMutedChip}>
-        Not available
+      <span className={tableMutedChip} title="Recording not available">
+        <span aria-hidden="true">&ndash;</span>
+        <span className="sr-only">Not available</span>
       </span>
     )
 
@@ -1273,12 +1296,11 @@ export default function InterviewsPage() {
     model.interview.recruiterDecisionStatus ? (
       <DecisionPill status={model.interview.recruiterDecisionStatus} />
     ) : model.isCompleted && !model.isEarlyExit ? (
-      <span className="inline-flex whitespace-nowrap rounded-full border border-slate-700 bg-slate-950/30 px-2.5 py-0.5 text-[11px] font-semibold text-slate-400">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-dashed border-cyan-400/40 px-2.5 py-0.5 text-[11px] font-semibold text-cyan-200">
+        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" aria-hidden="true" />
         Awaiting decision
       </span>
-    ) : (
-      <span className="text-slate-600">-</span>
-    )
+    ) : null
 
   const renderRowNotes = (model) =>
     model.hasRowNotes ? (
@@ -1295,7 +1317,7 @@ export default function InterviewsPage() {
   const renderActions = (model) => {
     const { interview } = model
     if (!model.hasHiringActions) {
-      return !model.isEarlyExit ? <span className="text-slate-600">-</span> : null
+      return null
     }
 
     return (
@@ -1376,6 +1398,101 @@ export default function InterviewsPage() {
       </DropdownMenu>
     )
   }
+
+  const renderPrimaryAction = (model, visibility = "inline-flex") => {
+    const { interview } = model
+    const name = interview.candidateName || "candidate"
+    const busy = actionBusyId === interview.interviewId
+    const base = `${visibility} h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-60`
+    const outline = `${base} border border-slate-700 bg-slate-900/60 text-slate-200 hover:border-cyan-400/40 hover:text-cyan-100`
+
+    if (model.canTakeAction) {
+      return (
+        <button type="button" onClick={() => setReviewInterview(interview)} className={`${base} hv-solid-action bg-cyan-600 text-white hover:bg-cyan-500`}>
+          Take Action
+        </button>
+      )
+    }
+    if (model.canViewSummary) {
+      return (
+        <button type="button" onClick={() => openInterviewSummary(interview)} className={outline}>
+          Summary
+        </button>
+      )
+    }
+    if (model.canRetryEmail) {
+      return (
+        <button type="button" onClick={() => retryEmail(interview)} disabled={busy} aria-label={`Retry email for ${name}`} className={outline}>
+          <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
+          {busy ? "Sending..." : "Retry"}
+        </button>
+      )
+    }
+    if (model.canRetryPreparation) {
+      return (
+        <button type="button" onClick={() => retryPreparation(interview)} disabled={busy} aria-label={`Retry preparation for ${name}`} className={outline}>
+          <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
+          {busy ? "Retrying..." : "Retry"}
+        </button>
+      )
+    }
+    if (model.canCopyLink) {
+      return (
+        <button type="button" onClick={() => copyLink(interview)} aria-label={`Copy interview link for ${name}`} className={outline}>
+          <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+          {copiedInterviewId === interview.interviewId ? "Copied" : "Copy Link"}
+        </button>
+      )
+    }
+    return null
+  }
+
+  const renderScore = (model) => {
+    const { interview } = model
+    const tone = scoreTone(interview.score)
+    if (!tone) {
+      return (
+        <span className="text-slate-600" title="Not scored yet">
+          <span aria-hidden="true">&ndash;</span>
+          <span className="sr-only">Not scored</span>
+        </span>
+      )
+    }
+    return (
+      <div className="w-full max-w-[76px]">
+        <p className={`text-sm font-semibold tabular-nums leading-none ${tone.text}`}>
+          {formatScore(interview.score)}
+          {model.evidenceIncomplete ? (
+            <span className="text-amber-300" title={model.incompleteEvidenceNote}>*</span>
+          ) : null}
+        </p>
+        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+          <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${Math.max(3, Math.min(100, Math.round(interview.score)))}%` }} />
+        </div>
+      </div>
+    )
+  }
+
+  const renderVerisDecision = (model) =>
+    model.interview.decision ? (
+      <span className="block max-w-full truncate text-[11px] text-slate-500">
+        VERIS: <span className="font-medium text-slate-300">{formatStatusText(model.interview.decision)}</span>
+        {model.evidenceIncomplete ? (
+          <span className="text-amber-300" title={model.incompleteEvidenceNote}>*</span>
+        ) : null}
+      </span>
+    ) : null
+
+  const renderAvatar = (model, size = "h-9 w-9") => (
+    <span
+      aria-hidden="true"
+      className={`flex ${size} shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+        model.canTakeAction ? "bg-cyan-400/15 text-cyan-200" : "bg-slate-800 text-slate-300"
+      }`}
+    >
+      {candidateInitials(model.interview.candidateName)}
+    </span>
+  )
 
   const rowModels = filteredInterviews.map(buildRowModel)
   const activeFilterCount = [statusFilter, jobFilter, accessFilter, evaluationFilter, recruiterDecisionFilter].filter(
@@ -1487,7 +1604,7 @@ export default function InterviewsPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-x-3 gap-y-2.5 border-b border-slate-800 bg-slate-950/20 px-4 py-3.5 sm:grid-cols-2 lg:px-5 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto]">
+          <div className="grid gap-x-3 gap-y-2.5 border-b border-slate-800 bg-slate-950/20 px-4 py-3.5 sm:grid-cols-2 lg:grid-cols-4 lg:px-5 xl:grid-cols-[minmax(180px,1.15fr)_repeat(5,minmax(112px,0.7fr))_auto]">
             <label className="grid gap-1.5 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-slate-500 sm:col-span-2 xl:col-span-1">
               Search
               <input
@@ -1557,70 +1674,65 @@ export default function InterviewsPage() {
                 type="button"
                 onClick={clearFilters}
                 disabled={!hasActiveFilters}
-                className="h-10 self-end rounded-xl border border-slate-700 px-4 text-[13px] font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                className="h-10 self-end rounded-xl border border-slate-700 px-4 text-[13px] font-semibold lg:w-24 xl:w-auto text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Clear
               </button>
             </div>
           </div>
 
-          {/* Table from lg up. */}
+          {/* Register from lg up: seven columns, notes tucked under the row. */}
           <div className="hidden max-h-[calc(100vh-320px)] min-h-[380px] overflow-y-auto overflow-x-hidden overscroll-contain lg:block">
-            <table className="w-full table-fixed text-[13px] 2xl:text-sm">
+            <table className="w-full table-fixed text-[13px]">
               <colgroup>
-                <col className="w-[13%]" />
-                <col className="w-[8%]" />
-                <col className="w-[13%]" />
-                <col className="w-[12%]" />
-                <col className="w-[8%]" />
-                <col className="w-[6%]" />
+                <col className="w-[25%]" />
+                <col className="w-[15%]" />
+                <col className="w-[10%]" />
+                <col className="w-[15%]" />
                 <col className="w-[9%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[7%]" />
+                <col className="w-[11%]" />
+                <col className="w-[15%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-950 text-slate-500 shadow-[0_1px_0_rgba(30,41,59,0.9)]">
-                <tr>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Candidate</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Recording</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Role</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Status</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Access</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Score</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">VERIS decision</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Recruiter decision</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em]">Last activity</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.12em]">Actions</th>
+                <tr className="[&>th]:whitespace-nowrap [&>th]:py-2.5 [&>th]:text-[10.5px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-[0.14em]">
+                  <th className="pl-5 pr-3 text-left">Candidate</th>
+                  <th className="px-3 text-left">Status</th>
+                  <th className="px-3 text-left">Score</th>
+                  <th className="px-3 text-left">Decision</th>
+                  <th className="px-3 text-left">Recording</th>
+                  <th className="px-3 text-left">Last activity</th>
+                  <th className="pl-3 pr-5 text-right">Actions</th>
                 </tr>
               </thead>
               {emptyMessage ? (
                 <tbody><tr>
-                  <td colSpan={10} className="p-10 text-center text-slate-400">{emptyMessage}</td>
+                  <td colSpan={7} className="p-10 text-center text-slate-400">{emptyMessage}</td>
                 </tr></tbody>
               ) : (
                 rowModels.map((model) => {
                   const { interview } = model
+                  const accessLabel = getAccessLabel(interview)
                   return (
-                    <tbody key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200 transition-colors hover:bg-slate-800/30">
-                      <tr className={`align-top ${model.hasRowNotes ? "[&>td]:pb-1.5" : ""}`}>
-                        <td className="px-3 py-4 font-medium text-white">
-                          <div className={cellLine}>
-                            <span className="block min-w-0 break-words font-semibold leading-snug" title={interview.candidateName || "Candidate"}>
-                              {interview.candidateName}
-                            </span>
+                    <tbody key={interview.interviewId} className="border-t border-slate-800/80 text-slate-200 transition-colors first:border-t-0 hover:bg-slate-800/25">
+                      <tr className="align-middle">
+                        <td className={`relative pl-5 pr-3 ${model.hasRowNotes ? "pb-1.5 pt-3" : "py-3"}`}>
+                          {model.canTakeAction ? (
+                            <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-cyan-400" />
+                          ) : null}
+                          <div className="flex min-w-0 items-center gap-3">
+                            {renderAvatar(model)}
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-white" title={interview.candidateName || "Candidate"}>
+                                {displayCandidateName(interview.candidateName)}
+                              </p>
+                              <p className="truncate text-xs text-slate-400" title={interview.jobTitle || ""}>
+                                {interview.jobTitle || "No role"}
+                              </p>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-3 py-4">
-                          <div className={cellLine}>{renderRecording(interview)}</div>
-                        </td>
-                        <td className="px-3 py-4 text-slate-300">
-                          <div className={cellLine}>
-                            <span className="block truncate" title={interview.jobTitle || ""}>{interview.jobTitle}</span>
-                          </div>
-                        </td>
-                        <td className="overflow-hidden px-3 py-4">
-                          {/* Wraps rather than clips when the column is narrow (small windows). */}
-                          <div className={`${cellLine} flex-wrap gap-x-1.5 gap-y-1`}>
+                        <td className={`overflow-hidden px-3 ${model.hasRowNotes ? "pb-1.5 pt-3" : "py-3"}`}>
+                          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
                             <span
                               className={`inline-flex max-w-full rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4 ${getStatusBadge(model.recruiterStatus.key)}`}
                               title={model.recruiterStatus.description}
@@ -1629,45 +1741,30 @@ export default function InterviewsPage() {
                             </span>
                             {model.faultNote ? <FaultNote note={model.faultNote} /> : null}
                           </div>
+                          <p className="mt-1 truncate text-[11px] text-slate-500" title={accessLabel}>{accessLabel}</p>
                         </td>
-                        <td className="px-3 py-4 text-slate-300">
-                          <div className={cellLine}>
-                            <span className="block truncate">{getAccessLabel(interview)}</span>
+                        <td className={`px-3 ${model.hasRowNotes ? "pb-1.5 pt-3" : "py-3"}`}>{renderScore(model)}</td>
+                        <td className={`px-3 ${model.hasRowNotes ? "pb-1.5 pt-3" : "py-3"}`}>
+                          <div className="flex min-w-0 flex-col items-start gap-1">
+                            {renderRecruiterDecision(model)}
+                            {renderVerisDecision(model)}
                           </div>
                         </td>
-                        <td className="px-3 py-4 text-slate-300">
-                          <div className={`${cellLine} whitespace-nowrap font-semibold tabular-nums text-white`}>
-                            {formatScore(interview.score)}
-                            {model.evidenceIncomplete ? (
-                              <span className="text-amber-300" title={model.incompleteEvidenceNote}>*</span>
-                            ) : null}
+                        <td className={`px-3 ${model.hasRowNotes ? "pb-1.5 pt-3" : "py-3"}`}>{renderRecording(interview)}</td>
+                        <td className={`px-3 text-xs leading-snug ${model.hasRowNotes ? "pb-1.5 pt-3" : "py-3"}`}>
+                          <span className="block whitespace-nowrap text-slate-300">{model.latestActivity.date}</span>
+                          <span className="block whitespace-nowrap text-slate-500">{model.latestActivity.time}</span>
+                        </td>
+                        <td className={`pl-3 pr-5 ${model.hasRowNotes ? "pb-1.5 pt-3" : "py-3"}`}>
+                          <div className="flex items-center justify-end gap-2">
+                            {renderPrimaryAction(model, "hidden min-[1200px]:inline-flex")}
+                            {renderActions(model)}
                           </div>
-                        </td>
-                        <td className="px-3 py-4 text-slate-300">
-                          <div className={cellLine}>
-                            <span className="block truncate">
-                              {interview.decision ?? "-"}
-                              {model.evidenceIncomplete && interview.decision ? (
-                                <span className="text-amber-300" title={model.incompleteEvidenceNote}>*</span>
-                              ) : null}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-4">
-                          <div className={cellLine}>{renderRecruiterDecision(model)}</div>
-                        </td>
-                        <td className="px-3 py-4 text-[13px] leading-snug text-slate-400">
-                          <div className={`${cellLine} whitespace-nowrap`}>{model.latestActivity.date}</div>
-                          <span className="block whitespace-nowrap text-xs text-slate-500">{model.latestActivity.time}</span>
-                        </td>
-                        <td className="px-3 py-4">
-                          <div className={`${cellLine} justify-end gap-2`}>{renderActions(model)}</div>
                         </td>
                       </tr>
                       {model.hasRowNotes ? (
-                        <tr className="align-top">
-                          <td colSpan={3} aria-hidden="true" />
-                          <td colSpan={7} className="px-3 pb-4 pt-0">
+                        <tr>
+                          <td colSpan={7} className="pb-3 pl-[68px] pr-5 pt-0">
                             {renderRowNotes(model)}
                           </td>
                         </tr>
@@ -1687,42 +1784,42 @@ export default function InterviewsPage() {
               {rowModels.map((model) => {
                 const { interview } = model
                 return (
-                  <li key={interview.interviewId} className="border-t border-slate-800/80 px-4 py-4 first:border-t-0">
+                  <li key={interview.interviewId} className="relative border-t border-slate-800/80 px-4 py-4 first:border-t-0">
+                    {model.canTakeAction ? (
+                      <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[3px] rounded-r-full bg-cyan-400" />
+                    ) : null}
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white">{interview.candidateName}</p>
-                        <p className="truncate text-xs text-slate-400">{interview.jobTitle}</p>
+                      <div className="flex min-w-0 items-center gap-3">
+                        {renderAvatar(model)}
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white" title={interview.candidateName || "Candidate"}>
+                            {displayCandidateName(interview.candidateName)}
+                          </p>
+                          <p className="truncate text-xs text-slate-400">{interview.jobTitle}</p>
+                        </div>
                       </div>
-                      <div className="flex flex-none items-center gap-2">
+                      <div className="flex flex-none items-center gap-1">
                         <span
                           className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4 ${getStatusBadge(model.recruiterStatus.key)}`}
                           title={model.recruiterStatus.description}
                         >
                           {model.recruiterStatus.label}
                         </span>
-                        {renderActions(model)}
+                        {model.faultNote ? <FaultNote note={model.faultNote} /> : null}
                       </div>
                     </div>
-                    {model.faultNote ? (
-                      <div className="mt-2">
-                        <FaultNote note={model.faultNote} />
-                      </div>
-                    ) : null}
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
                       <div>
                         <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Score</dt>
-                        <dd className="mt-0.5 font-semibold tabular-nums text-white">
-                          {formatScore(interview.score)}
-                          {model.evidenceIncomplete ? <span className="text-amber-300" title={model.incompleteEvidenceNote}>*</span> : null}
-                        </dd>
+                        <dd className="mt-1">{renderScore(model)}</dd>
                       </div>
                       <div>
                         <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">VERIS decision</dt>
-                        <dd className="mt-0.5 text-slate-300">{interview.decision ?? "-"}</dd>
+                        <dd className="mt-0.5 text-slate-300">{interview.decision ? formatStatusText(interview.decision) : "-"}</dd>
                       </div>
                       <div>
                         <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Recruiter decision</dt>
-                        <dd className="mt-0.5">{renderRecruiterDecision(model)}</dd>
+                        <dd className="mt-0.5">{renderRecruiterDecision(model) ?? <span className="text-slate-600">-</span>}</dd>
                       </div>
                       <div>
                         <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Access</dt>
@@ -1736,10 +1833,16 @@ export default function InterviewsPage() {
                       </div>
                       <div>
                         <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Recording</dt>
-                        <dd className="mt-0.5 pl-2">{renderRecording(interview)}</dd>
+                        <dd className="mt-0.5">{renderRecording(interview)}</dd>
                       </div>
                     </dl>
                     {model.hasRowNotes ? <div className="mt-3">{renderRowNotes(model)}</div> : null}
+                    {model.hasHiringActions ? (
+                      <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-800/80 pt-3">
+                        {renderPrimaryAction(model)}
+                        {renderActions(model)}
+                      </div>
+                    ) : null}
                   </li>
                 )
               })}
