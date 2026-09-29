@@ -1,18 +1,10 @@
 "use client"
-import { formatLabel } from "@/lib/client/format-label"
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
 
 import { buildAuthUrl } from "@/lib/client/auth-query"
-import { formatDate } from "@/lib/client/date-format"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
-
-function statusTone(status) {
-  if (status === "PUBLISHED") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-  if (status === "ARCHIVED") return "border-slate-700 bg-slate-800/60 text-slate-400"
-  return "border-amber-500/30 bg-amber-500/10 text-amber-200"
-}
 
 function StatTile({ label, value }) {
   return (
@@ -99,39 +91,16 @@ export default function AssessmentSummary({ isLoading = false }) {
             />
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40">
-            {recent.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-slate-400">
-                No assessments yet.{" "}
-                <Link href={buildAuthUrl("/assessments", searchParams)} className="text-violet-300 hover:text-violet-200">
-                  Create one to get started.
-                </Link>
-              </div>
-            ) : (
-              <ul className="divide-y divide-slate-800/80">
-                {recent.map((assessment) => (
-                  <li key={assessment.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                    <div className="min-w-0">
-                      <Link
-                        href={buildAuthUrl(`/assessments/${assessment.id}/results`, searchParams)}
-                        className="truncate text-sm font-medium text-white hover:text-violet-200 hover:underline"
-                      >
-                        {assessment.title}
-                      </Link>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {assessment.invitesSent} sent · {assessment.completedAttempts} completed · {formatDate(assessment.createdAt)}
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] ${statusTone(assessment.status)}`}
-                    >
-                      {formatLabel(assessment.status)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {/* The dashboard shows activity only; individual assessments and
+              their draft/published state live on the Assessments page. */}
+          {recent.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/40 px-5 py-6 text-center text-sm text-slate-400">
+              No assessments yet.{" "}
+              <Link href={buildAuthUrl("/assessments", searchParams)} className="text-cyan-300 hover:text-cyan-200">
+                Create one to get started.
+              </Link>
+            </div>
+          ) : null}
         </>
       )}
     </div>
