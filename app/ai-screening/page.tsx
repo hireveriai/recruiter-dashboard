@@ -747,6 +747,55 @@ function buildComparisonInsight(matches: MatchRow[]) {
   return `Why ${best.candidateName} is better than ${challenger.candidateName}: ${reasons.join(" ")}`
 }
 
+// Names typed entirely in capitals (or lowercase) show in title case;
+// mixed-case names stay as entered.
+function displayCandidateName(name: string) {
+  const value = String(name ?? "").trim()
+  if (!value) return "Candidate"
+  if (value !== value.toUpperCase() && value !== value.toLowerCase()) return value
+  return value.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_, lead: string, letter: string) => lead + letter.toUpperCase())
+}
+
+function candidateInitials(name: string) {
+  const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return "?"
+  return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : "")).toUpperCase()
+}
+
+function getScoreBar(score: number) {
+  if (score >= 82) return "bg-emerald-400"
+  if (score >= 62) return "bg-cyan-400"
+  if (score >= 42) return "bg-amber-400"
+  return "bg-rose-400"
+}
+
+function getRiskLabel(risk: MatchRow["riskLevel"]) {
+  if (risk === "LOW") return "Low risk"
+  if (risk === "MEDIUM") return "Medium risk"
+  return "High risk"
+}
+
+const primaryAction =
+  "hv-solid-action inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+const secondaryAction =
+  "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-cyan-400/40 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+const stepCard =
+  "hv-elevated-section scroll-mt-28 rounded-xl border border-slate-800 bg-slate-900/80 p-5 shadow-[0_14px_44px_rgba(2,6,23,0.18)]"
+
+function StepHeading({ step, title, detail }: { step: number; title: string; detail: string }) {
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-400/15 text-xs font-semibold text-cyan-200">
+        {step}
+      </span>
+      <div className="min-w-0">
+        <h2 className="text-base font-semibold text-white">{title}</h2>
+        <p className="mt-0.5 truncate text-sm text-slate-400">{detail}</p>
+      </div>
+    </div>
+  )
+}
+
 function getScoreColor(score: number) {
   if (score >= 82) {
     return "text-emerald-300"
@@ -2473,38 +2522,46 @@ export default function AiScreeningPage() {
       <ScreeningAnalysisOverlay phase={screeningLoaderPhase} />
       <Navbar onSendInterviewClick={() => setOpenSendInterview(true)} />
 
-      <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_14px_44px_rgba(2,6,23,0.22)]">
-          <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-400/40 hover:bg-slate-900 hover:text-white" />
-              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">VERIS Screening</p>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">Pre-Interview Intelligence Layer</h1>
-              <p className="mt-4 text-base leading-7 text-slate-400">
-                Bulk resume parsing, JD intelligence, candidate ranking, email capture, and interview invitation dispatch in one recruiter workflow.
+      <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <header className="max-w-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">VERIS Screening</p>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">Resume Screening</h1>
+            <p className="mt-1 text-sm leading-6 text-slate-400">
+              Upload resumes, pick the job, and VERIS ranks candidates by fit and risk. You choose who gets an interview.
+            </p>
+          </header>
+          <BackToDashboardLink className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white" />
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {([
+            ["Matched", stats.candidates, "neutral"],
+            ["Strong fit", stats.strongFit, "accent"],
+            ["Average score", `${stats.averageScore}%`, "neutral"],
+            ["No email", stats.noEmail, "warning"],
+          ] as Array<[string, string | number, "neutral" | "accent" | "warning"]>).map(([label, value, tone]) => (
+            <div
+              key={label}
+              className={`hv-elevated-section rounded-xl border px-4 py-3.5 shadow-[0_14px_44px_rgba(2,6,23,0.18)] ${
+                tone === "accent"
+                  ? "border-cyan-300/25 bg-cyan-400/[0.06]"
+                  : tone === "warning"
+                    ? "border-amber-400/25 bg-amber-500/[0.06]"
+                    : "border-slate-800 bg-slate-900/80"
+              }`}
+            >
+              <p className="text-xs text-slate-400">{label}</p>
+              <p
+                className={`mt-1.5 text-2xl font-semibold tabular-nums ${
+                  tone === "accent" ? "text-cyan-100" : tone === "warning" ? "text-amber-200" : "text-white"
+                }`}
+              >
+                {value}
               </p>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[680px]">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Matched</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.candidates}</p>
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-400">Strong Fit</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.strongFit}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-sm text-slate-500">Avg Score</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{stats.averageScore}%</p>
-              </div>
-              <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4">
-                <p className="text-sm text-amber-200/70">No Email</p>
-                <p className="mt-3 text-3xl font-semibold text-amber-100">{stats.noEmail}</p>
-              </div>
-            </div>
-          </div>
-        </section>
+          ))}
+        </div>
 
         <ScreeningWorkflow
           className="mt-6"
@@ -2522,7 +2579,7 @@ export default function AiScreeningPage() {
         />
 
         {(notice || error) ? (
-          <section className="hv-preserve-dark mt-6 rounded-2xl border border-slate-800 bg-[#0f172a] px-5 py-4">
+          <section className="mt-6 rounded-xl border border-slate-800 bg-slate-900/80 px-5 py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className={`text-sm font-medium ${error ? "text-rose-200" : "text-slate-200"}`}>
@@ -2537,18 +2594,15 @@ export default function AiScreeningPage() {
           <TrialStatusCard credits={trialCredits} />
         </div>
 
-        <div className="mt-8 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <section id="screening-resume-intake" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Resume Intake</h2>
-                <p className="mt-1 text-sm text-slate-400">{files.length} selected, {uploadedResumeCount} ready</p>
-              </div>
+        <div className="mt-6 grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+          <section id="screening-resume-intake" className={stepCard}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <StepHeading step={1} title="Upload resumes" detail={`${files.length} selected, ${uploadedResumeCount} ready`} />
               <button
                 type="button"
                 onClick={handleUpload}
                 disabled={isBusy || screeningLimitReached}
-                className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                className={primaryAction}
               >
                 <PlayIcon />
                 {uploading ? "Uploading..." : "Start VERIS Screening"}
@@ -2570,38 +2624,36 @@ export default function AiScreeningPage() {
               }}
               onDrop={handleDrop}
               className={[
-                "mt-5 flex min-h-[210px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center transition",
+                "mt-4 flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center transition",
                 dragActive
                   ? "border-cyan-300 bg-cyan-400/10 text-cyan-100"
                   : "border-slate-700 bg-slate-950/35 text-slate-300 hover:border-slate-500 hover:bg-slate-950/45",
               ].join(" ")}
             >
               <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple className="sr-only" onChange={handleFileChange} disabled={isBusy} />
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900/80 text-cyan-200">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-200">
                 <UploadIcon />
               </div>
-              <p className="mt-4 text-base font-semibold text-white">Drop PDF/DOCX resumes to begin screening</p>
+              <p className="mt-3 text-base font-semibold text-white">Drop PDF or DOCX resumes here, or click to choose</p>
               <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">Resumes are parsed, emails are validated, and everything is saved securely to your workspace.</p>
             </label>
 
-            <p className="mt-3 text-sm text-slate-400">Step 1 of 4 — Upload resumes to start the screening process</p>
-
-            <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/25 px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-slate-500">Current Upload</p>
+            <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/25 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Current upload</p>
               <p className={`mt-2 text-sm font-semibold ${resumeState === "IDLE" ? "text-slate-400" : "text-cyan-100"}`}>
                 {resumeStatusText}
               </p>
             </div>
 
             {resumeDisplayRows.length > 0 ? (
-              <div className="mt-5 max-h-72 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/25">
+              <div className="mt-4 max-h-72 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/25">
                 {resumeDisplayRows.map((row) => (
                   <div key={row.id} className="flex items-center justify-between gap-4 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-white">{row.name || row.fileName}</p>
                       {row.email || row.error || row.status === "READY" ? (
                         <p className="mt-1 truncate text-xs text-slate-500">
-                          {row.email || row.error || "No Email ⚠️"}
+                          {row.email || row.error || "No email found"}
                         </p>
                       ) : null}
                     </div>
@@ -2614,18 +2666,15 @@ export default function AiScreeningPage() {
             ) : null}
           </section>
 
-          <section id="screening-job-intelligence" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Job Intelligence</h2>
-                <p className="mt-1 text-sm text-slate-400">{resolvedActiveJob ? resolvedActiveJob.title : "No active screening job"}</p>
-              </div>
+          <section id="screening-job-intelligence" className={stepCard}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <StepHeading step={2} title="Choose the job" detail={resolvedActiveJob ? resolvedActiveJob.title : "No job selected yet"} />
               <div className="text-right">
                 <button
                   type="button"
                   onClick={handleProcessJob}
                   disabled={!canAnalyzeJob}
-                  className="rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-2.5 text-sm font-semibold text-blue-100 transition hover:border-blue-300/50 hover:bg-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={secondaryAction}
                 >
                   {isProcessingJD ? "Analyzing..." : "Analyze Job"}
                 </button>
@@ -2635,9 +2684,9 @@ export default function AiScreeningPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4">
+            <div className="mt-4 grid gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-300">Select Existing Job</label>
+                <label className="text-sm font-medium text-slate-300">Job</label>
                 <select
                   value={selectedExistingJobId}
                   onChange={(event) => {
@@ -2658,7 +2707,7 @@ export default function AiScreeningPage() {
                     }
                   }}
                   disabled={isBusy}
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400/60"
+                  className="mt-2 h-11 w-full rounded-xl border border-slate-700 bg-slate-950/50 px-3 text-sm text-white outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10"
                 >
                   <option value="">Select a job</option>
                   {existingJobs.map((job) => (
@@ -2672,18 +2721,19 @@ export default function AiScreeningPage() {
                     setCreateJobModalOpen(true)
                   }}
                   disabled={isBusy}
-                  className="mt-3 rounded-xl border border-slate-700 bg-slate-950/40 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-2 text-sm font-semibold text-cyan-300 transition hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  + Create / Paste New Job Description
+                  + Paste a new job description
                 </button>
               </div>
             </div>
 
             {resolvedActiveJob ? (
-              <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/25 p-4">
-                <div className="flex flex-wrap gap-2">
+              <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/25 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Skills VERIS will look for</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
                   {resolvedActiveJob.requiredSkills.slice(0, 12).map((skill) => (
-                    <span key={skill} className="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-xs text-slate-200">
+                    <span key={skill} className="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-0.5 text-xs text-slate-200">
                       {skill}
                     </span>
                   ))}
@@ -2696,9 +2746,9 @@ export default function AiScreeningPage() {
                         type="button"
                         onClick={handleMatchCandidates}
                         disabled={!canRunMatching || screeningLimitReached}
-                        className="shrink-0 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-300/50 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`shrink-0 ${primaryAction}`}
                       >
-                        {isMatching ? "Matching..." : "Run Matching"}
+                        {isMatching ? "Matching..." : "Rank candidates"}
                       </button>
                       {(!canRunMatching || screeningLimitReached) && !isBusy ? (
                         <button
@@ -2727,18 +2777,15 @@ export default function AiScreeningPage() {
           </section>
         </div>
 
-        <section ref={resultsSectionRef} className="mt-8 scroll-mt-28 overflow-visible rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
-          <div className="border-b border-slate-800 px-6 py-5">
+        <section ref={resultsSectionRef} className="hv-elevated-section mt-6 scroll-mt-28 overflow-visible rounded-xl border border-slate-800 bg-slate-900/80 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+          <div className="border-b border-slate-800 px-4 py-4 lg:px-5">
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Screening Results</h2>
-                <p className="mt-1 text-sm text-slate-400">{activeJob ? activeJob.title : "Process a JD to populate ranked candidates."}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                  <span className="font-medium text-blue-100">{recommendedCount} candidates recommended for interview</span>
-                  <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs text-blue-100" title="VERIS recommended based on match score and risk analysis">
-                    VERIS recommended based on match score and risk analysis
-                  </span>
-                </div>
+              <div className="min-w-0">
+                <StepHeading step={3} title="Review ranked candidates" detail={activeJob ? activeJob.title : "Choose a job and rank candidates to see results here."} />
+                <p className="mt-2 text-sm text-slate-300">
+                  <span className="font-semibold text-cyan-200">{recommendedCount}</span> recommended for interview
+                  <span className="text-slate-500"> &middot; based on match score and risk</span>
+                </p>
               </div>
               {canShowCleanupActions ? (
                 <div className="relative">
@@ -2776,48 +2823,43 @@ export default function AiScreeningPage() {
               ) : null}
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Total Candidates</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{decisionSummary.totalCandidates}</p>
-              </div>
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-200/70">Strong Matches</p>
-                <p className="mt-2 text-2xl font-semibold text-emerald-100">{decisionSummary.strongMatches}</p>
-              </div>
-              <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-blue-200/70">Borderline</p>
-                <p className="mt-2 text-2xl font-semibold text-blue-100">{decisionSummary.borderlineCandidates}</p>
-              </div>
-              <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-rose-200/70">Rejected</p>
-                <p className="mt-2 text-2xl font-semibold text-rose-100">{decisionSummary.rejectedCandidates}</p>
-              </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+              {([
+                ["Total candidates", decisionSummary.totalCandidates, "text-white", "border-slate-800"],
+                ["Strong matches", decisionSummary.strongMatches, "text-emerald-300", "border-emerald-400/25"],
+                ["Borderline", decisionSummary.borderlineCandidates, "text-cyan-200", "border-slate-800"],
+                ["Not a fit", decisionSummary.rejectedCandidates, "text-rose-300", "border-slate-800"],
+              ] as Array<[string, number, string, string]>).map(([label, value, tone, border]) => (
+                <div key={label} className={`rounded-xl border bg-slate-950/30 px-4 py-3 ${border}`}>
+                  <p className="text-xs text-slate-400">{label}</p>
+                  <p className={`mt-1 text-2xl font-semibold tabular-nums ${tone}`}>{value}</p>
+                </div>
+              ))}
             </div>
 
-            <div className="mt-5 grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.07] p-4">
+            <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
+              <div className="rounded-xl border border-slate-800 border-l-2 border-l-emerald-400 bg-slate-950/25 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-emerald-100">Top Matches</h3>
-                    <p className="mt-1 text-xs text-emerald-100/60">Score 80+ with low risk</p>
+                    <h3 className="text-sm font-semibold text-white">Top matches</h3>
+                    <p className="mt-0.5 text-xs text-slate-400">Score 80+ with low risk</p>
                   </div>
-                  <span className="rounded-full border border-emerald-400/20 px-3 py-1 text-xs font-semibold text-emerald-100">
+                  <span className="rounded-full border border-emerald-400/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
                     {decisionSummary.topMatches.length}
                   </span>
                 </div>
                 {decisionSummary.topMatches.length > 0 ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     {decisionSummary.topMatches.slice(0, 4).map((match) => (
-                      <div key={match.id} className="rounded-xl border border-emerald-400/15 bg-slate-950/35 p-3">
+                      <div key={match.id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-white">{match.candidateName}</p>
-                            <p className="mt-1 truncate text-xs text-slate-500">{match.email || "No email captured"}</p>
+                            <p className="truncate text-sm font-semibold text-white" title={match.candidateName}>{displayCandidateName(match.candidateName)}</p>
+                            <p className="mt-0.5 truncate text-xs text-slate-500">{match.email || "No email captured"}</p>
                           </div>
-                          <span className="text-lg font-semibold text-emerald-200">{match.matchScore}%</span>
+                          <span className="text-lg font-semibold tabular-nums text-emerald-300">{match.matchScore}%</span>
                         </div>
-                        <p className="mt-3 text-xs leading-5 text-emerald-50/80">{getCandidateVerdict(match)}</p>
+                        <p className="mt-2 text-xs leading-5 text-slate-300">{getCandidateVerdict(match)}</p>
                       </div>
                     ))}
                   </div>
@@ -2836,9 +2878,9 @@ export default function AiScreeningPage() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
-                <h3 className="text-sm font-semibold text-blue-100">Suggested Actions</h3>
-                <div className="mt-4 space-y-3 text-sm leading-6 text-blue-50/85">
+              <div className="rounded-xl border border-slate-800 border-l-2 border-l-cyan-400 bg-slate-950/25 p-4">
+                <h3 className="text-sm font-semibold text-white">Suggested next steps</h3>
+                <div className="mt-3 space-y-2 text-sm leading-6 text-slate-300">
                   <p>Send interview to {decisionSummary.strongMatches} candidate{decisionSummary.strongMatches === 1 ? "" : "s"}.</p>
                   <p>Review {decisionSummary.reviewCandidates} candidate{decisionSummary.reviewCandidates === 1 ? "" : "s"} before deciding.</p>
                   {decisionSummary.rejectedCandidates > 0 ? (
@@ -2849,10 +2891,10 @@ export default function AiScreeningPage() {
             </div>
 
             {screeningRuns.length > 0 ? (
-              <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/25 p-4">
+              <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/25 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-white">Recent Screening Runs</h3>
+                    <h3 className="text-sm font-semibold text-white">Recent screening runs</h3>
                     <p className="mt-1 text-xs text-slate-500">Last 5 runs for this job</p>
                   </div>
                   <button
@@ -2861,7 +2903,7 @@ export default function AiScreeningPage() {
                     disabled={isBusy || !resolvedActiveJob || !hasUploadedResumes}
                     className="rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Re-run matching
+                    Rank again
                   </button>
                 </div>
                 <div className="mt-4 grid gap-2 lg:grid-cols-5">
@@ -2901,17 +2943,17 @@ export default function AiScreeningPage() {
               </div>
             ) : null}
 
-            <div className="mt-5 mb-4 grid w-full grid-cols-[minmax(145px,1.05fr)_minmax(125px,0.85fr)_minmax(105px,0.7fr)_minmax(205px,1.35fr)_minmax(145px,0.95fr)_minmax(205px,1.1fr)] items-center gap-2">
+            <div className="mt-4 mb-3 grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(145px,1.05fr)_minmax(125px,0.85fr)_minmax(105px,0.7fr)_minmax(205px,1.35fr)_minmax(145px,0.95fr)_minmax(205px,1.1fr)]">
               <div className="contents">
-                <select value={recommendationFilter} onChange={(event) => setRecommendationFilter(event.target.value as (typeof recommendationFilters)[number])} disabled={isBusy} className="h-10 w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/50 px-2.5 py-2 text-[12px] text-white outline-none">
-                  {recommendationFilters.map((filter) => <option key={filter} value={filter} className="bg-slate-950 text-white">{getRecommendationLabel(filter)}</option>)}
+                <select value={recommendationFilter} onChange={(event) => setRecommendationFilter(event.target.value as (typeof recommendationFilters)[number])} disabled={isBusy} className="h-10 w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/50 px-2.5 py-2 text-[13px] text-white outline-none transition focus:border-cyan-300/60">
+                  {recommendationFilters.map((filter) => <option key={filter} value={filter} className="bg-slate-950 text-white">{filter === "ALL" ? "All recommendations" : getRecommendationDisplayLabel(filter)}</option>)}
                 </select>
-                <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value as (typeof riskFilters)[number])} disabled={isBusy} className="h-10 w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/50 px-2.5 py-2 text-[12px] text-white outline-none">
-                  {riskFilters.map((filter) => <option key={filter} value={filter} className="bg-slate-950 text-white">{filter === "ALL" ? "All Risk Levels" : filter}</option>)}
+                <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value as (typeof riskFilters)[number])} disabled={isBusy} className="h-10 w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/50 px-2.5 py-2 text-[13px] text-white outline-none transition focus:border-cyan-300/60">
+                  {riskFilters.map((filter) => <option key={filter} value={filter} className="bg-slate-950 text-white">{filter === "ALL" ? "All risk levels" : getRiskLabel(filter)}</option>)}
                 </select>
-                <select value={sortMode} onChange={(event) => setSortMode(event.target.value as "score" | "recent")} disabled={isBusy} className="h-10 w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/50 px-2.5 py-2 text-[12px] text-white outline-none">
-                  <option value="score" className="bg-slate-950 text-white">Top Score</option>
-                  <option value="recent" className="bg-slate-950 text-white">Most Recent</option>
+                <select value={sortMode} onChange={(event) => setSortMode(event.target.value as "score" | "recent")} disabled={isBusy} className="h-10 w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/50 px-2.5 py-2 text-[13px] text-white outline-none transition focus:border-cyan-300/60">
+                  <option value="score" className="bg-slate-950 text-white">Sort: Top score</option>
+                  <option value="recent" className="bg-slate-950 text-white">Sort: Most recent</option>
                 </select>
                 <select
                   value={includeAllCandidates ? "GLOBAL" : "BATCH"}
@@ -2919,10 +2961,10 @@ export default function AiScreeningPage() {
                   disabled={isBusy}
                   aria-label="Scope"
                   title="Choose whether to match only uploaded resumes or include your full candidate database"
-                  className="h-10 w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/50 px-2.5 py-2 text-[12px] text-white outline-none"
+                  className="h-10 w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/50 px-2.5 py-2 text-[13px] text-white outline-none transition focus:border-cyan-300/60"
                 >
-                  <option value="BATCH" className="bg-slate-950 text-white">Scope: Uploaded Resumes Only</option>
-                  <option value="GLOBAL" className="bg-slate-950 text-white">Scope: All Candidates (Database)</option>
+                  <option value="BATCH" className="bg-slate-950 text-white">Search: This upload only</option>
+                  <option value="GLOBAL" className="bg-slate-950 text-white">Search: All my candidates</option>
                 </select>
               </div>
 
@@ -2931,12 +2973,12 @@ export default function AiScreeningPage() {
                   type="button"
                   onClick={selectRecommendedCandidates}
                   disabled={isBusy || flowStep !== "MATCHED" || !activeJob || matches.length === 0}
-                  className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-cyan-400/30 bg-transparent px-2 py-2 text-[12px] font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-700 bg-slate-900/60 px-2 py-2 text-[13px] font-semibold text-slate-200 transition hover:border-cyan-400/40 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Select Recommended
+                  Select recommended
                 </button>
-                <div className="flex h-10 w-full min-w-0 items-center overflow-hidden rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-[12px] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.08)]">
-                  <span className="flex h-full shrink-0 items-center border-r border-cyan-400/20 px-2.5 font-semibold">Send Top</span>
+                <div className="flex h-10 w-full min-w-0 items-center overflow-hidden rounded-xl border border-slate-700 bg-slate-900/60 text-[13px] text-slate-200">
+                  <span className="flex h-full shrink-0 items-center border-r border-slate-700 px-2.5 font-semibold">Send top</span>
                   <input
                     type="number"
                     min={1}
@@ -2951,9 +2993,9 @@ export default function AiScreeningPage() {
                     type="button"
                     onClick={openTopCandidateSendConfirmation}
                     disabled={isBusy || flowStep !== "MATCHED" || !activeJob || matches.length === 0}
-                    className="h-full min-w-0 flex-1 border-l border-cyan-400/20 px-2 text-[12px] font-semibold text-cyan-50 transition hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="hv-solid-action h-full min-w-0 flex-1 bg-cyan-600 px-2 text-[13px] font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Candidates
+                    candidates
                   </button>
                 </div>
               </div>
@@ -2964,47 +3006,43 @@ export default function AiScreeningPage() {
                 <button
                   type="button"
                   onClick={() => setCompareModalOpen(true)}
-                  className="rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:border-blue-300/50 hover:bg-blue-500/15"
+                  className={secondaryAction}
                 >
-                  Compare Candidates
+                  Compare {comparisonMatches.length} candidates
                 </button>
               ) : null}
             </div>
           </div>
 
-          <div className="w-full">
-            <table className="w-full table-fixed text-[13px] leading-[1.4]">
+          {/* Scrolls sideways only on small screens; from lg the headings pin
+              under the navbar, which a scrolling box would prevent. */}
+          <div className="w-full overflow-x-auto lg:overflow-visible">
+            <table className="w-full min-w-[920px] table-fixed text-[13px] leading-[1.4]">
               <colgroup>
-                <col className="w-[6%]" />
-                <col className="w-[6%]" />
+                <col className="w-[5%]" />
+                <col className="w-[27%]" />
+                <col className="w-[12%]" />
                 <col className="w-[14%]" />
+                <col className="w-[28%]" />
                 <col className="w-[14%]" />
-                <col className="w-[9%]" />
-                <col className="w-[8%]" />
-                <col className="w-[10%]" />
-                <col className="w-[25%]" />
-                <col className="w-[8%]" />
               </colgroup>
-              <thead className="bg-slate-950/20 text-slate-400">
-                <tr>
-                  <th className="px-3 py-2.5 text-center text-[12px] font-medium leading-[1.4]">Compare</th>
-                  <th className="px-3 py-2.5 text-center text-[12px] font-medium leading-[1.4]">Selected</th>
-                  <th className="px-3 py-2.5 text-left text-[12px] font-medium leading-[1.4]">Candidate Name</th>
-                  <th className="px-3 py-2.5 text-left text-[12px] font-medium leading-[1.4]">Email</th>
-                  <th className="px-3 py-2.5 text-left text-[12px] font-medium leading-[1.4]">Match Score</th>
-                  <th className="px-3 py-2.5 text-left text-[12px] font-medium leading-[1.4]">Risk Level</th>
-                  <th className="px-3 py-2.5 text-left text-[12px] font-medium leading-[1.4]">Recommendation</th>
-                  <th className="px-3 py-2.5 text-left text-[12px] font-medium leading-[1.4]">VERIS Insights</th>
-                  <th className="px-3 py-2.5 text-right text-[12px] font-medium leading-[1.4]">Actions</th>
+              <thead className="bg-slate-950 text-slate-500 shadow-[0_1px_0_var(--color-slate-800)] lg:sticky lg:top-[77px] lg:z-10">
+                <tr className="[&>th]:py-2.5 [&>th]:text-[10.5px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-[0.14em]">
+                  <th className="px-3 text-center"><span className="sr-only">Select for interview</span></th>
+                  <th className="px-3 text-left">Candidate</th>
+                  <th className="px-3 text-left">Match</th>
+                  <th className="px-3 text-left">Fit &amp; risk</th>
+                  <th className="px-3 text-left">Why</th>
+                  <th className="px-3 text-right">Actions</th>
                 </tr>
               </thead>
               {isSwitchingRuns ? (
-                <TableSkeleton rows={7} columns={9} showAvatar showStatusChip />
+                <TableSkeleton rows={7} columns={6} showAvatar showStatusChip />
               ) : (
               <tbody>
                 {filteredMatches.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-10 text-center text-slate-400">
+                    <td colSpan={6} className="p-10 text-center text-slate-400">
                       <div>
                         <p className="font-medium text-slate-300">{isMatching ? "Analysis is running..." : selectedRun ? "No stored results for this screening run" : "No matching candidates found"}</p>
                         <p className="mt-2 text-sm text-slate-500">
@@ -3018,7 +3056,7 @@ export default function AiScreeningPage() {
                             <ul className="mt-3 space-y-2 text-sm text-slate-400">
                               {selectedRun ? (
                                 <>
-                                  <li>Stored result rows were not found in screening_run_matches for this run.</li>
+                                  <li>No stored results were found for this run.</li>
                                   <li>The run may have been created before snapshot persistence was enabled.</li>
                                   <li>Run ID: {selectedRun.id}</li>
                                 </>
@@ -3076,100 +3114,100 @@ export default function AiScreeningPage() {
                     ].filter(Boolean).join("\n")
 
                     return (
-                    <tr key={match.id} className="border-t border-slate-800/80 align-middle text-slate-200">
-                      <td className="px-3 py-2.5 align-middle">
-                        <label className="flex items-center justify-center text-xs text-slate-400">
-                          <input
-                            type="checkbox"
-                            checked={isCompared}
-                            onChange={(event) => toggleCompareCandidate(match.candidateId, event.target.checked)}
-                            disabled={isBusy || flowStep !== "MATCHED" || compareLimitReached}
-                            className="h-4 w-4 rounded border-slate-600 bg-slate-950 accent-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label={`Compare ${match.candidateName}`}
-                          />
-                        </label>
-                      </td>
-                      <td className="px-3 py-2.5 align-middle">
-                        <div className="flex items-center justify-center gap-2">
+                    <tr key={match.id} className={`border-t border-slate-800/80 align-middle text-slate-200 transition-colors hover:bg-slate-800/25 ${isSelected ? "bg-cyan-400/[0.04]" : ""}`}>
+                      <td className="px-3 py-3 align-middle">
+                        <div className="flex items-center justify-center">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(event) => toggleCandidateSelection(match.candidateId, event.target.checked)}
                             disabled={isBusy || flowStep !== "MATCHED"}
-                            className="h-4 w-4 rounded border-slate-600 bg-slate-950 accent-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="h-4 w-4 rounded border-slate-600 bg-slate-950 accent-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label={`Select ${match.candidateName} for interview`}
                           />
-                          <div className="flex min-w-0 items-center gap-1">
-                            {isRecommended ? (
-                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-400/20 bg-blue-500/10 text-[9px] font-semibold text-blue-100" title="VERIS recommended based on match score and risk analysis" aria-label="VERIS recommended">
-                                V
-                              </span>
-                            ) : null}
-                            {isHighRisk ? (
-                              <span className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400/30 bg-amber-500/10 text-xs font-bold text-amber-200" aria-label="High risk warning">
-                                !
-                                <span className="absolute left-0 top-full z-50 mt-2 hidden w-64 rounded-lg border border-white/10 bg-[#0B1220] p-3 text-left text-xs font-normal leading-5 text-gray-200 shadow-xl group-hover:block">
-                                  High risk candidate. Review carefully before sending.
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 align-middle">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${isRecommended ? "bg-cyan-400/15 text-cyan-200" : "bg-slate-800 text-slate-300"}`}>
+                            {candidateInitials(match.candidateName)}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <span className="truncate text-sm font-semibold text-white" title={match.candidateName}>{displayCandidateName(match.candidateName)}</span>
+                              {isRecommended ? (
+                                <span className="shrink-0 rounded-full border border-cyan-400/30 px-1.5 py-px text-[10px] font-semibold text-cyan-200" title="VERIS recommended based on match score and risk analysis">
+                                  Recommended
                                 </span>
-                              </span>
-                            ) : null}
+                              ) : null}
+                              {isHighRisk ? (
+                                <span className="group relative inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/10 text-[10px] font-bold text-amber-200" aria-label="High risk warning">
+                                  !
+                                  <span className="absolute left-0 top-full z-50 mt-2 hidden w-64 rounded-lg border border-white/10 bg-[#0B1220] p-3 text-left text-xs font-normal leading-5 text-gray-200 shadow-xl group-hover:block">
+                                    High risk candidate. Review carefully before sending.
+                                  </span>
+                                </span>
+                              ) : null}
+                            </div>
+                            {editingCandidateId === match.candidateId ? (
+                              <div className="mt-1 flex min-w-0 gap-2">
+                                <input
+                                  value={emailDraft}
+                                  onChange={(event) => setEmailDraft(event.target.value)}
+                                  className="h-8 min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 text-xs text-white outline-none focus:border-cyan-400/60"
+                                  placeholder="candidate@email.com"
+                                  aria-label={`Email for ${match.candidateName}`}
+                                />
+                                <button type="button" onClick={() => handleSaveEmail(match.candidateId)} className="hv-solid-action h-8 rounded-lg bg-cyan-600 px-3 text-xs font-semibold text-white">
+                                  Save
+                                </button>
+                              </div>
+                            ) : match.email ? (
+                              <span className="block truncate text-xs text-slate-400" title={match.email}>{match.email}</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingCandidateId(match.candidateId)
+                                  setEmailDraft("")
+                                }}
+                                className="mt-0.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-px text-[11px] font-medium text-amber-200 transition hover:border-amber-300/50"
+                              >
+                                No email &middot; add one
+                              </button>
+                            )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 align-middle font-medium text-white">
-                        <span className="block leading-[1.4]">{match.candidateName}</span>
-                      </td>
-                      <td className="px-3 py-2.5 align-middle">
-                        {editingCandidateId === match.candidateId ? (
-                          <div className="flex min-w-0 gap-2">
-                            <input
-                              value={emailDraft}
-                              onChange={(event) => setEmailDraft(event.target.value)}
-                              className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/60"
-                              placeholder="candidate@email.com"
-                            />
-                            <button type="button" onClick={() => handleSaveEmail(match.candidateId)} className="rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-100">
-                              Save
-                            </button>
+                      <td className="px-3 py-3 align-middle">
+                        <div className="w-full max-w-[96px]">
+                          <p className={`text-sm font-semibold tabular-nums leading-none ${getScoreColor(match.matchScore)}`}>{match.matchScore}%</p>
+                          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+                            <div className={`h-full rounded-full ${getScoreBar(match.matchScore)}`} style={{ width: `${Math.max(3, Math.min(100, match.matchScore))}%` }} />
                           </div>
-                        ) : match.email ? (
-                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-slate-200" title={match.email}>{match.email}</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingCandidateId(match.candidateId)
-                              setEmailDraft("")
-                            }}
-                            className="rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-200 transition hover:border-amber-300/40"
-                          >
-                            No Email ⚠️
-                          </button>
-                        )}
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            <span className={getConfidenceTone(confidenceLevel)}>{getConfidenceLabel(confidenceLevel)}</span> confidence
+                          </p>
+                        </div>
                       </td>
-                      <td className="px-3 py-2.5 align-middle">
-                        <span className={`font-semibold leading-[1.4] ${getScoreColor(match.matchScore)}`}>
-                          {match.matchScore}%{" \u2022 "}<span className={getConfidenceTone(confidenceLevel)}>{getConfidenceLabel(confidenceLevel)}</span>
-                        </span>
+                      <td className="px-3 py-3 align-middle">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`text-[13px] font-semibold leading-[1.4] ${getRecommendationTextTone(match.recommendation)}`}>
+                            {getRecommendationDisplayLabel(match.recommendation)}
+                          </span>
+                          <span className={`inline-flex rounded-full border px-2 py-px text-[11px] font-medium ${getRiskTone(match.riskLevel)}`}>
+                            {getRiskLabel(match.riskLevel)}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-3 py-2.5 align-middle">
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[12px] font-medium uppercase tracking-[0.08em] ${getRiskTone(match.riskLevel)}`}>
-                          {match.riskLevel}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 align-middle">
-                        <span className={`text-[13px] font-semibold leading-[1.4] ${getRecommendationTextTone(match.recommendation)}`}>
-                          {getRecommendationDisplayLabel(match.recommendation)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 align-middle text-slate-400">
+                      <td className="px-3 py-3 align-middle text-slate-400">
                         <div className="max-w-full">
                           <InsightTooltip
                             text={insightTooltipText}
                             showHint={false}
                             preview={(
-                              <div className="max-w-full space-y-1 text-[12px] leading-[1.4]">
-                                <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-slate-300">
+                              <div className="max-w-full text-[12px] leading-[1.4]">
+                                <p className="line-clamp-2 max-w-full text-slate-300">
                                   {insightSummary}
                                 </p>
                               </div>
@@ -3178,23 +3216,38 @@ export default function AiScreeningPage() {
                           <button
                             type="button"
                             onClick={() => setSelectedInsight(candidateInsight)}
-                            className="mt-1 inline-flex items-center gap-1.5 text-[12px] font-semibold text-cyan-200 transition hover:text-cyan-100"
+                            className="mt-1 inline-flex items-center gap-1.5 text-[12px] font-semibold text-cyan-300 transition hover:text-cyan-200"
                           >
                             <EyeIcon />
-                            View Details
+                            View details
                           </button>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 align-middle text-right">
+                      <td className="px-3 py-3 align-middle text-right">
                         <div className="flex justify-end gap-1.5">
+                          <label
+                            className={`inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border px-2 text-[11px] font-medium transition ${isCompared ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-100" : "border-slate-700 text-slate-300 hover:border-slate-500"} ${isBusy || flowStep !== "MATCHED" || compareLimitReached ? "cursor-not-allowed opacity-50" : ""}`}
+                            title={compareLimitReached ? "You can compare up to 4 candidates" : "Add to comparison"}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isCompared}
+                              onChange={(event) => toggleCompareCandidate(match.candidateId, event.target.checked)}
+                              disabled={isBusy || flowStep !== "MATCHED" || compareLimitReached}
+                              className="h-3.5 w-3.5 accent-cyan-600"
+                              aria-label={`Compare ${match.candidateName}`}
+                            />
+                            Compare
+                          </label>
                           <button
                             type="button"
                             onClick={() => {
                               setEditingCandidateId(match.candidateId)
                               setEmailDraft(match.email ?? "")
                             }}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/80 text-slate-300 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-100"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/60 text-slate-300 transition hover:border-cyan-400/40 hover:text-cyan-100"
                             aria-label={`Edit email for ${match.candidateName}`}
+                            title="Edit email"
                           >
                             <EditIcon />
                           </button>
@@ -3202,8 +3255,9 @@ export default function AiScreeningPage() {
                             type="button"
                             onClick={() => openSendConfirmation([match.candidateId])}
                             disabled={isBusy || flowStep !== "MATCHED" || !match.email || interviewLimitReached}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10 text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="hv-solid-action inline-flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-600 text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label={`Send interview to ${match.candidateName}`}
+                            title="Send interview"
                           >
                             <SendIcon />
                           </button>
@@ -3220,12 +3274,12 @@ export default function AiScreeningPage() {
         </section>
 
         {matches.length > 0 ? (
-          <div className="hv-theme-floating-action sticky bottom-4 z-40 mt-6 rounded-2xl border border-cyan-400/20 bg-[#0B1220]/95 p-4 shadow-[0_18px_70px_rgba(2,6,23,0.55)] backdrop-blur">
+          <div className="hv-theme-floating-action sticky bottom-4 z-40 mt-6 rounded-xl border border-cyan-400/25 bg-[#0B1220]/95 p-4 shadow-[0_18px_70px_rgba(2,6,23,0.55)] backdrop-blur">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-sm font-semibold text-white">Send Interview to Selected ({selectedCount})</p>
+                <p className="text-sm font-semibold text-white"><span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-xs text-cyan-200">4</span>Send interviews to {selectedCount} selected</p>
                 <p className="mt-1 text-xs text-slate-400">
-                  Human approval is required before VerisNova sends interview links.
+                  Nothing is sent until you confirm.
                   {selectedMissingEmailCount > 0 ? ` ${selectedMissingEmailCount} selected candidate${selectedMissingEmailCount === 1 ? "" : "s"} without email will be skipped.` : ""}
                 </p>
               </div>
@@ -3233,35 +3287,35 @@ export default function AiScreeningPage() {
                 type="button"
                 onClick={() => openSendConfirmation(selectedMatches.map((match) => match.candidateId))}
                 disabled={isBusy || flowStep !== "MATCHED" || selectedCount === 0 || interviewLimitReached}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-5 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                className={primaryAction}
               >
                 <SendIcon />
-                Send Interview
+                Send interview
               </button>
             </div>
           </div>
         ) : null}
 
         {sendResults.length > 0 ? (
-        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
+        <section className="hv-elevated-section mt-6 rounded-xl border border-slate-800 bg-slate-900/80 p-5 shadow-[0_14px_44px_rgba(2,6,23,0.2)]">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Interview Dispatch</h2>
+              <h2 className="text-base font-semibold text-white">Interviews sent</h2>
               <button type="button" onClick={() => setSendResults([])} className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white">
                 Clear
               </button>
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {sendResults.map((result) => (
-                <div key={`${result.candidateId}-${result.status}`} className="rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
+                <div key={`${result.candidateId}-${result.status}`} className="rounded-xl border border-slate-800 bg-slate-950/30 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-white">{result.candidateName}</p>
+                      <p className="truncate font-medium text-white" title={result.candidateName}>{displayCandidateName(result.candidateName)}</p>
                       <p className="mt-1 truncate text-sm text-slate-500">{result.email || "No email"}</p>
                       {result.error ? (
                         <p className="mt-2 text-xs leading-5 text-rose-300">{result.error}</p>
                       ) : null}
                     </div>
-                    <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em] ${result.status === "SENT" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : result.status === "SKIPPED" ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-rose-500/20 bg-rose-500/10 text-rose-300"}`}>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${result.status === "SENT" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : result.status === "SKIPPED" ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-rose-500/20 bg-rose-500/10 text-rose-300"}`}>
                       {formatLabel(result.status)}
                     </span>
                   </div>
