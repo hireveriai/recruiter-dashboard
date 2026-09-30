@@ -291,7 +291,7 @@ export default function AssessmentsPage() {
           <div role="tablist" aria-label="Assessment audience" className="inline-flex w-fit rounded-xl border border-slate-800 bg-slate-900/80 p-1 shadow-sm">
             {[
               ["CANDIDATE", "Candidates", "Hiring"],
-              ["EMPLOYEE", "Employees", "Development"],
+              ["EMPLOYEE", "Employees", "Workforce"],
             ].map(([value, label, hint]) => (
               <button
                 key={value}

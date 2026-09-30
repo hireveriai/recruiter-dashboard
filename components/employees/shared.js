@@ -179,7 +179,49 @@ export function EmployeesSectionHeader({ active, title, description, searchParam
 }
 
 /** Centered modal shell matching the existing dialogs. */
-export function ModalShell({ open, onClose, busy = false, labelledBy, eyebrow, title, description, children, footer, maxWidth = "max-w-lg" }) {
+/**
+ * Numbered section card inside a modal, matching the Send Interview dialogs'
+ * FormStep so every form in the dashboard reads the same way.
+ */
+export function FormSection({ number, title, hint, aside = null, children }) {
+  return (
+    <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-cyan-400/15 text-xs font-semibold text-cyan-200"
+          >
+            {number}
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-white">{title}</h3>
+            {hint ? <p className="mt-0.5 text-xs leading-5 text-slate-400">{hint}</p> : null}
+          </div>
+        </div>
+        {aside}
+      </div>
+      <div className="space-y-4">{children}</div>
+    </section>
+  )
+}
+
+/** Field label with a red asterisk for required fields. */
+export function FieldLabel({ children, required = false }) {
+  return (
+    <span className="text-sm text-slate-300">
+      {children}
+      {required ? <span className="ml-0.5 text-rose-300" aria-hidden="true">*</span> : null}
+    </span>
+  )
+}
+
+/*
+ * Header and footer stay fixed while the body scrolls, and the card is capped
+ * to the viewport: without this, a tall form (Add employee) ran past the end
+ * of the dialog because the dashboard caps [aria-modal] children's height.
+ */
+export function ModalShell({ open, onClose, busy = false, labelledBy, eyebrow, title, description, icon = null, children, footer, footerNote = null, maxWidth = "max-w-lg" }) {
   useEffect(() => {
     if (!open) return undefined
     const handleEscape = (event) => {
@@ -197,14 +239,21 @@ export function ModalShell({ open, onClose, busy = false, labelledBy, eyebrow, t
       aria-modal="true"
       aria-labelledby={labelledBy}
     >
-      <div className={`hv-theme-modal w-full ${maxWidth} rounded-[20px] border border-slate-700/70 bg-[#0a1020] text-white shadow-[0_24px_80px_rgba(2,6,23,0.55)]`}>
-        <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-5">
-          <div className="min-w-0">
-            {eyebrow ? <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">{eyebrow}</p> : null}
-            <h2 id={labelledBy} className="mt-1 text-lg font-semibold text-white">
-              {title}
-            </h2>
-            {description ? <p className="mt-1 text-sm text-slate-400">{description}</p> : null}
+      <div className={`hv-theme-modal flex max-h-[calc(100dvh-2rem)] w-full ${maxWidth} flex-col overflow-hidden rounded-[24px] border border-slate-700/70 bg-[#0a1020] text-white shadow-[0_30px_80px_rgba(2,6,23,0.55)] sm:max-h-[calc(100dvh-5rem)]`}>
+        <div className="flex flex-none items-start justify-between gap-4 border-b border-slate-800 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.10),transparent_45%)] px-6 py-5">
+          <div className="flex min-w-0 items-start gap-3.5">
+            {icon ? (
+              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-200 shadow-[0_0_24px_rgba(34,211,238,0.14)]">
+                {icon}
+              </span>
+            ) : null}
+            <div className="min-w-0">
+              {eyebrow ? <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">{eyebrow}</p> : null}
+              <h2 id={labelledBy} className="mt-1 text-xl font-semibold tracking-tight text-white">
+                {title}
+              </h2>
+              {description ? <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p> : null}
+            </div>
           </div>
           <button
             type="button"
@@ -215,8 +264,13 @@ export function ModalShell({ open, onClose, busy = false, labelledBy, eyebrow, t
             Close
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
-        {footer ? <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-800 px-6 py-4">{footer}</div> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">{children}</div>
+        {footer ? (
+          <div className="flex flex-none flex-wrap items-center justify-between gap-3 border-t border-slate-800 bg-slate-950/40 px-6 py-4">
+            <p className="text-xs text-slate-500">{footerNote}</p>
+            <div className="flex flex-wrap items-center justify-end gap-2">{footer}</div>
+          </div>
+        ) : null}
       </div>
     </div>
   )

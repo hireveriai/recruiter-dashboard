@@ -6,6 +6,8 @@ import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 import { showActionFeedback } from "@/lib/client/action-feedback"
 import {
   FIELD_CLASS,
+  FieldLabel,
+  FormSection,
   LABEL_CLASS,
   ModalShell,
   PRIMARY_BUTTON,
@@ -219,8 +221,20 @@ export default function AddEmployeeModal({ open, onClose, onSaved, employee = nu
       labelledBy="employee-form-title"
       eyebrow="Employees"
       title={isEdit ? "Edit employee" : "Add employee"}
-      description={isEdit ? undefined : "They can then be assigned employee assessments, challenges and tasks."}
-      maxWidth="max-w-2xl"
+      description={isEdit ? "Update their details, team and reporting line." : "They can then be assigned employee assessments, challenges and tasks."}
+      icon={
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="10" cy="8" r="3.5" />
+          <path d="M3.5 20a6.5 6.5 0 0 1 13 0" />
+          <path d="M19 8v6M16 11h6" />
+        </svg>
+      }
+      maxWidth="max-w-3xl"
+      footerNote={
+        <>
+          <span className="text-rose-300">*</span> Required
+        </>
+      }
       footer={
         <>
           <button type="button" onClick={handleClose} disabled={saving} className={SECONDARY_BUTTON}>
@@ -232,64 +246,85 @@ export default function AddEmployeeModal({ open, onClose, onSaved, employee = nu
         </>
       }
     >
-      <div className="space-y-5">
-        <section>
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Employee details <span className="normal-case tracking-normal text-slate-500">· first name and email required</span>
-          </h3>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+      <div className="space-y-4">
+        <FormSection number={1} title="Who they are" hint="Assessment invitations are sent to this email.">
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className={LABEL_CLASS}>
-              First name
-              <input value={form.firstName} onChange={update("firstName")} className={FIELD_CLASS} autoFocus />
+              <FieldLabel required>First name</FieldLabel>
+              <input value={form.firstName} onChange={update("firstName")} placeholder="e.g. Priya" className={FIELD_CLASS} autoFocus />
             </label>
             <label className={LABEL_CLASS}>
-              <span>Last name <span className="text-xs text-slate-500">(optional)</span></span>
-              <input value={form.lastName} onChange={update("lastName")} className={FIELD_CLASS} />
+              <FieldLabel>Last name</FieldLabel>
+              <input value={form.lastName} onChange={update("lastName")} placeholder="e.g. Sharma" className={FIELD_CLASS} />
             </label>
             <label className={LABEL_CLASS}>
-              Email
+              <FieldLabel required>Work email</FieldLabel>
               <input type="email" value={form.email} onChange={update("email")} placeholder="name@company.com" className={FIELD_CLASS} />
-              <span className="text-xs text-slate-500">Assessment invitations are sent here.</span>
             </label>
             <label className={LABEL_CLASS}>
-              <span>Employee ID <span className="text-xs text-slate-500">(optional)</span></span>
+              <FieldLabel>Employee ID</FieldLabel>
               <input value={form.employeeCode} onChange={update("employeeCode")} placeholder="e.g. EMP-1024" className={FIELD_CLASS} />
             </label>
+          </div>
+        </FormSection>
+
+        <FormSection number={2} title="Role" hint="Optional details that help you find and group people later.">
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className={LABEL_CLASS}>
-              <span>Designation <span className="text-xs text-slate-500">(optional)</span></span>
+              <FieldLabel>Designation</FieldLabel>
               <input value={form.title} onChange={update("title")} placeholder="e.g. Software Engineer" className={FIELD_CLASS} />
             </label>
             <label className={LABEL_CLASS}>
-              <span>Phone <span className="text-xs text-slate-500">(optional)</span></span>
-              <input type="tel" value={form.phone} onChange={update("phone")} className={FIELD_CLASS} />
+              <FieldLabel>Phone</FieldLabel>
+              <input type="tel" value={form.phone} onChange={update("phone")} placeholder="+91 98765 43210" className={FIELD_CLASS} />
             </label>
             <label className={LABEL_CLASS}>
-              <span>Joining date <span className="text-xs text-slate-500">(optional)</span></span>
+              <FieldLabel>Joining date</FieldLabel>
               <input type="date" value={form.joiningDate} onChange={update("joiningDate")} className={FIELD_CLASS} />
             </label>
-            <label className={LABEL_CLASS}>
-              Status
-              <select value={form.status} onChange={update("status")} className={FIELD_CLASS}>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive (excluded from new assignments)</option>
-              </select>
-            </label>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Team &amp; reporting <span className="normal-case tracking-normal text-slate-500">· all optional</span>
-          </h3>
-          <p className="mt-1 text-xs leading-5 text-slate-400">
-            Used to assign assessments to a whole department or project, and to decide which manager sees this employee&apos;s results.
-          </p>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className={LABEL_CLASS}>
-              <label htmlFor="employee-department">Department</label>
+              <FieldLabel>Status</FieldLabel>
+              <div role="radiogroup" aria-label="Status" className="grid h-10 grid-cols-2 gap-1 rounded-xl border border-slate-700 bg-slate-950/60 p-1">
+                {[
+                  { value: "ACTIVE", label: "Active" },
+                  { value: "INACTIVE", label: "Inactive" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={form.status === option.value}
+                    onClick={() => setForm((current) => ({ ...current, status: option.value }))}
+                    className={`rounded-lg text-sm font-medium transition ${
+                      form.status === option.value
+                        ? option.value === "ACTIVE"
+                          ? "bg-emerald-400/15 text-emerald-200 ring-1 ring-emerald-400/30"
+                          : "bg-slate-700/60 text-white ring-1 ring-slate-500/40"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              {form.status === "INACTIVE" ? <span className="text-xs text-slate-500">Inactive employees are excluded from new assignments.</span> : null}
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection
+          number={3}
+          title="Team & reporting"
+          hint="Assign assessments to a whole department or project, and choose which manager sees this employee's results."
+          aside={<span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Optional</span>}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className={LABEL_CLASS}>
+              <label htmlFor="employee-department">
+                <FieldLabel>Department</FieldLabel>
+              </label>
               <select id="employee-department" value={form.departmentId} onChange={update("departmentId")} className={FIELD_CLASS}>
-                <option value="">{departmentOptions.length ? "No department" : "No departments created yet"}</option>
+                <option value="">{departmentOptions.length ? "No department" : "No departments yet"}</option>
                 {departmentOptions.map((department) => (
                   <option key={department.id} value={department.id}>
                     {department.name}
@@ -297,12 +332,13 @@ export default function AddEmployeeModal({ open, onClose, onSaved, employee = nu
                   </option>
                 ))}
               </select>
-              <span className="text-xs text-slate-500">One primary department per employee.</span>
               {renderQuickCreate("department")}
             </div>
 
             <div className={LABEL_CLASS}>
-              <label htmlFor="employee-manager">Manager</label>
+              <label htmlFor="employee-manager">
+                <FieldLabel>Manager</FieldLabel>
+              </label>
               <select id="employee-manager" value={form.managerUserId} onChange={update("managerUserId")} className={FIELD_CLASS}>
                 <option value="">{managers.length ? "No manager" : "No team members found"}</option>
                 {managers.map((manager) => (
@@ -312,40 +348,49 @@ export default function AddEmployeeModal({ open, onClose, onSaved, employee = nu
                   </option>
                 ))}
               </select>
-              <span className="text-xs text-slate-500">
-                From your workspace team (Manage Team). Managers can review their direct reports&apos; results.
-              </span>
+              <span className="text-xs leading-5 text-slate-500">From your workspace team. Managers review their direct reports&apos; results.</span>
             </div>
           </div>
 
-          <fieldset className="mt-4">
-            <legend className="text-sm text-slate-300">
-              Projects <span className="text-xs text-slate-500">({form.projectIds.length} selected · an employee can be on several)</span>
-            </legend>
+          <div>
+            <div className="flex items-baseline justify-between gap-2">
+              <FieldLabel>Projects</FieldLabel>
+              <span className="text-xs text-slate-500">{form.projectIds.length ? `${form.projectIds.length} selected` : "An employee can be on several"}</span>
+            </div>
             {projectOptions.length === 0 ? (
-              <p className="mt-2 text-xs text-slate-500">No projects created yet.</p>
+              <p className="mt-2 rounded-xl border border-dashed border-slate-700 px-3 py-3 text-xs text-slate-500">No projects yet. Create one below.</p>
             ) : (
-              <div className="mt-2 grid max-h-40 gap-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/40 p-2 sm:grid-cols-2">
-                {projectOptions.map((project) => (
-                  <label key={project.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-200 hover:bg-slate-800/50">
-                    <input
-                      type="checkbox"
-                      checked={form.projectIds.includes(project.id)}
-                      onChange={() => toggleProject(project.id)}
-                      className="h-4 w-4 accent-cyan-500"
-                    />
-                    <span className="truncate">
+              <div className="mt-2 flex max-h-36 flex-wrap gap-2 overflow-y-auto">
+                {projectOptions.map((project) => {
+                  const selected = form.projectIds.includes(project.id)
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleProject(project.id)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
+                        selected
+                          ? "border-cyan-300/50 bg-cyan-400/15 text-cyan-100"
+                          : "border-slate-700 bg-slate-950/40 text-slate-300 hover:border-slate-500 hover:text-white"
+                      }`}
+                    >
+                      {selected ? (
+                        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      ) : null}
                       {project.name}
-                      {project.code ? <span className="text-slate-500"> · {project.code}</span> : null}
-                      {project.status === "INACTIVE" ? <span className="text-slate-500"> (inactive)</span> : null}
-                    </span>
-                  </label>
-                ))}
+                      {project.code ? <span className="text-slate-500">· {project.code}</span> : null}
+                      {project.status === "INACTIVE" ? <span className="text-slate-500">(inactive)</span> : null}
+                    </button>
+                  )
+                })}
               </div>
             )}
             {renderQuickCreate("project")}
-          </fieldset>
-        </section>
+          </div>
+        </FormSection>
       </div>
     </ModalShell>
   )
