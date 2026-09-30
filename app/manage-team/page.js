@@ -540,6 +540,10 @@ export default function ManageTeamPage() {
   const [rowActionUserId, setRowActionUserId] = useState("");
   const [rowActionType, setRowActionType] = useState("");
   const [notice, setNotice] = useState("");
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [accessFilter, setAccessFilter] = useState("ALL");
+  const [inviteFilter, setInviteFilter] = useState("ALL");
 
   useEffect(() => {
     let active = true;
@@ -595,6 +599,25 @@ export default function ManageTeamPage() {
   }, [cacheKey, searchParams]);
 
   const team = useMemo(() => data?.team ?? [], [data]);
+  const roleOptions = useMemo(
+    () => [...new Set(team.map((member) => getMemberRoleLabel(member)))].sort(),
+    [team]
+  );
+  const filteredTeam = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return team.filter((member) => {
+      if (query && !`${member.name ?? ""} ${member.email ?? ""}`.toLowerCase().includes(query)) return false;
+      if (roleFilter !== "ALL" && getMemberRoleLabel(member) !== roleFilter) return false;
+      if (accessFilter === "ACTIVE" && !member.isActive) return false;
+      if (accessFilter === "DISABLED" && member.isActive) return false;
+      if (inviteFilter !== "ALL") {
+        const status = member.inviteStatus || "Accepted";
+        if (inviteFilter === "PENDING" ? status === "Accepted" || status === "Expired" : status !== (inviteFilter === "ACCEPTED" ? "Accepted" : "Expired")) return false;
+      }
+      return true;
+    });
+  }, [team, search, roleFilter, accessFilter, inviteFilter]);
+  const filtersActive = Boolean(search.trim()) || roleFilter !== "ALL" || accessFilter !== "ALL" || inviteFilter !== "ALL";
   const availableRoles = useMemo(() => data?.availableRoles ?? [], [data]);
   const allPermissions = useMemo(() => data?.allPermissions ?? [], [data]);
   const canManageUsers = Boolean(data?.canManageUsers);
@@ -865,7 +888,61 @@ export default function ManageTeamPage() {
             <div className="mt-6 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">{error}</div>
           ) : null}
 
-          <div className="mt-8 overflow-x-auto rounded-[24px] border border-slate-800 bg-slate-950/30">
+          <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="grid flex-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+              <label className="relative sm:col-span-2 lg:w-72">
+                <span className="sr-only">Search team members</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search name or email"
+                  className="h-10 rounded-xl border border-slate-700 bg-slate-950/60 px-3 text-sm text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10 w-full pl-9 placeholder:text-slate-500"
+                />
+              </label>
+              <select aria-label="Filter by role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="h-10 rounded-xl border border-slate-700 bg-slate-950/60 px-3 text-sm text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10">
+                <option value="ALL">All roles</option>
+                {roleOptions.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+              <select aria-label="Filter by access" value={accessFilter} onChange={(event) => setAccessFilter(event.target.value)} className="h-10 rounded-xl border border-slate-700 bg-slate-950/60 px-3 text-sm text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10">
+                <option value="ALL">Any access</option>
+                <option value="ACTIVE">Active</option>
+                <option value="DISABLED">Disabled</option>
+              </select>
+              <select aria-label="Filter by invite status" value={inviteFilter} onChange={(event) => setInviteFilter(event.target.value)} className="h-10 rounded-xl border border-slate-700 bg-slate-950/60 px-3 text-sm text-slate-200 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/10">
+                <option value="ALL">Any invite status</option>
+                <option value="ACCEPTED">Invite accepted</option>
+                <option value="PENDING">Invite pending</option>
+                <option value="EXPIRED">Invite expired</option>
+              </select>
+              {filtersActive ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setRoleFilter("ALL");
+                    setAccessFilter("ALL");
+                    setInviteFilter("ALL");
+                  }}
+                  className="h-10 rounded-xl border border-slate-700 px-3.5 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+            <p className="text-sm text-slate-400">
+              Showing <span className="font-semibold text-white">{filteredTeam.length}</span> of {team.length}
+            </p>
+          </div>
+
+          <div className="mt-4 overflow-x-auto rounded-[24px] border border-slate-800 bg-slate-950/30">
             <div className={`hidden items-center gap-4 border-b border-slate-800 px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 xl:grid ${ROW_GRID}`}>
               <div>Team member</div>
               <div>Role</div>
@@ -877,8 +954,10 @@ export default function ManageTeamPage() {
 
             {team.length === 0 ? (
               <div className="px-6 py-10 text-sm text-slate-400">No recruiter-side team members found for this organization.</div>
+            ) : filteredTeam.length === 0 ? (
+              <div className="px-6 py-10 text-center text-sm text-slate-400">No team members match these filters.</div>
             ) : (
-              team.map((member) => {
+              filteredTeam.map((member) => {
                 const invite = inviteLabel(member.inviteStatus);
                 const busy = rowActionUserId === member.userId;
                 return (
