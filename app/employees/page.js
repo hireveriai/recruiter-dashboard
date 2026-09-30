@@ -45,6 +45,7 @@ export default function EmployeesPage() {
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [flowKey, setFlowKey] = useState(0)
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300)
@@ -60,6 +61,8 @@ export default function EmployeesPage() {
     const url = new URL(window.location.href)
     setDepartmentId(url.searchParams.get("departmentId") ?? "")
     setProjectId(url.searchParams.get("projectId") ?? "")
+    // ?add=1 (from the setup guide) opens the Add Employee form straight away.
+    if (url.searchParams.get("add") === "1") setFormOpen(true)
     setFiltersReady(true)
     apiRequest("/api/departments", searchParams).then((res) => setDepartments(res.data?.departments ?? []))
     apiRequest("/api/projects", searchParams).then((res) => setProjects(res.data?.projects ?? []))
@@ -108,6 +111,7 @@ export default function EmployeesPage() {
           : `${employee.fullName} won't be included in new assessment assignments. Past results are kept.`,
     })
     loadEmployees()
+    setFlowKey((key) => key + 1)
   }
 
   if (lockedFeature) {
@@ -172,6 +176,7 @@ export default function EmployeesPage() {
           title="Employees"
           description="Your organization's employees, their departments and projects. Assign them Assessments, Challenges and Tasks by person, department or project."
           searchParams={searchParams}
+          flowRefreshKey={flowKey}
           actions={
             <button
               type="button"
@@ -307,7 +312,10 @@ export default function EmployeesPage() {
         open={formOpen}
         employee={editing}
         onClose={() => setFormOpen(false)}
-        onSaved={() => loadEmployees()}
+        onSaved={() => {
+          loadEmployees()
+          setFlowKey((key) => key + 1)
+        }}
       />
     </div>
   )

@@ -367,18 +367,81 @@ export async function updateEmployee(organizationId: string, employeeId: string,
   return getEmployee(organizationId, employeeId)
 }
 
-/** Staff users of this organization who can be set as an employee's manager. */
+/**
+ * Staff users of this organization who can be set as an employee's manager
+ * (the same people Manage Team lists). Raw SQL on purpose: users.role is
+ * plain text in production, while the Prisma model declares it as the
+ * "UserRole" enum, so a Prisma `role: { in: [...] }` filter casts to an
+ * enum type that doesn't exist there and the query fails.
+ */
 export async function listManagerOptions(organizationId: string) {
-  const users = await prisma.user.findMany({
-    where: {
-      organizationId,
-      isActive: true,
-      teamRemovedAt: null,
-      role: { in: ["RECRUITER", "ORG_OWNER", "ADMIN"] },
-    },
-    select: { userId: true, fullName: true, email: true },
-    orderBy: [{ fullName: "asc" }, { email: "asc" }],
-    take: 500,
-  })
-  return { managers: users }
+  const managers = await prisma.$queryRaw<{ userId: string; fullName: string | null; email: string }[]>(Prisma.sql`
+    select u.user_id::text as "userId", u.full_name as "fullName", u.email
+    from public.users u
+    where u.organization_id = ${organizationId}::uuid
+      and u.is_active = true
+      and u.team_removed_at is null
+      and u.role::text in ('RECRUITER', 'ORG_OWNER', 'ADMIN')
+    order by lower(coalesce(nullif(u.full_name, ''), u.email))
+    limit 500
+  `)
+  return { managers }
+}
+
+/**
+ * Setup progress for the Employees area's guided flow: what exists so far,
+ * so the UI can say which step comes next. All counts are for this
+ * organization only.
+ */
+export async function getEmployeeProgramOverview(organizationId: string) {
+  const rows = await prisma.$queryRaw<
+    {
+      departments: number
+      active_departments: number
+      projects: number
+      active_projects: number
+      employees: number
+      active_employees: number
+      without_department: number
+      without_project: number
+      draft_assessments: number
+      published_assessments: number
+      assigned: number
+      completed: number
+      managers: number
+    }[]
+  >(Prisma.sql`
+    select
+      (select count(*) from public.departments where organization_id = ${organizationId}::uuid)::int as departments,
+      (select count(*) from public.departments where organization_id = ${organizationId}::uuid and status = 'ACTIVE')::int as active_departments,
+      (select count(*) from public.projects where organization_id = ${organizationId}::uuid)::int as projects,
+      (select count(*) from public.projects where organization_id = ${organizationId}::uuid and status = 'ACTIVE')::int as active_projects,
+      (select count(*) from public.employees where organization_id = ${organizationId}::uuid)::int as employees,
+      (select count(*) from public.employees where organization_id = ${organizationId}::uuid and status = 'ACTIVE')::int as active_employees,
+      (select count(*) from public.employees where organization_id = ${organizationId}::uuid and status = 'ACTIVE' and department_id is null)::int as without_department,
+      (select count(*) from public.employees e where e.organization_id = ${organizationId}::uuid and e.status = 'ACTIVE'
+         and not exists (select 1 from public.employee_projects ep where ep.organization_id = e.organization_id and ep.employee_id = e.id))::int as without_project,
+      (select count(*) from public.assessments where organization_id = ${organizationId}::uuid and participant_type = 'EMPLOYEE' and status = 'DRAFT')::int as draft_assessments,
+      (select count(*) from public.assessments where organization_id = ${organizationId}::uuid and participant_type = 'EMPLOYEE' and status = 'PUBLISHED')::int as published_assessments,
+      (select count(*) from public.assessment_invites where organization_id = ${organizationId}::uuid and employee_id is not null and status <> 'CANCELLED')::int as assigned,
+      (select count(*) from public.assessment_invites where organization_id = ${organizationId}::uuid and employee_id is not null and status = 'COMPLETED')::int as completed,
+      (select count(*) from public.users where organization_id = ${organizationId}::uuid and is_active = true and team_removed_at is null
+         and role::text in ('RECRUITER', 'ORG_OWNER', 'ADMIN'))::int as managers
+  `)
+  const row = rows[0]
+  return {
+    departments: Number(row.departments),
+    activeDepartments: Number(row.active_departments),
+    projects: Number(row.projects),
+    activeProjects: Number(row.active_projects),
+    employees: Number(row.employees),
+    activeEmployees: Number(row.active_employees),
+    withoutDepartment: Number(row.without_department),
+    withoutProject: Number(row.without_project),
+    draftAssessments: Number(row.draft_assessments),
+    publishedAssessments: Number(row.published_assessments),
+    assigned: Number(row.assigned),
+    completed: Number(row.completed),
+    managers: Number(row.managers),
+  }
 }

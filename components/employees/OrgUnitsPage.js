@@ -22,9 +22,76 @@ import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 const DESCRIPTIONS = {
   department:
-    "Each employee has one primary department. Target an assessment at a whole department instead of picking people one by one.",
+    "Optional. Group employees into teams so you can assign an assessment to a whole department instead of picking people one by one.",
   project:
-    "Employees can work on several projects at once. Target an assessment at a project, or at a department and project together.",
+    "Optional. Employees can work on several projects at once. Assign an assessment to a project, or to a department and project together.",
+}
+
+// What the grouping is for, and what to do after creating one — shown as the
+// empty state, and as a compact reminder once some exist.
+const EXPLAINERS = {
+  department: {
+    title: "How departments work",
+    points: [
+      "Each employee belongs to one primary department (e.g. Engineering, HR, Finance).",
+      "Create departments first — they then appear in the Department field when you add or edit an employee.",
+      "When assigning an assessment, choose Department to reach every active employee in it automatically.",
+      "Departments are optional: you can always assign assessments to hand-picked employees instead.",
+    ],
+  },
+  project: {
+    title: "How projects work",
+    points: [
+      "An employee can be on several projects at once (e.g. Project Alpha and Project Beta).",
+      "Create projects first, then add people from a project's page or from the Projects field on the employee form.",
+      "When assigning an assessment, choose Project, or Department + Project to reach only people in both.",
+      "Projects are optional: skip them if you don't organise work this way.",
+    ],
+  },
+}
+
+function Explainer({ kind, compact, onCreate, searchParams }) {
+  const config = ORG_UNIT_KINDS[kind]
+  const explainer = EXPLAINERS[kind]
+  if (compact) {
+    return (
+      <details className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+        <summary className="cursor-pointer font-semibold text-slate-200">{explainer.title}</summary>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-400">
+          {explainer.points.map((point) => (
+            <li key={point}>{point}</li>
+          ))}
+        </ul>
+      </details>
+    )
+  }
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-10 text-center">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Optional setup</p>
+      <h3 className="mt-2 text-lg font-semibold text-white">No {config.plural.toLowerCase()} yet</h3>
+      <ul className="mx-auto mt-4 max-w-xl space-y-2 text-left text-sm text-slate-300">
+        {explainer.points.map((point, index) => (
+          <li key={point} className="flex gap-3">
+            <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-cyan-400/15 text-[11px] font-semibold text-cyan-200">
+              {index + 1}
+            </span>
+            <span>{point}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <button type="button" onClick={onCreate} className={PRIMARY_BUTTON}>
+          + Create your first {config.label.toLowerCase()}
+        </button>
+        <Link
+          href={buildAuthUrl(kind === "department" ? "/employees/projects" : "/employees", searchParams)}
+          className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white"
+        >
+          {kind === "department" ? "Skip to Projects" : "Skip to Employees"}
+        </Link>
+      </div>
+    </div>
+  )
 }
 
 /** Departments / Projects list: name, active headcount, status, actions. */
@@ -39,6 +106,7 @@ export default function OrgUnitsPage({ kind }) {
   const [status, setStatus] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [flowKey, setFlowKey] = useState(0)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -74,6 +142,12 @@ export default function OrgUnitsPage({ kind }) {
           : `${unit.name} can no longer be targeted or given new members. Existing assignments and results are kept.`,
     })
     load()
+    setFlowKey((key) => key + 1)
+  }
+
+  const openCreate = () => {
+    setEditing(null)
+    setFormOpen(true)
   }
 
   if (lockedFeature) {
@@ -84,6 +158,8 @@ export default function OrgUnitsPage({ kind }) {
   const visible = query
     ? units.filter((unit) => `${unit.name} ${unit.code ?? ""} ${unit.description ?? ""}`.toLowerCase().includes(query))
     : units
+  // Nothing created yet (and not just filtered away): explain instead of an empty table.
+  const isFirstRun = !loading && units.length === 0 && !status
   const emptyMessage = loading
     ? `Loading ${config.plural.toLowerCase()}...`
     : units.length === 0
@@ -133,21 +209,22 @@ export default function OrgUnitsPage({ kind }) {
           title={config.plural}
           description={DESCRIPTIONS[kind]}
           searchParams={searchParams}
+          flowRefreshKey={flowKey}
           actions={
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(null)
-                setFormOpen(true)
-              }}
-              className={PRIMARY_BUTTON}
-            >
+            <button type="button" onClick={openCreate} className={PRIMARY_BUTTON}>
               <span aria-hidden="true" className="text-base leading-none">+</span>
               Create {config.label}
             </button>
           }
         />
 
+        {isFirstRun ? (
+          <section aria-label={`No ${config.plural.toLowerCase()} yet`} className={SECTION_CLASS}>
+            <Explainer kind={kind} onCreate={openCreate} searchParams={searchParams} />
+          </section>
+        ) : (
+        <>
+        <Explainer kind={kind} compact />
         <section aria-label={config.plural} className={SECTION_CLASS}>
           <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-5">
             <div>
@@ -230,9 +307,14 @@ export default function OrgUnitsPage({ kind }) {
             </ul>
           )}
         </section>
+        </>
+        )}
       </main>
 
-      <OrgUnitFormModal kind={kind} open={formOpen} unit={editing} onClose={() => setFormOpen(false)} onSaved={load} />
+      <OrgUnitFormModal kind={kind} open={formOpen} unit={editing} onClose={() => setFormOpen(false)} onSaved={() => {
+          load()
+          setFlowKey((key) => key + 1)
+        }} />
     </div>
   )
 }

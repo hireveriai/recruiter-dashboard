@@ -70,7 +70,9 @@ export default function EmployeePicker({ selected, onChange, excludeIds = null, 
         {loading && results.length === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-slate-500">Searching...</p>
         ) : visible.length === 0 ? (
-          <p className="px-2 py-6 text-center text-sm text-slate-500">No active employees found.</p>
+          <p className="px-2 py-6 text-center text-sm text-slate-500">
+            {debounced ? "No active employees match this search." : "No active employees yet. Add them under Employees first."}
+          </p>
         ) : (
           visible.map((employee) => (
             <label

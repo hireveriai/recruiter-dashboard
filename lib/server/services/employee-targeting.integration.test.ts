@@ -670,6 +670,34 @@ suite("assessment targeting", () => {
   })
 })
 
+suite("manager options and setup overview", () => {
+  test("manager options: this organization's active staff only (users.role is text, as in production)", async () => {
+    await db!.pool.query(
+      `insert into public.users (organization_id, full_name, email, role, is_active, team_removed_at) values
+         ($1, 'Gone Person', 'gone@a.test', 'RECRUITER', true, now()),
+         ($1, 'Off Person', 'off@a.test', 'ADMIN', false, null),
+         ($1, 'Cand Person', 'cand@a.test', 'CANDIDATE', true, null)`,
+      [ORG_A]
+    )
+    const { managers } = await employees.listManagerOptions(ORG_A)
+    assert.deepEqual(managers.map((m) => m.fullName), ["Maya Manager"])
+    const orgB = await employees.listManagerOptions(ORG_B)
+    assert.deepEqual(orgB.managers.map((m) => m.fullName), ["Bob B"])
+  })
+
+  test("overview counts what exists, per organization", async () => {
+    const a = await employees.getEmployeeProgramOverview(ORG_A)
+    assert.equal(a.departments, 4)
+    assert.equal(a.projects, 4)
+    assert.equal(a.managers, 1)
+    assert.ok(a.employees >= 6)
+    assert.ok(a.publishedAssessments >= 1)
+    assert.ok(a.assigned >= 4)
+    const b = await employees.getEmployeeProgramOverview(ORG_B)
+    assert.deepEqual([b.departments, b.projects, b.employees, b.publishedAssessments], [1, 1, 1, 1])
+  })
+})
+
 suite("migration", () => {
   test("backfills departments and first/last names from existing employees", async () => {
     const fresh = await createEmployeeTestDatabase(EMPLOYEE_BASELINE_SQL)

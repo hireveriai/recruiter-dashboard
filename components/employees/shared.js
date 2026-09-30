@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect } from "react"
 
+import EmployeeFlowGuide from "@/components/employees/EmployeeFlowGuide"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatLabel } from "@/lib/client/format-label"
 
@@ -142,8 +143,12 @@ const SECTION_TABS = [
   { href: "/employees/projects", label: "Projects", key: "projects" },
 ]
 
-/** Page header + Employees / Departments / Projects tabs shared by the three sections. */
-export function EmployeesSectionHeader({ active, title, description, searchParams, actions }) {
+/**
+ * Page header + setup guide + Employees / Departments / Projects tabs, shared
+ * by the three sections. Bump `flowRefreshKey` after a change so the guide's
+ * progress updates.
+ */
+export function EmployeesSectionHeader({ active, title, description, searchParams, actions, flowRefreshKey = 0 }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -154,6 +159,7 @@ export function EmployeesSectionHeader({ active, title, description, searchParam
         </header>
         {actions ? <div className="flex flex-wrap items-center gap-2 lg:shrink-0">{actions}</div> : null}
       </div>
+      <EmployeeFlowGuide refreshKey={flowRefreshKey} />
       <nav aria-label="Employees sections" className="inline-flex w-fit rounded-xl border border-slate-800 bg-slate-900/80 p-1 shadow-sm">
         {SECTION_TABS.map((tab) => (
           <Link

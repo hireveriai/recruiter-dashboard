@@ -12,6 +12,7 @@ import {
   apiRequest,
 } from "@/components/employees/shared"
 import { showActionFeedback } from "@/lib/client/action-feedback"
+import { buildAuthUrl } from "@/lib/client/auth-query"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 const TARGET_TYPES = [
@@ -66,6 +67,7 @@ export default function AssignAssessmentModal({ open, assessment, onClose, onAss
   const [picked, setPicked] = useState({})
   const [departments, setDepartments] = useState([])
   const [projects, setProjects] = useState([])
+  const [unitsLoaded, setUnitsLoaded] = useState(false)
   const [preview, setPreview] = useState(null)
   const [previewError, setPreviewError] = useState(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -86,8 +88,15 @@ export default function AssignAssessmentModal({ open, assessment, onClose, onAss
     setShowEmployees(false)
     setPreviewPage(1)
     setResult(null)
-    apiRequest("/api/departments?status=ACTIVE", searchParams).then((res) => setDepartments(res.data?.departments ?? []))
-    apiRequest("/api/projects?status=ACTIVE", searchParams).then((res) => setProjects(res.data?.projects ?? []))
+    setUnitsLoaded(false)
+    Promise.all([
+      apiRequest("/api/departments?status=ACTIVE", searchParams),
+      apiRequest("/api/projects?status=ACTIVE", searchParams),
+    ]).then(([departmentRes, projectRes]) => {
+      setDepartments(departmentRes.data?.departments ?? [])
+      setProjects(projectRes.data?.projects ?? [])
+      setUnitsLoaded(true)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, assessment?.id])
 
@@ -175,6 +184,40 @@ export default function AssignAssessmentModal({ open, assessment, onClose, onAss
     }
     const showDepartment = targetType === "DEPARTMENT" || targetType === "DEPARTMENT_PROJECT"
     const showProject = targetType === "PROJECT" || targetType === "DEPARTMENT_PROJECT"
+    const missing = [
+      showDepartment && unitsLoaded && departments.length === 0 ? { label: "departments", href: "/employees/departments" } : null,
+      showProject && unitsLoaded && projects.length === 0 ? { label: "projects", href: "/employees/projects" } : null,
+    ].filter(Boolean)
+    if (missing.length) {
+      return (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+          <p className="font-semibold">
+            No active {missing.map((m) => m.label).join(" or ")} yet.
+          </p>
+          <p className="mt-1 text-amber-100/80">
+            To assign by {missing.map((m) => m.label.replace(/s$/, "")).join(" and ")}, first create{" "}
+            {missing.length > 1 ? "them" : "it"} and add employees to {missing.length > 1 ? "them" : "it"}. Or choose{" "}
+            <button type="button" className="font-semibold underline underline-offset-2" onClick={() => setTargetType("INDIVIDUAL")}>
+              Individual Employees
+            </button>{" "}
+            to pick people directly.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {missing.map((m) => (
+              <a
+                key={m.label}
+                href={buildAuthUrl(m.href, searchParams)}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-amber-300/40 px-3 py-1.5 text-xs font-semibold text-amber-50 hover:bg-amber-500/20"
+              >
+                Create {m.label} ↗
+              </a>
+            ))}
+          </div>
+        </div>
+      )
+    }
     return (
       <div className={`grid gap-4 ${showDepartment && showProject ? "sm:grid-cols-2" : ""}`}>
         {showDepartment ? (

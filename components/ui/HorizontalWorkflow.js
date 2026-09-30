@@ -45,6 +45,7 @@ const GRID_COLUMNS = {
   3: "lg:grid-cols-3",
   4: "lg:grid-cols-4",
   5: "lg:grid-cols-5",
+  6: "sm:grid-cols-3 lg:grid-cols-6",
 };
 
 function CheckIcon() {

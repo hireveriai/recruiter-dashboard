@@ -13,6 +13,7 @@ import CreateAssessmentModal from "@/components/CreateAssessmentModal"
 import SendAssessmentModal from "@/components/SendAssessmentModal"
 import AssignAssessmentModal from "@/components/AssignAssessmentModal"
 import { formatPercent } from "@/components/employees/shared"
+import EmployeeFlowGuide from "@/components/employees/EmployeeFlowGuide"
 import { AssessmentFlowGuide } from "@/components/AssessmentWorkflowGuide"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { formatDate } from "@/lib/client/date-format"
@@ -76,6 +77,7 @@ export default function AssessmentsPage() {
   const [openAddEmployee, setOpenAddEmployee] = useState(false)
   const [assigning, setAssigning] = useState(null)
   const latestLoadRef = useRef(0)
+  const [employeeFlowKey, setEmployeeFlowKey] = useState(0)
   const isEmployeeView = audience === "EMPLOYEE"
 
   // Org-wide progress for the Assessment Flow strip. Cache-busted because the
@@ -92,6 +94,8 @@ export default function AssessmentsPage() {
   }
 
   useEffect(() => {
+    // ?audience=EMPLOYEE (links from the Employees setup guide) opens the Employees view.
+    if (new URL(window.location.href).searchParams.get("audience") === "EMPLOYEE") setAudience("EMPLOYEE")
     loadFlowSummary()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -319,7 +323,20 @@ export default function AssessmentsPage() {
           ) : null}
         </div>
 
-        {isEmployeeView ? null : (
+        {isEmployeeView ? (
+          <EmployeeFlowGuide
+            refreshKey={employeeFlowKey}
+            onCreateAssessment={() => {
+              setEditing(null)
+              setOpenCreate(true)
+            }}
+            onAssignAssessment={() => {
+              const published = assessments.find((a) => a.status === "PUBLISHED")
+              if (published) setAssigning(published)
+              else setStatus("PUBLISHED")
+            }}
+          />
+        ) : (
         <AssessmentFlowGuide
           summary={flowSummary}
           loading={flowLoading}
@@ -514,6 +531,7 @@ export default function AssessmentsPage() {
         onSuccess={() => {
           loadAssessments()
           loadFlowSummary()
+          setEmployeeFlowKey((key) => key + 1)
         }}
       />
       <AddEmployeeModal open={openAddEmployee} onClose={() => setOpenAddEmployee(false)} />
@@ -521,7 +539,10 @@ export default function AssessmentsPage() {
         open={Boolean(assigning)}
         assessment={assigning}
         onClose={() => setAssigning(null)}
-        onAssigned={() => loadAssessments()}
+        onAssigned={() => {
+          loadAssessments()
+          setEmployeeFlowKey((key) => key + 1)
+        }}
       />
       <SendAssessmentModal
         isOpen={openSend}

@@ -19,14 +19,15 @@ create table public.organizations (
   created_at timestamptz not null default now()
 );
 
-create type public."UserRole" as enum ('CANDIDATE', 'RECRUITER', 'ORG_OWNER', 'ADMIN', 'SYSTEM');
-
+-- role is plain text in production (not the "UserRole" enum the Prisma
+-- model declares), so it is text here too: an enum-typed Prisma filter on it
+-- fails against production and must fail in tests as well.
 create table public.users (
   user_id uuid primary key default gen_random_uuid(),
   organization_id uuid not null,
   full_name text,
   email text not null unique,
-  role public."UserRole" not null,
+  role text not null,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   phone text,
