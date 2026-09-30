@@ -522,7 +522,7 @@ function inviteLabel(status) {
   return { text: "Invite accepted", tone: "text-slate-400", dot: "bg-emerald-400" };
 }
 
-const ROW_BUTTON = "rounded-lg border px-2.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60";
+const ROW_BUTTON = "whitespace-nowrap rounded-lg border px-2 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60";
 
 export default function ManageTeamPage() {
   const searchParams = useAuthSearchParams();
@@ -797,7 +797,9 @@ export default function ManageTeamPage() {
     { label: "Recruiters", value: summary.recruiters, tone: "text-cyan-300" },
     { label: "Global admins", value: summary.admins, tone: "text-amber-300" },
   ];
-  const ROW_GRID = "xl:grid-cols-[minmax(220px,1.3fr)_minmax(160px,1fr)_140px_104px_minmax(220px,1.4fr)_208px]";
+  // Proportional columns (minmax(0, …)) so the row shrinks with the card
+  // instead of pushing Actions out of view at 100% zoom on laptop screens.
+  const ROW_GRID = "xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.65fr)_minmax(0,1.3fr)_11rem]";
 
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-10 lg:py-10">
@@ -863,7 +865,7 @@ export default function ManageTeamPage() {
             <div className="mt-6 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">{error}</div>
           ) : null}
 
-          <div className="mt-8 overflow-hidden rounded-[24px] border border-slate-800 bg-slate-950/30">
+          <div className="mt-8 overflow-x-auto rounded-[24px] border border-slate-800 bg-slate-950/30">
             <div className={`hidden items-center gap-4 border-b border-slate-800 px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 xl:grid ${ROW_GRID}`}>
               <div>Team member</div>
               <div>Role</div>
@@ -936,7 +938,7 @@ export default function ManageTeamPage() {
 
                     <div className="xl:justify-self-end">
                       {canManageUsers && !member.isCurrentUser ? (
-                        <div className="grid w-full grid-cols-2 gap-1.5 sm:w-52">
+                        <div className="grid w-full grid-cols-2 gap-1.5 sm:w-44">
                           <button
                             type="button"
                             onClick={() => openEditModal(member)}
@@ -948,7 +950,7 @@ export default function ManageTeamPage() {
                             type="button"
                             disabled={busy}
                             onClick={() => handleResendInvite(member)}
-                            className={`${ROW_BUTTON} border-slate-700 text-slate-200 hover:border-cyan-400/40 hover:text-white`}
+                            className={`${ROW_BUTTON} col-span-2 border-slate-700 text-slate-200 hover:border-cyan-400/40 hover:text-white`}
                           >
                             {busy && rowActionType === "resend" ? "Sending..." : member.inviteStatus === "Accepted" ? "Resend access" : "Resend invite"}
                           </button>
@@ -968,9 +970,9 @@ export default function ManageTeamPage() {
                             type="button"
                             disabled={busy}
                             onClick={() => handleMemberAccessAction(member, "remove-member")}
-                            className={`${ROW_BUTTON} col-span-2 border-transparent text-rose-300 hover:border-rose-400/25 hover:bg-rose-500/10`}
+                            className={`${ROW_BUTTON} border-rose-400/25 text-rose-300 hover:bg-rose-500/10`}
                           >
-                            {busy && rowActionType === "remove-member" ? "Removing..." : "Remove from team"}
+                            {busy && rowActionType === "remove-member" ? "Removing..." : "Remove"}
                           </button>
                         </div>
                       ) : (
