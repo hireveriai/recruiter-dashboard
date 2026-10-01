@@ -2,7 +2,8 @@
  * VERIS Live Debrief: the post-interview, reviewable summary of a Live
  * interview.
  *
- *   evidence (deterministic)  overview, question coverage, screen-share sessions
+ *   evidence (deterministic)  overview, question coverage, screen-share sessions,
+ *                             integrity & session observations (never sent to the AI)
  *   AI summary (stored)       competency coverage with transcript quotes,
  *                             strengths, areas to probe, unresolved questions,
  *                             evidence requiring review
@@ -27,6 +28,7 @@ import { openAiFetch } from "@/lib/server/ai-usage-log"
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
 import { getLiveInterviewReport } from "@/lib/server/services/live-interviews"
+import { liveIntegrityEvidence } from "@/lib/server/services/live-signals"
 import { getRecruiterDecisionsForInterviews } from "@/lib/server/services/recruiter-decisions"
 
 type Report = Awaited<ReturnType<typeof getLiveInterviewReport>>
@@ -104,6 +106,7 @@ export function buildDebriefEvidence(report: Report) {
     },
     transcriptLines: report.transcript.length,
     submittedScorecards: report.scorecards.filter((s) => s.submittedAt).length,
+    integrity: liveIntegrityEvidence(report.timeline),
   }
 }
 

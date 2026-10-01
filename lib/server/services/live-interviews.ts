@@ -17,6 +17,7 @@ import { Prisma } from "@prisma/client"
 
 import { ApiError } from "@/lib/server/errors"
 import { prisma } from "@/lib/server/prisma"
+import { annotateLiveTimeline } from "@/lib/server/services/live-signals"
 import {
   generateInviteToken,
   generateLivekitIdentity,
@@ -780,13 +781,19 @@ export async function getLiveInterviewReport(params: { organizationId: string; i
     })),
     manualQuestions,
     copilotSuggestions,
-    timeline: events
-      .filter((e) => e.event_type !== "COPILOT_SUGGESTION")
-      .map((e) => ({
-        type: e.event_type,
-        participant: e.participant_id ? nameOf.get(e.participant_id) ?? null : null,
-        at: e.occurred_at.toISOString(),
-      })),
+    // Integrity / screen-share starts carry their duration and how they ended.
+    timeline: annotateLiveTimeline(
+      events
+        .filter((e) => e.event_type !== "COPILOT_SUGGESTION")
+        .map((e) => ({
+          type: e.event_type,
+          participantId: e.participant_id,
+          participant: e.participant_id ? nameOf.get(e.participant_id) ?? null : null,
+          at: e.occurred_at.toISOString(),
+          payload: e.payload,
+        })),
+      detail.endedAt
+    ),
     scorecards,
     transcript: segments.map((s) => ({
       speaker: nameOf.get(s.participant_id) ?? "Participant",

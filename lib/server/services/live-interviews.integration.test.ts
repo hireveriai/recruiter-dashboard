@@ -558,3 +558,59 @@ suite("debrief: needs an ended, transcribed interview; AI never sees notes or ra
   // Org-scoped.
   await assert.rejects(debrief.getLiveDebrief({ organizationId: ORG_B, interviewId, userId: userB }), { code: "LIVE_INTERVIEW_NOT_FOUND" })
 })
+
+suite("integrity evidence: on the report timeline and in the Debrief, factual, never sent to the AI", async () => {
+  const debrief = await import("@/lib/server/services/live-debrief")
+  const { interviewId } = await svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ sendInvitations: false }), deps })
+  const [cand] = await q<{ id: string }>(`select participant_id::text as id from public.interview_participants where interview_id = $1 and role = 'CANDIDATE'`, [interviewId])
+  await q(`update public.interviews set live_status = 'COMPLETED', live_started_at = now() - interval '40 minutes', live_ended_at = now() where interview_id = $1`, [interviewId])
+  const event = (type: string, minutesAgo: number, payload: Record<string, unknown> = {}) =>
+    q(
+      `insert into public.live_interview_events (organization_id, interview_id, participant_id, event_type, payload, occurred_at)
+       values ($1, $2, $3, $4, $5::jsonb, now() - make_interval(secs => $6))`,
+      [ORG_A, interviewId, cand.id, type, JSON.stringify(payload), minutesAgo * 60]
+    )
+  await event("PARTICIPANT_JOINED", 39, { session: "tag0123456789abc" })
+  await event("SCREEN_SHARE_STARTED", 30)
+  await event("PAGE_VISIBILITY_HIDDEN", 25)
+  await event("PAGE_VISIBILITY_RESTORED", 24, { durationMs: 60_000, reason: "RESOLVED" })
+  await event("CAMERA_UNAVAILABLE", 20)
+  await event("CAMERA_RESTORED", 19.8, { durationMs: 12_000, reason: "RESOLVED" })
+  await event("SCREEN_SHARE_STOPPED", 18)
+  await event("FACE_NOT_VISIBLE", 10)
+  await event("FACE_NOT_VISIBLE_ENDED", 9, { durationMs: 60_000, reason: "LEFT_ROOM" })
+  await q(
+    `with r as (
+       insert into public.live_recordings (organization_id, interview_id, participant_id, kind, egress_id, storage_path, status, transcription_status)
+       values ($1, $2, $3, 'PARTICIPANT_AUDIO', 'EG_integrity_1', 'veris-live/x/y/b.ogg', 'COMPLETE', 'DONE') returning recording_id)
+     insert into public.live_transcript_segments (organization_id, interview_id, participant_id, recording_id, source, started_at_ms, ended_at_ms, text)
+     select $1, $2, $3, r.recording_id, 'POST_TRANSCRIPTION', 1000, 4000, 'I built the order service and monitored it closely.' from r`,
+    [ORG_A, interviewId, cand.id]
+  )
+
+  const report = await svc.getLiveInterviewReport({ organizationId: ORG_A, interviewId })
+  const line = (type: string) => report.timeline.find((e) => e.type === type)!
+  assert.equal(line("CAMERA_UNAVAILABLE").durationSeconds, 12)
+  assert.equal(line("PAGE_VISIBILITY_HIDDEN").durationSeconds, 60)
+  assert.equal(line("FACE_NOT_VISIBLE").endReason, "LEFT_ROOM")
+  assert.equal(line("SCREEN_SHARE_STARTED").durationSeconds, 12 * 60, "existing screen-share events stay on the same timeline")
+  assert.ok(!JSON.stringify(report).includes("tag0123456789abc"), "session tags are never exposed")
+
+  const prompts: string[] = []
+  const generated = await debrief.generateLiveDebrief({
+    organizationId: ORG_A,
+    interviewId,
+    userId: hiringManager,
+    ai: async (prompt) => {
+      prompts.push(JSON.stringify(prompt))
+      return { overview: "Discussed an order service.", competencies: [], strengths: [], areas_to_probe: [], unresolved_questions: [], evidence_for_review: [] }
+    },
+  })
+  assert.deepEqual(generated.evidence.integrity.counts, { faceNotVisible: 1, multipleFaces: 0, cameraUnavailable: 1, pageHidden: 1, screenShares: 1, sessionChanges: 0 })
+  assert.deepEqual(
+    generated.evidence.integrity.timeline.map((e) => e.type),
+    ["SCREEN_SHARE_STARTED", "PAGE_VISIBILITY_HIDDEN", "PAGE_VISIBILITY_RESTORED", "CAMERA_UNAVAILABLE", "CAMERA_RESTORED", "SCREEN_SHARE_STOPPED", "FACE_NOT_VISIBLE"]
+  )
+  assert.ok(!/FACE_NOT|CAMERA_|PAGE_VISIBILITY|SCREEN_SHARE|visibility|camera/i.test(prompts[0]), "integrity evidence never reaches the AI")
+  assert.ok(!/score|verdict|cheat|suspic/i.test(JSON.stringify(generated.evidence.integrity)))
+})
