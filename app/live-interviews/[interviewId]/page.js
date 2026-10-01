@@ -5,7 +5,15 @@ import { use, useEffect, useState } from "react"
 
 import Navbar from "@/components/Navbar"
 import SendInterviewModal from "@/components/SendInterviewModal"
-import { clock, DebriefEvaluation, DebriefPanel } from "@/components/veris-live/LiveDebrief"
+import {
+  clock,
+  DebriefEvaluation,
+  DebriefPanel,
+  isEvidenceEvent,
+  isFoldedEnd,
+  isScreenShareEvent,
+  liveEventText,
+} from "@/components/veris-live/LiveDebrief"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
@@ -428,13 +436,15 @@ export default function LiveInterviewReportPage({ params }) {
                 <section className={CARD}>
                   <SectionTitle eyebrow="VERIS evidence" title="Timeline" />
                   <ol className="relative ml-2 space-y-3 border-l border-slate-800 pl-4">
-                    {report.timeline.map((e, i) => (
+                    {report.timeline.filter((e) => !isFoldedEnd(e)).map((e, i) => (
                       <li key={i} className="relative">
                         <span
                           aria-hidden="true"
-                          className={`absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-slate-900 ${e.type.startsWith("SCREEN_SHARE") ? "bg-violet-400" : "bg-cyan-400"}`}
+                          className={`absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-slate-900 ${
+                            isScreenShareEvent(e.type) ? "bg-violet-400" : isEvidenceEvent(e.type) ? "bg-amber-400" : "bg-cyan-400"
+                          }`}
                         />
-                        <p className="text-xs font-medium text-white">{label(e.type)}</p>
+                        <p className="text-xs font-medium text-white">{liveEventText(e, label(e.type))}</p>
                         <p className="text-[11px] text-slate-400">
                           {new Date(e.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                           {e.participant ? ` · ${e.participant}` : ""}

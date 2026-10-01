@@ -22,6 +22,49 @@ const DECISIONS = [
   { value: "REVIEW_REQUIRED", label: "Needs review", tone: "border-cyan-400/50 bg-cyan-400/15 text-cyan-100" },
 ]
 
+// Integrity / session evidence wording: factual, never accusatory.
+export const LIVE_EVENT_LABELS = {
+  FACE_NOT_VISIBLE: "Face not visible",
+  FACE_NOT_VISIBLE_ENDED: "Face visible again",
+  MULTIPLE_FACES_DETECTED: "Multiple faces detected",
+  MULTIPLE_FACES_CLEARED: "Multiple faces cleared",
+  CAMERA_UNAVAILABLE: "Camera unavailable",
+  CAMERA_RESTORED: "Camera restored",
+  PAGE_VISIBILITY_HIDDEN: "Tab/window visibility changed",
+  PAGE_VISIBILITY_RESTORED: "Page visible again",
+  SESSION_CHANGE_DETECTED: "Session change detected",
+  SCREEN_SHARE_STARTED: "Screen sharing started",
+  SCREEN_SHARE_STOPPED: "Screen sharing stopped",
+}
+
+const END_NOTE = {
+  CHECK_PAUSED: "check paused",
+  LEFT_ROOM: "until the candidate left",
+  REJOINED: "until the candidate rejoined",
+  INTERVIEW_ENDED: "until the interview ended",
+}
+
+export const isEvidenceEvent = (type) => Boolean(LIVE_EVENT_LABELS[type])
+export const isScreenShareEvent = (type) => type === "SCREEN_SHARE_STARTED" || type === "SCREEN_SHARE_STOPPED"
+
+/** An end that wasn't a real recovery is described on its start line instead. */
+export const isFoldedEnd = (e) => Boolean(e.endReason && e.endReason !== "RESOLVED" && e.durationSeconds === undefined)
+
+function durationText(seconds) {
+  if (seconds < 60) return `${seconds} sec`
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return s ? `${m} min ${s} sec` : `${m} min`
+}
+
+/** "Camera unavailable — 8 sec", "Tab/window visibility changed — 2 min (until the candidate left)". */
+export function liveEventText(e, fallback) {
+  const base = LIVE_EVENT_LABELS[e.type] ?? fallback ?? e.type
+  const duration = typeof e.durationSeconds === "number" ? ` — ${durationText(e.durationSeconds)}` : ""
+  const note = e.durationSeconds !== undefined && e.endReason && END_NOTE[e.endReason] ? ` (${END_NOTE[e.endReason]})` : ""
+  return `${base}${duration}${note}`
+}
+
 export function clock(ms) {
   if (ms === null || ms === undefined) return ""
   const total = Math.floor(ms / 1000)
@@ -95,6 +138,69 @@ function PointList({ title, hint, items, onJump, emptyText }) {
           )}
         </ul>
       )}
+    </div>
+  )
+}
+
+const INTEGRITY_ROWS = [
+  ["faceNotVisible", "Face visibility"],
+  ["multipleFaces", "Multiple faces"],
+  ["cameraUnavailable", "Camera interruptions"],
+  ["pageHidden", "Page visibility changes"],
+  ["screenShares", "Screen-share sessions"],
+  ["sessionChanges", "Session security events"],
+]
+
+/** Factual integrity and session observations. Never sent to the AI; no score, no verdict. */
+function IntegrityEvidence({ integrity }) {
+  return (
+    <div className="mt-5">
+      <Heading
+        title="VERIS Integrity & Session Evidence"
+        hint="Observed in the candidate's browser and session during the interview. Not used by the AI summary and not a judgement of the candidate."
+      />
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3.5">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Observed events</p>
+          <dl className="mt-2 space-y-1.5">
+            {INTEGRITY_ROWS.map(([key, text]) => {
+              const value = integrity.counts[key] ?? 0
+              return (
+                <div key={key} className="flex items-center justify-between gap-3 text-sm">
+                  <dt className="text-slate-300">{text}</dt>
+                  <dd className={`font-semibold tabular-nums ${value && key !== "screenShares" ? "text-amber-300" : "text-slate-400"}`}>{value}</dd>
+                </div>
+              )
+            })}
+          </dl>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3.5">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Timeline</p>
+          {integrity.timeline.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-400">No integrity or session events were recorded.</p>
+          ) : (
+            <ol className="mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-1">
+              {integrity.timeline.map((e, i) => (
+                <li key={i} className="flex gap-3 text-sm">
+                  <span className="w-[4.5rem] shrink-0 whitespace-nowrap font-mono text-xs leading-5 text-slate-400">
+                    {new Date(e.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <span className="flex min-w-0 items-start gap-2 text-slate-200">
+                    <span
+                      aria-hidden="true"
+                      className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${isScreenShareEvent(e.type) ? "bg-violet-400" : "bg-amber-400"}`}
+                    />
+                    {liveEventText(e)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </div>
+      <p className="mt-2 text-[11px] leading-5 text-slate-400">
+        A visibility change can also mean a minimised window or a locked screen. Face checks run in the candidate&apos;s browser and may not be available on every device.
+      </p>
     </div>
   )
 }
@@ -291,6 +397,8 @@ export function DebriefPanel({ debrief, error, generating, generateError, onGene
           </div>
         </div>
       </div>
+
+      {evidence.integrity ? <IntegrityEvidence integrity={evidence.integrity} /> : null}
 
       {summary ? (
         <p className="mt-4 flex items-start gap-2 text-[11px] leading-5 text-slate-400">
