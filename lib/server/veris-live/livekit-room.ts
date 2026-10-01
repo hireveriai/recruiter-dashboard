@@ -17,6 +17,8 @@ import { RoomServiceClient } from "livekit-server-sdk"
 export type RoomControl = {
   removeParticipant(roomName: string, identity: string): Promise<void>
   deleteRoom(roomName: string): Promise<void>
+  /** People currently in the room; a room that doesn't exist has none. */
+  countParticipants?(roomName: string): Promise<number>
 }
 
 export type RoomControlOutcome = "done" | "not_present" | "not_configured" | "failed"
@@ -39,6 +41,14 @@ export function livekitRoomControl(): RoomControl | null {
     },
     deleteRoom: async (roomName) => {
       await client.deleteRoom(roomName)
+    },
+    countParticipants: async (roomName) => {
+      try {
+        return (await client.listParticipants(roomName)).length
+      } catch (error) {
+        if (isNotFound(error)) return 0
+        throw error
+      }
     },
   }
 }

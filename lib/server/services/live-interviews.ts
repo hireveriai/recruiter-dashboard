@@ -390,8 +390,104 @@ async function expireStaleSessions(organizationId: string) {
   `)
 }
 
+const LIVEKIT_CHECK_TIMEOUT_MS = 3000
+// Without a LiveKit answer, only sessions this long past their slot are treated as abandoned.
+const ABANDONED_WITHOUT_LIVEKIT_MINUTES = 6 * 60
+
+function withTimeout<T>(promise: Promise<T>, ms: number) {
+  return Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))])
+}
+
+/**
+ * In-progress sessions that everyone left without pressing "End interview".
+ * Completed (same effect as End interview) once the slot plus 15 minutes is
+ * over, nobody has joined or left for 15 minutes, and LiveKit confirms the
+ * room is empty. If LiveKit can't answer, only after 6 hours past the slot.
+ * The end time is when the room last saw someone leave or join.
+ * (veris-live also does this from LiveKit's room_finished webhook.)
+ */
+export async function completeAbandonedSessions(organizationId: string, control: RoomControl | null = livekitRoomControl()) {
+  const stale = await prisma.$queryRaw<Array<{ interview_id: string; live_room_name: string; minutes_past_slot: number }>>(Prisma.sql`
+    select i.interview_id::text, i.live_room_name,
+           (extract(epoch from now() - (coalesce(i.live_started_at, i.scheduled_start_at) + make_interval(mins => coalesce(i.duration_minutes, 60)))) / 60)::float8 as minutes_past_slot
+    from public.interviews i
+    where i.organization_id = ${organizationId}::uuid
+      and i.delivery_mode = 'LIVE'
+      and i.live_status = 'IN_PROGRESS'
+      and coalesce(i.live_started_at, i.scheduled_start_at) + make_interval(mins => coalesce(i.duration_minutes, 60)) + interval '15 minutes' < now()
+      and not exists (
+        select 1 from public.live_interview_events e
+        where e.interview_id = i.interview_id
+          and e.event_type in ('SESSION_STARTED', 'PARTICIPANT_JOINED', 'PARTICIPANT_LEFT')
+          and e.occurred_at > now() - interval '15 minutes'
+      )
+    order by i.scheduled_start_at
+    limit 20
+  `)
+
+  let completed = 0
+  for (const row of stale) {
+    let empty: boolean | null = null
+    if (control?.countParticipants && row.live_room_name) {
+      try {
+        empty = (await withTimeout(control.countParticipants(row.live_room_name), LIVEKIT_CHECK_TIMEOUT_MS)) === 0
+      } catch {
+        empty = null
+      }
+    }
+    if (empty === false) continue
+    if (empty === null && row.minutes_past_slot < ABANDONED_WITHOUT_LIVEKIT_MINUTES) continue
+
+    const done = await prisma.$queryRaw<Array<{ interview_id: string }>>(Prisma.sql`
+      with done as (
+        update public.interviews i
+        set live_status = 'COMPLETED',
+            live_ended_at = greatest(
+              i.live_started_at,
+              coalesce(
+                (select max(e.occurred_at) from public.live_interview_events e
+                 where e.interview_id = i.interview_id and e.event_type in ('PARTICIPANT_JOINED', 'PARTICIPANT_LEFT')),
+                coalesce(i.live_started_at, i.scheduled_start_at) + make_interval(mins => coalesce(i.duration_minutes, 60))))
+        where i.interview_id = ${row.interview_id}::uuid
+          and i.organization_id = ${organizationId}::uuid
+          and i.delivery_mode = 'LIVE'
+          and i.live_status = 'IN_PROGRESS'
+        returning i.interview_id, i.organization_id
+      ),
+      people as (
+        update public.interview_participants p
+        set invite_token_hash = case when p.role = 'CANDIDATE' then null else p.invite_token_hash end,
+            join_status = case when p.join_status = 'JOINED' then 'LEFT' else p.join_status end,
+            last_left_at = case when p.join_status = 'JOINED' then now() else p.last_left_at end
+        from done
+        where p.interview_id = done.interview_id
+        returning p.participant_id
+      ),
+      logged as (
+        insert into public.live_interview_events (organization_id, interview_id, event_type, payload)
+        select organization_id, interview_id, 'SESSION_COMPLETED', jsonb_build_object('reason', ${empty ? "ROOM_EMPTY" : "ABANDONED"}::text) from done
+        returning event_id
+      )
+      select interview_id::text from done
+    `)
+    if (done.length) {
+      completed += 1
+      console.info(JSON.stringify({ scope: "veris_live", event: "session_auto_completed", interviewId: row.interview_id, reason: empty ? "ROOM_EMPTY" : "ABANDONED" }))
+    }
+  }
+  return { completed }
+}
+
+async function sweepLiveSessions(organizationId: string) {
+  await expireStaleSessions(organizationId)
+  // Never let the sweep break a page load.
+  await completeAbandonedSessions(organizationId).catch((error) => {
+    console.warn(JSON.stringify({ scope: "veris_live", event: "session_auto_complete_failed", message: error instanceof Error ? error.message.slice(0, 120) : "unknown" }))
+  })
+}
+
 export async function listLiveInterviews(params: { organizationId: string; bucket: LiveBucket; limit?: number }) {
-  await expireStaleSessions(params.organizationId)
+  await sweepLiveSessions(params.organizationId)
   const statuses = bucketStatuses(params.bucket)
   const limit = Math.min(Math.max(params.limit ?? 50, 1), 200)
   const order = params.bucket === "completed"
@@ -427,6 +523,7 @@ type ParticipantRow = {
 
 export async function getLiveInterviewDetail(params: { organizationId: string; interviewId: string }) {
   if (!UUID_PATTERN.test(params.interviewId)) throw new ApiError(404, "LIVE_INTERVIEW_NOT_FOUND", "Live interview not found.")
+  await sweepLiveSessions(params.organizationId)
 
   const rows = await prisma.$queryRaw<LiveInterviewRow[]>(Prisma.sql`
     ${LIVE_SELECT}
