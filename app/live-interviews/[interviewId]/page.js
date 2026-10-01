@@ -5,18 +5,13 @@ import { use, useEffect, useState } from "react"
 
 import Navbar from "@/components/Navbar"
 import SendInterviewModal from "@/components/SendInterviewModal"
+import { clock, DebriefEvaluation, DebriefPanel } from "@/components/veris-live/LiveDebrief"
 import { buildAuthUrl } from "@/lib/client/auth-query"
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params"
 
 // Colors use the dashboard's dark-scale classes; its light theme remaps them.
 // White text on colored fills carries hv-solid-action.
 const CARD = "rounded-xl border border-slate-800 bg-slate-900/80 p-4 shadow-[0_14px_44px_rgba(2,6,23,0.18)] sm:p-5"
-
-function clock(ms) {
-  if (ms === null || ms === undefined) return ""
-  const total = Math.floor(ms / 1000)
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`
-}
 
 function label(value) {
   return String(value || "").replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())
@@ -85,9 +80,10 @@ function RatingDots({ rating }) {
 }
 
 /**
- * VERIS Live Interview report. Human ratings are shown per interviewer, side
- * by side; there is intentionally no combined score and no hiring
- * recommendation. Private interviewer notes are never included.
+ * VERIS Live Interview report and debrief. Human ratings are shown per
+ * interviewer, side by side; there is intentionally no combined score and the
+ * AI never recommends hiring or rejecting. Each viewer sees only their own
+ * private notes.
  */
 export default function LiveInterviewReportPage({ params }) {
   const { interviewId } = use(params)
@@ -96,6 +92,11 @@ export default function LiveInterviewReportPage({ params }) {
   const [error, setError] = useState("")
   const [openSend, setOpenSend] = useState(false)
   const [playback, setPlayback] = useState({})
+  const [debrief, setDebrief] = useState(null)
+  const [debriefError, setDebriefError] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState("")
+  const [highlight, setHighlight] = useState(null)
 
   useEffect(() => {
     fetch(buildAuthUrl(`/api/live-interviews/${interviewId}/report`, searchParams), { credentials: "include" })
@@ -105,7 +106,38 @@ export default function LiveInterviewReportPage({ params }) {
         setReport(body.data)
       })
       .catch((e) => setError(e.message))
+    fetch(buildAuthUrl(`/api/live-interviews/${interviewId}/debrief`, searchParams), { credentials: "include" })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}))
+        if (!r.ok) throw new Error(body?.error?.message || body?.message || "Could not load the debrief.")
+        setDebrief(body.data)
+      })
+      .catch((e) => setDebriefError(e.message))
   }, [interviewId, searchParams])
+
+  const generateDebrief = async () => {
+    setGenerating(true)
+    setGenerateError("")
+    try {
+      const r = await fetch(buildAuthUrl(`/api/live-interviews/${interviewId}/debrief`, searchParams), { method: "POST", credentials: "include" })
+      const body = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(body?.error?.message || body?.message || "Could not generate the debrief. Please try again.")
+      setDebrief(body.data)
+    } catch (e) {
+      setGenerateError(e.message)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  // Quotes in the debrief link to their line in the transcript.
+  const jumpToTranscript = (atMs) => {
+    const index = report?.transcript.findIndex((s) => s.startMs === atMs) ?? -1
+    if (index < 0) return
+    document.getElementById(`transcript-line-${index}`)?.scrollIntoView({ behavior: "smooth", block: "center" })
+    setHighlight(index)
+    window.setTimeout(() => setHighlight((cur) => (cur === index ? null : cur)), 2500)
+  }
 
   const play = async (recordingId) => {
     const r = await fetch(buildAuthUrl(`/api/live-interviews/${interviewId}/recordings/${recordingId}`, searchParams), { credentials: "include" })
@@ -120,6 +152,8 @@ export default function LiveInterviewReportPage({ params }) {
   const recorded = report ? report.recordings.some((r) => r.kind === "COMPOSITE") : false
   const start = report?.interview.startedAt ? new Date(report.interview.startedAt) : null
   const end = report?.interview.endedAt ? new Date(report.interview.endedAt) : null
+  const actualMinutes = start && end ? Math.max(0, Math.round((end - start) / 60000)) : null
+  const scheduledMinutes = report?.interview.durationMinutes ?? null
 
   return (
     <div className="hv-page-enter min-h-screen bg-slate-950 text-white">
@@ -167,8 +201,11 @@ export default function LiveInterviewReportPage({ params }) {
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                <Stat
+                  value={actualMinutes !== null ? `${actualMinutes} min` : "—"}
+                  label={scheduledMinutes ? `Duration · ${scheduledMinutes} min scheduled` : "Duration"}
+                />
                 <Stat value={`${covered}/${report.questions.length}`} label="Questions covered" tone="text-emerald-300" />
-                <Stat value={report.scorecards.length} label="Interviewers" />
                 <Stat value={`${submitted}/${report.scorecards.length}`} label="Scorecards submitted" tone="text-cyan-300" />
                 <Stat value={recorded ? "Yes" : "No"} label="Recorded" />
               </div>
@@ -190,6 +227,15 @@ export default function LiveInterviewReportPage({ params }) {
                 ))}
               </div>
             </section>
+
+            <DebriefPanel
+              debrief={debrief}
+              error={debriefError}
+              generating={generating}
+              generateError={generateError}
+              onGenerate={generateDebrief}
+              onJump={jumpToTranscript}
+            />
 
             {/* Interviewer evaluation */}
             <section className={CARD}>
@@ -235,6 +281,16 @@ export default function LiveInterviewReportPage({ params }) {
                   </div>
                 ))}
               </div>
+              {debrief ? (
+                <div className="mt-4">
+                  <DebriefEvaluation
+                    debrief={debrief}
+                    interviewId={interviewId}
+                    searchParams={searchParams}
+                    onDecisionSaved={(decision) => setDebrief((cur) => (cur ? { ...cur, decision } : cur))}
+                  />
+                </div>
+              ) : null}
             </section>
 
             {/* VERIS evidence: coverage */}
@@ -290,9 +346,13 @@ export default function LiveInterviewReportPage({ params }) {
                     {report.transcript.map((s, i) => {
                       const isCandidate = s.role === "CANDIDATE"
                       return (
-                        <li key={i} className="flex items-start gap-2.5">
+                        <li key={i} id={`transcript-line-${i}`} className="flex scroll-my-4 items-start gap-2.5">
                           <Avatar name={s.speaker} candidate={isCandidate} size="h-7 w-7 text-[10px]" />
-                          <div className={`min-w-0 flex-1 rounded-xl px-3 py-2 ${isCandidate ? "bg-cyan-400/[0.07] ring-1 ring-cyan-400/20" : "bg-slate-800/60"}`}>
+                          <div
+                            className={`min-w-0 flex-1 rounded-xl px-3 py-2 transition-shadow ${isCandidate ? "bg-cyan-400/[0.07]" : "bg-slate-800/60"} ${
+                              highlight === i ? "ring-2 ring-amber-300/70" : isCandidate ? "ring-1 ring-cyan-400/20" : ""
+                            }`}
+                          >
                             <p className="text-[11px] text-slate-400">
                               <span className={`font-semibold ${isCandidate ? "text-cyan-300" : "text-white"}`}>{s.speaker}</span>
                               <span className="ml-2 font-mono">{clock(s.startMs)}</span>
@@ -370,7 +430,10 @@ export default function LiveInterviewReportPage({ params }) {
                   <ol className="relative ml-2 space-y-3 border-l border-slate-800 pl-4">
                     {report.timeline.map((e, i) => (
                       <li key={i} className="relative">
-                        <span aria-hidden="true" className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-slate-900 bg-cyan-400" />
+                        <span
+                          aria-hidden="true"
+                          className={`absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-slate-900 ${e.type.startsWith("SCREEN_SHARE") ? "bg-violet-400" : "bg-cyan-400"}`}
+                        />
                         <p className="text-xs font-medium text-white">{label(e.type)}</p>
                         <p className="text-[11px] text-slate-400">
                           {new Date(e.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
