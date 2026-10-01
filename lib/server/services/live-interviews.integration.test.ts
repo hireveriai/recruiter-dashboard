@@ -614,3 +614,101 @@ suite("integrity evidence: on the report timeline and in the Debrief, factual, n
   assert.ok(!/FACE_NOT|CAMERA_|PAGE_VISIBILITY|SCREEN_SHARE|visibility|camera/i.test(prompts[0]), "integrity evidence never reaches the AI")
   assert.ok(!/score|verdict|cheat|suspic/i.test(JSON.stringify(generated.evidence.integrity)))
 })
+
+suite("abandoned sessions: completed only after the slot, when idle and LiveKit says the room is empty", async () => {
+  const create = async () => (await svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ sendInvitations: false }), deps })).interviewId
+  const setRunning = (id: string, startedMinutesAgo: number) =>
+    q(`update public.interviews set live_status = 'IN_PROGRESS', live_started_at = now() - make_interval(mins => $2), duration_minutes = 45 where interview_id = $1`, [id, startedMinutesAgo])
+  const status = async (id: string) => (await q<{ live_status: string }>(`select live_status from public.interviews where interview_id = $1`, [id]))[0].live_status
+  const roomWith = (people: number | Error) => ({
+    removeParticipant: async () => {},
+    deleteRoom: async () => {},
+    countParticipants: async () => {
+      if (people instanceof Error) throw people
+      return people
+    },
+  })
+
+  const inSlot = await create()
+  await setRunning(inSlot, 30)
+  const someoneThere = await create()
+  await setRunning(someoneThere, 120)
+  const recentlyActive = await create()
+  await setRunning(recentlyActive, 120)
+  const [cand] = await q<{ id: string }>(`select participant_id::text as id from public.interview_participants where interview_id = $1 and role = 'CANDIDATE'`, [recentlyActive])
+  await q(`insert into public.live_interview_events (organization_id, interview_id, participant_id, event_type, occurred_at) values ($1, $2, $3, 'PARTICIPANT_LEFT', now() - interval '5 minutes')`, [ORG_A, recentlyActive, cand.id])
+
+  // Someone is still in the room: left alone, however late.
+  assert.deepEqual(await svc.completeAbandonedSessions(ORG_A, roomWith(1)), { completed: 0 })
+  assert.equal(await status(someoneThere), "IN_PROGRESS")
+
+  // Empty room: only the session past its slot and idle for 15 minutes is completed.
+  const abandoned = await create()
+  await setRunning(abandoned, 180)
+  const [abandonedCand] = await q<{ id: string }>(`select participant_id::text as id from public.interview_participants where interview_id = $1 and role = 'CANDIDATE'`, [abandoned])
+  await q(`update public.interview_participants set join_status = 'JOINED' where interview_id = $1`, [abandoned])
+  await q(`insert into public.live_interview_events (organization_id, interview_id, participant_id, event_type, occurred_at) values ($1, $2, $3, 'PARTICIPANT_LEFT', now() - interval '130 minutes')`, [ORG_A, abandoned, abandonedCand.id])
+  // Another organization's sweep never touches these.
+  assert.deepEqual(await svc.completeAbandonedSessions(ORG_B, roomWith(0)), { completed: 0 })
+  assert.equal(await status(abandoned), "IN_PROGRESS", "other organizations can't complete it")
+
+  const result = await svc.completeAbandonedSessions(ORG_A, roomWith(0))
+  assert.equal(await status(inSlot), "IN_PROGRESS", "still inside its slot")
+  assert.equal(await status(recentlyActive), "IN_PROGRESS", "someone left 5 minutes ago")
+  assert.equal(await status(abandoned), "COMPLETED")
+  assert.equal(await status(someoneThere), "COMPLETED", "now empty too")
+  assert.equal(result.completed, 2)
+
+  const [ended] = await q<{ ended_ok: boolean }>(
+    `select abs(extract(epoch from live_ended_at - (now() - interval '130 minutes'))) < 5 as ended_ok from public.interviews where interview_id = $1`,
+    [abandoned]
+  )
+  assert.ok(ended.ended_ok, "ends when the room last saw someone leave")
+  const people = await q<{ role: string; join_status: string; has_link: boolean }>(
+    `select role, join_status, invite_token_hash is not null as has_link from public.interview_participants where interview_id = $1`,
+    [abandoned]
+  )
+  assert.ok(people.every((p) => p.join_status !== "JOINED"))
+  assert.equal(people.find((p) => p.role === "CANDIDATE")?.has_link, false, "the candidate's link closes")
+  const [event] = await q<{ reason: string }>(
+    `select payload->>'reason' as reason from public.live_interview_events where interview_id = $1 and event_type = 'SESSION_COMPLETED'`,
+    [abandoned]
+  )
+  assert.equal(event.reason, "ROOM_EMPTY")
+
+  // LiveKit unreachable or not configured: only once 6 hours past the slot.
+  const veryOld = await create()
+  await setRunning(veryOld, 8 * 60)
+  const lateButRecent = await create()
+  await setRunning(lateButRecent, 120)
+  await svc.completeAbandonedSessions(ORG_A, roomWith(new Error("LiveKit unavailable")))
+  assert.equal(await status(lateButRecent), "IN_PROGRESS")
+  assert.equal(await status(veryOld), "COMPLETED")
+  const [fallback] = await q<{ reason: string }>(`select payload->>'reason' as reason from public.live_interview_events where interview_id = $1 and event_type = 'SESSION_COMPLETED'`, [veryOld])
+  assert.equal(fallback.reason, "ABANDONED")
+  assert.equal((await svc.completeAbandonedSessions(ORG_A, null)).completed, 0)
+  assert.equal(await status(lateButRecent), "IN_PROGRESS")
+})
+
+suite("dashboard alerts: VERIS Live Interviews raise started and completed alerts", async () => {
+  const alerts = await import("@/lib/server/services/dashboard-alerts")
+  // Columns the existing AI-alert query reads that the focus fixture doesn't carry (production has both, as text).
+  await q(`alter table public.interview_attempts add column if not exists interruption_reason text`)
+  await q(`alter table public.interviews add column if not exists final_status text`)
+  const { interviewId } = await svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ sendInvitations: false }), deps })
+  const live = async () => (await alerts.getDashboardAlerts(ORG_A, "all")).filter((a) => a.id.startsWith(interviewId))
+
+  assert.deepEqual(await live(), [], "nothing before it starts")
+  await q(`update public.interviews set live_status = 'IN_PROGRESS', live_started_at = now() where interview_id = $1`, [interviewId])
+  const started = await live()
+  assert.deepEqual(started.map((a) => [a.type, a.title, a.tone]), [["LIVE_INTERVIEW_STARTED", "VERIS Live Interview started", "info"]])
+  await q(`update public.interviews set live_status = 'COMPLETED', live_ended_at = now() where interview_id = $1`, [interviewId])
+  const completed = await live()
+  assert.deepEqual(completed.map((a) => [a.type, a.tone]), [["LIVE_INTERVIEW_COMPLETED", "success"]])
+  assert.match(completed[0].message, /VERIS Live Interview/)
+
+  // Read state works per alert, like AI interview alerts.
+  await alerts.markDashboardAlertsRead({ organizationId: ORG_A, userId: hiringManager, alertIds: [completed[0].id] })
+  assert.deepEqual((await alerts.getDashboardAlerts(ORG_A, "all", hiringManager)).filter((a) => a.id.startsWith(interviewId)), [])
+  assert.deepEqual((await alerts.getDashboardAlerts(ORG_B, "all")).filter((a) => a.id.startsWith(interviewId)), [], "scoped to the organization")
+})

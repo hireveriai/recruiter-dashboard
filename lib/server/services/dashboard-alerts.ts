@@ -11,6 +11,8 @@ export type DashboardAlert = {
     | "INTERVIEW_NEEDS_REVIEW"
     | "INTERVIEW_INTERRUPTED"
     | "INTERVIEW_FAILED"
+    | "LIVE_INTERVIEW_STARTED"
+    | "LIVE_INTERVIEW_COMPLETED"
   title: string
   message: string
   tone: "info" | "success" | "warning" | "danger"
@@ -116,6 +118,32 @@ function buildAlert(row: AlertRow): DashboardAlert {
   const candidateName = row.candidate_name || "Candidate"
   const jobTitle = row.job_title || "Interview"
   const type = row.alert_type
+
+  if (type === "LIVE_INTERVIEW_STARTED") {
+    return {
+      id: row.alert_id,
+      type,
+      title: "VERIS Live Interview started",
+      message: `${candidateName}'s VERIS Live Interview for ${jobTitle} is in progress.`,
+      tone: "info",
+      candidateName,
+      jobTitle,
+      occurredAt: toIso(row.occurred_at),
+    }
+  }
+
+  if (type === "LIVE_INTERVIEW_COMPLETED") {
+    return {
+      id: row.alert_id,
+      type,
+      title: "VERIS Live Interview completed",
+      message: `${candidateName}'s VERIS Live Interview for ${jobTitle} has ended. The report and VERIS Debrief are ready to review.`,
+      tone: "success",
+      candidateName,
+      jobTitle,
+      occurredAt: toIso(row.occurred_at),
+    }
+  }
 
   if (type === "INTERVIEW_COMPLETED") {
     return {
@@ -234,9 +262,38 @@ export async function getDashboardAlerts(organizationId: string, limit?: number 
       left join public.job_positions jp on jp.job_id = i.job_id
       where i.organization_id = ${organizationId}::uuid
         and ${aiInterviewsOnly("i")}
+    ),
+    -- VERIS Live Interviews: one alert per state (started while in progress,
+    -- then completed), from the interview row the room keeps up to date.
+    live_source as (
+      select
+        i.interview_id::text || ':live:' || lower(i.live_status) as alert_id,
+        case i.live_status when 'IN_PROGRESS' then 'LIVE_INTERVIEW_STARTED' else 'LIVE_INTERVIEW_COMPLETED' end as alert_type,
+        c.full_name as candidate_name,
+        jp.job_title,
+        null::text as attempt_status,
+        i.live_status as interview_status,
+        i.live_started_at as started_at,
+        i.live_ended_at as ended_at,
+        case i.live_status when 'IN_PROGRESS' then i.live_started_at else coalesce(i.live_ended_at, i.live_started_at) end as occurred_at
+      from public.interviews i
+      left join public.candidates c on c.candidate_id = i.candidate_id
+      left join public.job_positions jp on jp.job_id = i.job_id
+      where i.organization_id = ${organizationId}::uuid
+        and i.delivery_mode = 'LIVE'
+        and i.live_status in ('IN_PROGRESS', 'COMPLETED')
+        and i.live_started_at is not null
+    ),
+    all_alerts as (
+      select alert_id, alert_type, candidate_name, job_title, attempt_status::text, interview_status::text,
+             started_at::timestamptz, ended_at::timestamptz, occurred_at::timestamptz
+      from alert_source
+      union all
+      select alert_id, alert_type, candidate_name, job_title, attempt_status, interview_status, started_at, ended_at, occurred_at
+      from live_source
     )
     select *
-    from alert_source
+    from all_alerts
     where alert_type is not null
       ${canFilterReadAlerts
         ? Prisma.sql`and not exists (
@@ -244,7 +301,7 @@ export async function getDashboardAlerts(organizationId: string, limit?: number 
           from public.dashboard_alert_reads dar
           where dar.organization_id = ${organizationId}::uuid
             and dar.user_id = ${userId}::uuid
-            and dar.alert_id = alert_source.alert_id
+            and dar.alert_id = all_alerts.alert_id
         )`
         : Prisma.empty}
     order by occurred_at desc nulls last

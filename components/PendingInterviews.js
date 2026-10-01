@@ -478,20 +478,18 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
     }
   }, [hasInitial, initialPendingInterviews, initialPendingTotal])
 
-  // Upcoming + in-progress VERIS Live Interviews. The endpoint refuses when
+  // Upcoming VERIS Live Interviews only (scheduled / invites sent), like AI
+  // interviews that leave this list once started. The endpoint refuses when
   // VERIS Live is not enabled for the workspace; that simply means no rows.
   useEffect(() => {
     let active = true
-    Promise.all(
-      ["in_progress", "upcoming"].map((bucket) =>
-        fetch(buildAuthUrl(`/api/live-interviews?bucket=${bucket}`, searchParams), { credentials: "include", cache: "no-store" })
-          .then((response) => (response.ok ? response.json() : null))
-          .then((payload) => (Array.isArray(payload?.data?.interviews) ? payload.data.interviews : []))
-          .catch(() => [])
-      )
-    ).then(([inProgress, upcoming]) => {
-      if (active) setLiveInterviews([...inProgress, ...upcoming].slice(0, 5))
-    })
+    fetch(buildAuthUrl("/api/live-interviews?bucket=upcoming", searchParams), { credentials: "include", cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => (Array.isArray(payload?.data?.interviews) ? payload.data.interviews : []))
+      .catch(() => [])
+      .then((upcoming) => {
+        if (active) setLiveInterviews(upcoming.slice(0, 5))
+      })
     return () => {
       active = false
     }
