@@ -472,3 +472,89 @@ suite("report: submitted scorecards side by side, no drafts, no private notes, n
   assert.equal(await svc.getLiveRecordingPath({ organizationId: ORG_A, interviewId, recordingId: recording.id }), "veris-live/a/b/audio.ogg")
   await assert.rejects(svc.getLiveRecordingPath({ organizationId: ORG_B, interviewId, recordingId: recording.id }), { code: "RECORDING_NOT_FOUND" })
 })
+
+suite("debrief: needs an ended, transcribed interview; AI never sees notes or ratings; notes only for their author", async () => {
+  const debrief = await import("@/lib/server/services/live-debrief")
+  const { interviewId } = await svc.createLiveInterview({ organizationId: ORG_A, userId: hiringManager, input: input({ sendInvitations: false }), deps })
+  const parts = await q<{ participant_id: string; role: string; user_id: string | null }>(
+    `select participant_id::text, role, user_id::text from public.interview_participants where interview_id = $1`, [interviewId]
+  )
+  const hm = parts.find((p) => p.user_id === hiringManager)!.participant_id
+  const cand = parts.find((p) => p.role === "CANDIDATE")!.participant_id
+  const prompts: Array<{ system: string; user: string }> = []
+  const fakeAi = async (prompt: { system: string; user: string }) => {
+    prompts.push(prompt)
+    return {
+      overview: "The candidate described an order service.",
+      competencies: [
+        { name: "Backend reliability", level: "STRONG", note: "Concrete figure.", evidence: [{ quote: "handled two thousand requests per second" }] },
+        { name: "Leadership", level: "STRONG", note: "Claimed only.", evidence: [{ quote: "I managed fifty people" }] },
+      ],
+      strengths: [{ point: "Specific throughput number.", evidence: [{ quote: "handled two thousand requests per second" }] }, { point: "We should hire them" }],
+      areas_to_probe: [],
+      unresolved_questions: ["How was it monitored?"],
+      evidence_for_review: [],
+    }
+  }
+
+  // Not before the interview has ended.
+  await assert.rejects(debrief.generateLiveDebrief({ organizationId: ORG_A, interviewId, userId: hiringManager, ai: fakeAi }), { code: "DEBRIEF_NOT_READY" })
+  await q(`update public.interviews set live_status = 'COMPLETED', live_started_at = now() - interval '40 minutes', live_ended_at = now() where interview_id = $1`, [interviewId])
+  // Not without a transcript.
+  await assert.rejects(debrief.generateLiveDebrief({ organizationId: ORG_A, interviewId, userId: hiringManager, ai: fakeAi }), { code: "DEBRIEF_NO_TRANSCRIPT" })
+  assert.equal(prompts.length, 0)
+
+  const [recording] = await q<{ id: string }>(
+    `insert into public.live_recordings (organization_id, interview_id, participant_id, kind, egress_id, storage_path, status, transcription_status)
+     values ($1, $2, $3, 'PARTICIPANT_AUDIO', 'EG_debrief_1', 'veris-live/x/y/a.ogg', 'COMPLETE', 'DONE') returning recording_id::text as id`,
+    [ORG_A, interviewId, cand]
+  )
+  const segment = (startMs: number, text: string) =>
+    q(
+      `insert into public.live_transcript_segments (organization_id, interview_id, participant_id, recording_id, source, started_at_ms, ended_at_ms, text)
+       values ($1, $2, $3, $4, 'POST_TRANSCRIPTION', $5, $6, $7)`,
+      [ORG_A, interviewId, cand, recording.id, startMs, startMs + 5000, text]
+    )
+  await segment(60000, "I built an order service that handled two thousand requests per second.")
+  await q(`insert into public.live_interviewer_notes (organization_id, interview_id, participant_id, body) values ($1, $2, $3, 'HM_ONLY_NOTE')`, [ORG_A, interviewId, hm])
+  await q(
+    `insert into public.live_evaluator_ratings (organization_id, interview_id, participant_id, target_type, rating, evidence, submitted_at)
+     values ($1, $2, $3, 'OVERALL', 4, 'HM_RATING_EVIDENCE', now())`,
+    [ORG_A, interviewId, hm]
+  )
+  await q(
+    `insert into public.live_interview_events (organization_id, interview_id, participant_id, event_type, payload, occurred_at)
+     values ($1, $2, $3, 'SCREEN_SHARE_STARTED', '{}', now() - interval '20 minutes'), ($1, $2, $3, 'SCREEN_SHARE_STOPPED', '{}', now() - interval '10 minutes')`,
+    [ORG_A, interviewId, cand]
+  )
+
+  const generated = await debrief.generateLiveDebrief({ organizationId: ORG_A, interviewId, userId: hiringManager, ai: fakeAi })
+  const prompt = JSON.stringify(prompts[0])
+  assert.ok(prompt.includes("two thousand requests"), "the transcript is the input")
+  assert.ok(!prompt.includes("HM_ONLY_NOTE"), "private notes are never sent to the AI")
+  assert.ok(!prompt.includes("HM_RATING_EVIDENCE"), "interviewer ratings are never sent to the AI")
+
+  const s = generated.summary!
+  assert.equal(s.stale, false)
+  assert.equal(s.competencies.find((c) => c.name === "Backend reliability")!.level, "STRONG")
+  assert.equal(s.competencies.find((c) => c.name === "Leadership")!.level, "PARTIAL", "unverified 'strong' is downgraded")
+  assert.deepEqual(s.strengths.map((x) => x.point), ["Specific throughput number."], "verdict dropped")
+  assert.ok(!/"(hire|reject|score|verdict)"/i.test(JSON.stringify(s)))
+  assert.ok(generated.evidence.screenShare.totalSeconds >= 590 && generated.evidence.screenShare.totalSeconds <= 610)
+
+  // Private notes: the author sees theirs, another interviewer sees none.
+  assert.deepEqual(generated.myNotes.map((n) => n.body), ["HM_ONLY_NOTE"])
+  const asPanelist = await debrief.getLiveDebrief({ organizationId: ORG_A, interviewId, userId: panelist })
+  assert.deepEqual(asPanelist.myNotes, [])
+  assert.ok(!JSON.stringify(asPanelist).includes("HM_ONLY_NOTE"))
+
+  // New evidence marks the stored summary stale; regenerating replaces it (one row).
+  await segment(90000, "We monitored it with Grafana and PagerDuty alerts.")
+  assert.equal((await debrief.getLiveDebrief({ organizationId: ORG_A, interviewId, userId: hiringManager })).summary!.stale, true)
+  await debrief.generateLiveDebrief({ organizationId: ORG_A, interviewId, userId: hiringManager, ai: fakeAi })
+  const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from public.live_interview_debriefs where interview_id = $1`, [interviewId])
+  assert.equal(n, 1)
+
+  // Org-scoped.
+  await assert.rejects(debrief.getLiveDebrief({ organizationId: ORG_B, interviewId, userId: userB }), { code: "LIVE_INTERVIEW_NOT_FOUND" })
+})
