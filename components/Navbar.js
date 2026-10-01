@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BrainCircuit } from "lucide-react";
+import { Bell, BrainCircuit, Moon, Sun } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,7 +12,6 @@ import { ACTION_FEEDBACK_EVENT } from "@/lib/client/action-feedback";
 import { logoutRecruiter } from "@/lib/client/logout";
 import { DEFAULT_RECRUITER_PERMISSION_PROFILE, canAccessFeature } from "@/lib/client/permissions";
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params";
-import ThemeSelector from "@/components/ThemeSelector";
 import { useTheme } from "@/components/ThemeProvider";
 
 const CreateJobModal = dynamic(() => import("./CreateJobModal"), {
@@ -21,8 +20,8 @@ const CreateJobModal = dynamic(() => import("./CreateJobModal"), {
 
 const navItems = [
   { href: "/", label: "Dashboard", feature: "dashboard" },
-  { href: "/ai-screening", label: "VERIS Screening", feature: "aiScreening" },
-  { href: "/assessments", label: "Assessment", feature: "assessments" },
+  { href: "/ai-screening", label: "Screening", feature: "aiScreening" },
+  { href: "/assessments", label: "Assessments", feature: "assessments" },
   { href: "/jobs", label: "Jobs", feature: "jobs" },
   { href: "/candidates", label: "Candidates", feature: "candidates" },
   { href: "/interviews", label: "Interviews", feature: "interviews" },
@@ -239,7 +238,7 @@ function cacheAlerts(alerts) {
 }
 
 export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, initialProfile = null, initialAlerts = undefined }) {
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, theme, setTheme } = useTheme();
   /* Two different marks, and they need different treatment. The dark-theme
      asset is line art on transparency with wide padding baked in, so it is
      oversized and cropped by the tile to trim that padding. The light-theme
@@ -252,7 +251,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
     : "border-cyan-400/25 bg-slate-900 group-hover:border-cyan-300/45";
   const logoImageClass = isLightTheme
     ? "h-full w-full object-contain"
-    : "h-[5.1rem] w-[5.1rem] max-w-none object-contain";
+    : "h-[4.2rem] w-[4.2rem] max-w-none object-contain";
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useAuthSearchParams();
@@ -614,7 +613,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
     <>
       <header className="hv-navbar sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/92 text-white shadow-[0_8px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl">
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-400/45 to-transparent" />
-        <div className="relative mx-auto flex w-full max-w-[1840px] flex-nowrap items-center justify-between gap-3 px-3 py-4 sm:px-4 xl:px-6">
+        <div className="relative mx-auto flex w-full max-w-[1840px] flex-nowrap items-center justify-between gap-3 px-3 py-2.5 sm:px-4 xl:px-6">
           <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 xl:gap-3">
             <Link
               href="/"
@@ -623,7 +622,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               aria-label="VerisNova home"
             >
               <span
-                className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-sm transition-all duration-200 ${logoTileClass}`}
+                className={`relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-sm transition-all duration-200 ${logoTileClass}`}
               >
                 <Image
                   src={logoSrc}
@@ -636,8 +635,8 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                 />
               </span>
               <span className="min-w-0">
-                <span className="hv-brand-wordmark block text-lg font-bold tracking-tight xl:text-xl">VerisNova</span>
-                <span className="mt-1 hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 sm:block">
+                <span className="hv-brand-wordmark block text-lg font-bold tracking-tight">VerisNova</span>
+                <span className="mt-0.5 hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 sm:block">
                   Hiring Workspace
                 </span>
               </span>
@@ -656,87 +655,19 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                     className={[
                       "hv-nav-link group relative inline-flex whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] tracking-[0.005em] transition-colors duration-200 xl:px-3.5 xl:text-sm",
                       active
-                        ? "hv-nav-link-active bg-slate-800 font-semibold text-cyan-100 shadow-sm"
+                        ? "hv-nav-link-active bg-cyan-500/15 font-semibold text-cyan-100 ring-1 ring-inset ring-cyan-400/25"
                         : "text-slate-300/90 hover:bg-slate-800/60 hover:text-white",
                     ].join(" ")}
+                    aria-current={active ? "page" : undefined}
                   >
                     <span className="relative z-10">{item.label}</span>
+                    {active ? (
+                      <span aria-hidden="true" className="hv-nav-underline absolute inset-x-3 -bottom-[5px] h-[2px] rounded-full bg-cyan-400" />
+                    ) : null}
                   </Link>
                 );
               })}
 
-              {canViewAlerts ? (
-              <div className="relative shrink-0" ref={alertsRef}>
-                <button
-                  type="button"
-                  onClick={() => setAlertsOpen((value) => !value)}
-                  aria-label="Alerts"
-                  title="Alerts"
-                  className={[
-                    "hv-nav-link group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-medium tracking-[0.005em] transition-colors duration-200 xl:px-3 xl:text-sm",
-                    alertsOpen
-                      ? "hv-nav-link-active bg-slate-800 text-cyan-100 shadow-sm"
-                      : "text-slate-300/90 hover:bg-slate-800/60 hover:text-white",
-                  ].join(" ")}
-                >
-                  <Bell className="h-4 w-4" strokeWidth={1.8} />
-                  {unreadAlerts.length > 0 ? (
-                    <span className="hv-solid-action relative inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-cyan-600 px-1 text-[10px] font-semibold leading-none text-white">
-                      {unreadAlerts.length}
-                    </span>
-                  ) : null}
-                </button>
-
-                {alertsOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+14px)] z-50 w-[360px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/98 p-4 shadow-[0_24px_70px_rgba(2,6,23,0.42)]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">Alerts</h2>
-                        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Interview Activity</p>
-                      </div>
-                      {unreadAlerts.length > 0 ? (
-                        <button
-                          type="button"
-                          onClick={handleMarkAllAlertsRead}
-                          className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-500/20"
-                        >
-                          Mark all as read
-                        </button>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                      {unreadAlerts.length === 0 ? (
-                        <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-5 text-sm text-slate-400">
-                          No unread interview activity alerts.
-                        </div>
-                      ) : (
-                        unreadAlerts.map((alert) => (
-                          <article key={alert.id} className={`rounded-2xl border px-4 py-3 ${getAlertToneClass(alert.tone)}`}>
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="text-sm font-semibold text-white">{alert.title}</p>
-                              <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-slate-300">
-                                {formatAlertTime(alert.occurredAt)}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-sm leading-6 text-slate-200">{alert.message}</p>
-                            <div className="mt-3 flex justify-end">
-                              <button
-                                type="button"
-                                onClick={() => handleMarkAlertRead(alert.id)}
-                                className="rounded-lg border border-white/10 bg-slate-950/30 px-2.5 py-1 text-xs font-semibold text-slate-200 transition hover:border-cyan-300/35 hover:bg-cyan-500/10 hover:text-cyan-100"
-                              >
-                                Read
-                              </button>
-                            </div>
-                          </article>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-              ) : null}
               </div>
             </nav>
           </div>
@@ -746,7 +677,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               <button
                 type="button"
                 onClick={handleOpenVerisAi}
-                className="hv-veris-ai-trigger group relative inline-flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full border border-cyan-400/25 bg-[linear-gradient(135deg,rgba(8,145,178,0.22),rgba(56,189,248,0.1))] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.14)] transition-all duration-200 hover:border-cyan-300/45 hover:bg-cyan-400/20 hover:text-white hover:shadow-[0_0_20px_rgba(34,211,238,0.22)]"
+                className="hv-veris-ai-trigger group relative inline-flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full border border-cyan-400/25 bg-[linear-gradient(135deg,rgba(8,145,178,0.22),rgba(56,189,248,0.1))] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.14)] transition-all duration-200 hover:border-cyan-300/45 hover:bg-cyan-400/20 hover:text-white hover:shadow-[0_0_20px_rgba(34,211,238,0.22)]"
                 aria-label="Open VERIS AI"
                 title="VERIS AI"
               >
@@ -754,14 +685,83 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                 <span className="hv-veris-ai-dot pointer-events-none absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_6px_rgba(34,211,238,0.9)]" />
               </button>
             ) : null}
-            <ThemeSelector />
+            {canViewAlerts ? (
+            <div className="relative shrink-0" ref={alertsRef}>
+              <button
+                type="button"
+                onClick={() => setAlertsOpen((value) => !value)}
+                aria-label="Alerts"
+                aria-expanded={alertsOpen}
+                title="Alerts"
+                className={`hv-nav-utility relative inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors duration-200 ${
+                  alertsOpen ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-100" : "border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-300/45 hover:text-white"
+                }`}
+              >
+                <Bell className="h-4 w-4" strokeWidth={1.8} />
+                {unreadAlerts.length > 0 ? (
+                  <span className="hv-solid-action absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-cyan-600 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-slate-950">
+                    {unreadAlerts.length}
+                  </span>
+                ) : null}
+              </button>
+
+              {alertsOpen ? (
+                <div className="absolute right-0 top-[calc(100%+14px)] z-50 w-[360px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/98 p-4 shadow-[0_24px_70px_rgba(2,6,23,0.42)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold text-white">Alerts</h2>
+                      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Interview Activity</p>
+                    </div>
+                    {unreadAlerts.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllAlertsRead}
+                        className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-500/20"
+                      >
+                        Mark all as read
+                      </button>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                    {unreadAlerts.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-5 text-sm text-slate-400">
+                        No unread interview activity alerts.
+                      </div>
+                    ) : (
+                      unreadAlerts.map((alert) => (
+                        <article key={alert.id} className={`rounded-2xl border px-4 py-3 ${getAlertToneClass(alert.tone)}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-sm font-semibold text-white">{alert.title}</p>
+                            <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-slate-300">
+                              {formatAlertTime(alert.occurredAt)}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-slate-200">{alert.message}</p>
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleMarkAlertRead(alert.id)}
+                              className="rounded-lg border border-white/10 bg-slate-950/30 px-2.5 py-1 text-xs font-semibold text-slate-200 transition hover:border-cyan-300/35 hover:bg-cyan-500/10 hover:text-cyan-100"
+                            >
+                              Read
+                            </button>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            ) : null}
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
                 onClick={() => setProfileOpen((value) => !value)}
                 aria-label="Account menu"
                 aria-expanded={profileOpen}
-                className="flex h-10 items-center gap-2 rounded-full border border-slate-700 bg-slate-900 p-1 shadow-sm transition-colors duration-200 hover:border-cyan-300/45 2xl:pr-3"
+                className="flex h-9 items-center gap-2 rounded-full border border-slate-700 bg-slate-900 p-0.5 shadow-sm transition-colors duration-200 hover:border-cyan-300/45 2xl:pr-3"
               >
                 <div className="hv-solid-action flex h-8 w-8 items-center justify-center rounded-full bg-cyan-600 text-xs font-semibold text-white">
                   {initials}
@@ -821,6 +821,34 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                       <span>Settings</span>
                     </Link>
                     ) : null}
+
+                    <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-200">
+                      <span className="flex items-center gap-3">
+                        {resolvedTheme === "light" ? <Sun className="h-4 w-4" strokeWidth={1.8} /> : <Moon className="h-4 w-4" strokeWidth={1.8} />}
+                        Appearance
+                      </span>
+                      <div role="radiogroup" aria-label="Color theme" className="inline-flex rounded-full border border-slate-700 bg-slate-900 p-0.5">
+                        {[
+                          { value: "light", label: "Light", Icon: Sun },
+                          { value: "dark", label: "Dark", Icon: Moon },
+                        ].map(({ value, label, Icon }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            role="radio"
+                            aria-checked={theme === value}
+                            aria-label={`${label} mode`}
+                            title={`${label} mode`}
+                            onClick={() => setTheme(value)}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition ${
+                              theme === value ? "hv-solid-action bg-cyan-600 text-white" : "text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
                     <Link href="/contact-us" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-200 transition hover:bg-slate-800/70 hover:text-white" onClick={() => { setProfileOpen(false); handleNavigationClick("/contact-us"); }}>
                       <MailIcon />
