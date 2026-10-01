@@ -848,7 +848,8 @@ export default function InterviewsPage() {
   const searchParams = useAuthSearchParams()
   const cacheKey = `interviews:${searchParams.toString()}`
   // AI Interviews / VERIS Live Interviews switch (only when VERIS Live is enabled).
-  const [interviewView, setInterviewView] = useState("ai")
+  // ?view=live opens straight on the Live list (linked from the dashboard card).
+  const [interviewView, setInterviewView] = useState(() => (searchParams.get("view") === "live" ? "live" : "ai"))
   const [liveEnabled, setLiveEnabled] = useState(false)
 
   useEffect(() => {

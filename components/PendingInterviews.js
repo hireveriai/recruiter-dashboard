@@ -278,6 +278,15 @@ function openDashboardAction(action) {
   window.dispatchEvent(new CustomEvent(action))
 }
 
+// VERIS Live Interviews live in public.interviews too but are excluded from
+// the AI invite pipeline, so the card loads them separately and shows them as
+// their own rows.
+const LIVE_STATUS = {
+  SCHEDULED: { label: "Scheduled", className: "border-violet-400/25 bg-violet-500/10 text-violet-200" },
+  INVITATIONS_SENT: { label: "Invites sent", className: "border-violet-400/25 bg-violet-500/10 text-violet-200" },
+  IN_PROGRESS: { label: "In progress", className: "border-emerald-400/25 bg-emerald-500/10 text-emerald-200" },
+}
+
 function GuidedInterviewEmptyState({ compact = false, profile = null }) {
   const canCreateJob = canAccessFeature(profile, "createJob", profile?.entitlements)
   const canSendInterview = canAccessFeature(profile, "sendInterview", profile?.entitlements)
@@ -442,6 +451,7 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
   const [notice, setNotice] = useState({ open: false, title: "", message: "", tone: "error" })
   const [nowTick, setNowTick] = useState(() => Date.now())
   const [copiedLink, setCopiedLink] = useState("")
+  const [liveInterviews, setLiveInterviews] = useState([])
   const hasInitial = initialPendingInterviews !== undefined
   const canEditInterview = canAccessFeature(profile, "editInterview", profile?.entitlements)
   const canDeleteInterview = canAccessFeature(profile, "deleteInterview", profile?.entitlements)
@@ -467,6 +477,25 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
       active = false
     }
   }, [hasInitial, initialPendingInterviews, initialPendingTotal])
+
+  // Upcoming + in-progress VERIS Live Interviews. The endpoint refuses when
+  // VERIS Live is not enabled for the workspace; that simply means no rows.
+  useEffect(() => {
+    let active = true
+    Promise.all(
+      ["in_progress", "upcoming"].map((bucket) =>
+        fetch(buildAuthUrl(`/api/live-interviews?bucket=${bucket}`, searchParams), { credentials: "include", cache: "no-store" })
+          .then((response) => (response.ok ? response.json() : null))
+          .then((payload) => (Array.isArray(payload?.data?.interviews) ? payload.data.interviews : []))
+          .catch(() => [])
+      )
+    ).then(([inProgress, upcoming]) => {
+      if (active) setLiveInterviews([...inProgress, ...upcoming].slice(0, 5))
+    })
+    return () => {
+      active = false
+    }
+  }, [searchParams])
 
   const loadPendingInterviews = useCallback(async ({ limit = 5 } = {}) => {
     if (!hasAuthQuery(searchParams)) {
@@ -879,7 +908,7 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
                 <th className="p-4 text-left">Job</th>
                 <th className="p-4 text-left">Status</th>
                 <th className="p-4 text-left">Interview Type</th>
-                <th className="p-4 text-left">Link Expiry</th>
+                <th className="p-4 text-left">Expiry / Schedule</th>
                 <th className="p-4 text-left">Action</th>
               </tr>
             </thead>
@@ -888,7 +917,7 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
               <TableSkeleton rows={5} columns={6} showAvatar />
             ) : (
               <tbody>
-                {previewInterviews.length === 0 ? (
+                {previewInterviews.length === 0 && liveInterviews.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-4">
                     <GuidedInterviewEmptyState compact profile={profile} />
@@ -949,7 +978,40 @@ export default function PendingInterviews({ initialPendingInterviews, initialPen
                       </div>
                     </td>
                   </tr>
-                ))
+                )).concat(
+                  liveInterviews.map((live) => {
+                    const status = LIVE_STATUS[live.liveStatus] ?? LIVE_STATUS.SCHEDULED
+                    return (
+                      <tr key={`live-${live.interviewId}`} className="border-b border-gray-800">
+                        <td className="p-4">{live.candidateName || "Candidate"}</td>
+                        <td className="p-4 text-gray-300">{live.jobTitle || "-"}</td>
+                        <td className="p-4">
+                          <span className={`inline-flex min-w-[96px] items-center justify-center whitespace-nowrap rounded-full border px-3 py-1 text-center text-xs font-medium leading-5 ${status.className}`}>
+                            {status.label}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center gap-1.5 text-violet-200">
+                            <span className="h-1.5 w-1.5 rounded-full bg-violet-400" aria-hidden="true" />
+                            VERIS Live Interview
+                          </span>
+                        </td>
+                        <td className="p-4 text-slate-300">
+                          {live.scheduledStartAt ? formatDateTime(live.scheduledStartAt, timezone) : "-"}
+                          <span className="block text-xs text-slate-500">Scheduled{live.durationMinutes ? ` · ${live.durationMinutes} min` : ""}</span>
+                        </td>
+                        <td className="p-4">
+                          <a
+                            href={buildAuthUrl("/interviews?view=live", searchParams)}
+                            className="text-xs font-semibold text-violet-300 hover:text-violet-200 sm:text-sm"
+                          >
+                            Manage
+                          </a>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )
               )}
               </tbody>
             )}
