@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { requireAiRouteAccess } from "@/lib/server/ai/route-access"
 import { fetchSkillState } from "@/lib/server/ai/skill-state"
 import { errorResponse } from "@/lib/server/response"
 
@@ -14,6 +15,8 @@ export async function GET(request: Request) {
         { status: 400 }
       )
     }
+
+    await requireAiRouteAccess(request, attemptId)
 
     const state = await fetchSkillState(attemptId)
 
