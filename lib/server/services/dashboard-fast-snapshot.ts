@@ -121,6 +121,14 @@ export async function getFastDashboardCandidates(organizationId: string, limit: 
       coalesce(jp.job_title, sj.title, '-') as job_title,
       case
         when i.interview_id is null and sm.id is not null then 'SCREENED'
+        -- Ahead of the completion arm, as in dashboard-pipeline/dashboard-alerts:
+        -- that arm treats any ended attempt as completed, and an abandoned or
+        -- interrupted attempt also has ended_at, so a broken session showed as
+        -- "Completed" and "Awaiting your decision" on the Candidates page.
+        when upper(coalesce(i.status, '')) in ('NEEDS_REVIEW', 'INTERRUPTED')
+          or upper(coalesce(i.final_status, '')) = 'TRANSCRIPT_REVIEW_REQUIRED'
+          or upper(coalesce(la.status, '')) in ('ABANDONED', 'TIME_EXPIRED', 'TERMINATED', 'FAILED')
+          then 'NEEDS_REVIEW'
         when upper(coalesce(i.status, la.status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED') or la.ended_at is not null then 'COMPLETED'
         when la.attempt_id is not null and la.ended_at is null then 'IN_PROGRESS'
         when li.invite_id is not null and li.used_at is null and li.expires_at is not null and li.expires_at <= now() then 'EXPIRED'

@@ -153,6 +153,7 @@ async function getInterviewWorkflowMetrics(organizationId: string) {
       select
         i.interview_id,
         i.status as interview_status,
+        i.final_status,
         la.attempt_id,
         la.status as attempt_status,
         la.started_at,
@@ -169,21 +170,27 @@ async function getInterviewWorkflowMetrics(organizationId: string) {
         and rd.interview_id = i.interview_id
       where i.organization_id = ${organizationId}::uuid
         and ${aiInterviewsOnly("i")}
+    ),
+    scored as (
+      select
+        base.*,
+        -- An abandoned or interrupted attempt also has ended_at; it has no
+        -- report to review, matching dashboard-pipeline's integrity arm.
+        (
+          (upper(coalesce(interview_status, attempt_status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED') or ended_at is not null)
+          and not (
+            upper(coalesce(interview_status, '')) in ('NEEDS_REVIEW', 'INTERRUPTED')
+            or upper(coalesce(final_status, '')) = 'TRANSCRIPT_REVIEW_REQUIRED'
+            or upper(coalesce(attempt_status, '')) in ('ABANDONED', 'TIME_EXPIRED', 'TERMINATED', 'FAILED')
+          )
+        ) as completed
+      from base
     )
     select
-      count(*) filter (
-        where (upper(coalesce(interview_status, attempt_status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED') or ended_at is not null)
-          and recruiter_decision_status is null
-      )::int as pending_reports,
-      count(*) filter (
-        where (upper(coalesce(interview_status, attempt_status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED') or ended_at is not null)
-          and recruiter_decision_status is not null
-      )::int as reviewed_reports,
-      count(*) filter (
-        where (upper(coalesce(interview_status, attempt_status, '')) in ('COMPLETED', 'SUBMITTED', 'EVALUATED') or ended_at is not null)
-          and recruiter_decision_status is null
-      )::int as decisions_pending
-    from base
+      count(*) filter (where completed and recruiter_decision_status is null)::int as pending_reports,
+      count(*) filter (where completed and recruiter_decision_status is not null)::int as reviewed_reports,
+      count(*) filter (where completed and recruiter_decision_status is null)::int as decisions_pending
+    from scored
   `)
 
   const row = rows[0]
