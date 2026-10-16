@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { requireAiRouteAccess } from "@/lib/server/ai/route-access"
 import { fetchSkillState, upsertSkillState } from "@/lib/server/ai/skill-state"
 import {
   aggregateSkillScores,
@@ -58,6 +59,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
+    const attemptId = body.attempt_id ?? body.attemptId
+    const { auth, attempt } = await requireAiRouteAccess(request, attemptId)
+    const interviewId = attempt?.interviewId ?? null
+    const organizationId = auth.organizationId
+
     const jobDescription = body.job_description ?? body.jobDescription
     const coreSkills = Array.isArray(body.core_skills) ? body.core_skills : body.coreSkills
     const resumeSkills = Array.isArray(body.resume_skills) ? body.resume_skills : body.resumeSkills
@@ -105,15 +111,11 @@ export async function POST(request: Request) {
     const missingSkills = coverage.remaining
     const coverageComplete = missingSkills.length === 0
 
-    const attemptId = body.attempt_id ?? body.attemptId
-    const interviewId = body.interview_id ?? body.interviewId
-    const organizationId = body.organization_id ?? body.organizationId
-
     if (attemptId) {
       await upsertSkillState({
         attemptId,
-        interviewId: interviewId ?? null,
-        organizationId: organizationId ?? null,
+        interviewId,
+        organizationId,
         skillsCovered: coverage.covered,
         skillsRemaining: coverage.remaining,
       })
@@ -133,9 +135,9 @@ export async function POST(request: Request) {
           overall_weighted_score
         )
         values (
-          ${interviewId ?? null}::uuid,
+          ${interviewId}::uuid,
           ${attemptId ?? null}::uuid,
-          ${organizationId ?? null}::uuid,
+          ${organizationId}::uuid,
           ${JSON.stringify(profile.skill_scores)}::jsonb,
           ${profile.strengths}::text[],
           ${profile.weaknesses}::text[],

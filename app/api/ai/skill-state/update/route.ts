@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { requireAiRouteAccess } from "@/lib/server/ai/route-access"
 import { upsertSkillState } from "@/lib/server/ai/skill-state"
 import { errorResponse } from "@/lib/server/response"
 
@@ -8,8 +9,6 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     const attemptId = body.attempt_id ?? body.attemptId
-    const interviewId = body.interview_id ?? body.interviewId
-    const organizationId = body.organization_id ?? body.organizationId
     const skillsCovered = Array.isArray(body.skills_covered) ? body.skills_covered : body.skillsCovered
     const skillsRemaining = Array.isArray(body.skills_remaining) ? body.skills_remaining : body.skillsRemaining
 
@@ -20,10 +19,12 @@ export async function POST(request: Request) {
       )
     }
 
+    const { auth, attempt } = await requireAiRouteAccess(request, attemptId)
+
     await upsertSkillState({
       attemptId,
-      interviewId: interviewId ?? null,
-      organizationId: organizationId ?? null,
+      interviewId: attempt?.interviewId ?? null,
+      organizationId: auth.organizationId,
       skillsCovered: Array.isArray(skillsCovered) ? skillsCovered : [],
       skillsRemaining: Array.isArray(skillsRemaining) ? skillsRemaining : [],
     })

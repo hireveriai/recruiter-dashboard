@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { requireAiRouteAccess } from "@/lib/server/ai/route-access"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse } from "@/lib/server/response"
 
@@ -41,6 +42,7 @@ export async function GET(request: Request) {
       )
     }
 
+    await requireAiRouteAccess(request, attemptId)
     await ensureSkillProfileTable()
 
     const rows = await prisma.$queryRaw`

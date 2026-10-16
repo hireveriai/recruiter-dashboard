@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
 
 import { generateFollowUp, generateFollowUpWithAI } from "@/lib/server/ai/adaptive-interview"
+import { requireAiRouteAccess } from "@/lib/server/ai/route-access"
 import { errorResponse } from "@/lib/server/response"
 
 export async function POST(request: Request) {
   try {
+    await requireAiRouteAccess(request)
     const body = await request.json()
 
     const lastQuestion = body.last_question ?? body.lastQuestion

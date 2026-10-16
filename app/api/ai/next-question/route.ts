@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { generateQuestions } from "@/lib/server/ai/brain"
+import { requireAiRouteAccess } from "@/lib/server/ai/route-access"
 import { fetchSkillState } from "@/lib/server/ai/skill-state"
 import { errorResponse } from "@/lib/server/response"
 
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     const attemptId = body.attempt_id ?? body.attemptId
+    await requireAiRouteAccess(request, attemptId)
     const skillsRemainingInput = body.skillsRemaining ?? body.skills_remaining
 
     let skillsRemaining = Array.isArray(skillsRemainingInput) ? skillsRemainingInput : null

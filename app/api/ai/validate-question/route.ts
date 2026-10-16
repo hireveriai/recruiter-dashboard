@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
 
 import { validateQuestionQuality } from "@/lib/server/ai/brain"
+import { requireAiRouteAccess } from "@/lib/server/ai/route-access"
 import { errorResponse } from "@/lib/server/response"
 
 export async function POST(request: Request) {
   try {
+    await requireAiRouteAccess(request)
     const body = await request.json()
 
     const question = String(body.generated_question ?? body.question ?? "").trim()

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { evaluateCandidateResponse, updateSkillState } from "@/lib/server/ai/response-evaluation"
+import { requireAiRouteAccess } from "@/lib/server/ai/route-access"
 import { fetchSkillState, upsertSkillState } from "@/lib/server/ai/skill-state"
 import { errorResponse } from "@/lib/server/response"
 
@@ -9,8 +10,6 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     const attemptId = body.attempt_id ?? body.attemptId
-    const interviewId = body.interview_id ?? body.interviewId
-    const organizationId = body.organization_id ?? body.organizationId
     const skill = body.skill
     const answer = body.answer ?? ""
     const lastQuestion = body.last_question ?? body.lastQuestion
@@ -23,6 +22,10 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    const { auth, attempt } = await requireAiRouteAccess(request, attemptId)
+    const interviewId = attempt?.interviewId ?? null
+    const organizationId = auth.organizationId
 
     const state = await fetchSkillState(attemptId)
     const skillsCovered = state?.skills_covered ?? []

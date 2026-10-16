@@ -52,6 +52,7 @@ type JwtClaims = {
   organizationId?: string
   role?: string
   email?: string
+  exp?: number
 }
 
 type RecruiterJwtLookup = RecruiterLookupRow & {
@@ -281,11 +282,6 @@ function parseJwtClaims(token: string | null | undefined): JwtClaims | null {
   }
 }
 
-function decodeJwtSub(token: string | null | undefined): string | null {
-  const sub = parseJwtClaims(token)?.sub?.trim()
-  return sub && UUID_REGEX.test(sub) ? sub : null
-}
-
 function base64UrlEncode(value: Buffer | string) {
   return Buffer.from(value)
     .toString("base64")
@@ -323,6 +319,12 @@ function decodeVerifiedRecruiterJwt(token: string | null | undefined): Recruiter
   const claims = parseJwtClaims(token)
   const userId = claims?.userId?.trim()
   const organizationId = (claims?.orgId ?? claims?.organizationId)?.trim()
+
+  // Every issuer (team-invite accept) sets exp. A token without one would be
+  // valid forever and survive logout, so it is rejected rather than trusted.
+  if (typeof claims?.exp !== "number" || claims.exp <= Math.floor(Date.now() / 1000)) {
+    return null
+  }
 
   if (
     claims?.role !== "recruiter" ||
@@ -591,6 +593,9 @@ async function repairRecruiterByEmailOrg(
   email: string,
   organizationId: string
 ): Promise<RecruiterLookupRow | null> {
+  // Never re-activates: is_active = false means an owner disabled or removed
+  // this member (manage-team), and only the team-invite accept / re-invite
+  // flows may turn it back on.
   try {
     await prisma.$executeRaw(Prisma.sql`
       update public.users
@@ -599,10 +604,10 @@ async function repairRecruiterByEmailOrg(
           when role in ('RECRUITER', 'ADMIN', 'ORG_OWNER') then role
           else 'RECRUITER'
         end,
-        is_active = true,
         is_email_verified = true
       where lower(email) = ${email}
         and organization_id::text = ${organizationId}
+        and is_active = true
     `)
   } catch (error) {
     console.warn("Trusted recruiter email repair failed", error)
@@ -658,7 +663,6 @@ async function ensureRecruiterUserFromTrustedAuth(input: {
           when public.users.role in ('RECRUITER', 'ADMIN', 'ORG_OWNER') then public.users.role
           else excluded.role
         end,
-        is_active = true,
         is_email_verified = true
     `)
   } catch (error) {
@@ -1012,9 +1016,7 @@ export async function getRecruiterRequestContext(request: Request): Promise<Recr
     }
   }
 
-  const jwtIdentityCandidates = uniqueNormalizedValues(jwtCandidates.map((jwt) => decodeJwtSub(jwt)))
-
-  if (!sessionCookiePresent && jwtCandidates.length === 0 && jwtIdentityCandidates.length === 0) {
+  if (!sessionCookiePresent && jwtCandidates.length === 0) {
     if (DEV_AUTH_BYPASS) {
       const recruiter = await lookupDevBypassRecruiter()
       if (recruiter?.user_id && recruiter.organization_id) {
@@ -1092,7 +1094,10 @@ export async function getRecruiterRequestContext(request: Request): Promise<Recr
     }
   }
 
-  const identityCandidates = [...jwtIdentityCandidates]
+  // Identities come only from server-side session lookups. A JWT's `sub` is
+  // never used here: these tokens are not signature-checked, so trusting `sub`
+  // let anyone who knew a recruiter's identity_id sign in as them.
+  const identityCandidates: string[] = []
 
   for (const sessionId of sessionCandidates) {
     const identityId = await lookupIdentityFromSupabaseSession(sessionId)
@@ -1109,8 +1114,8 @@ export async function getRecruiterRequestContext(request: Request): Promise<Recr
         userId: recruiter.user_id,
         organizationId: recruiter.organization_id,
         sessionCookiePresent,
-        sessionCookieMatched: Boolean(sessionCookiePresent || jwtIdentityCandidates.includes(identityId)),
-        sessionValidatedVia: jwtIdentityCandidates.includes(identityId) ? "jwt" : "identity_cookie",
+        sessionCookieMatched: sessionCookiePresent,
+        sessionValidatedVia: "identity_cookie",
       }
     }
   }
@@ -1144,10 +1149,6 @@ export async function getRecruiterRequestContext(request: Request): Promise<Recr
         sessionValidatedVia: "identity_cookie",
       }
     }
-  }
-
-  if (jwtIdentityCandidates.length > 0) {
-    throw new ApiError(401, "RECRUITER_NOT_FOUND", "Recruiter not found for the authenticated session")
   }
 
   throw new ApiError(401, "INVALID_SESSION", "Authenticated recruiter session is invalid or expired")
