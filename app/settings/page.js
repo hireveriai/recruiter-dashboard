@@ -24,6 +24,9 @@ export default function SettingsPage() {
   const [status, setStatus] = useState({ loading: true, saving: false, error: "", notice: "" });
   const [notifyRecruitingTeam, setNotifyRecruitingTeam] = useState(true);
   const [notificationStatus, setNotificationStatus] = useState({ saving: false, error: "", notice: "" });
+  // "" = platform default (365 days); otherwise one of RETENTION_OPTIONS.
+  const [retentionDays, setRetentionDays] = useState("");
+  const [retentionStatus, setRetentionStatus] = useState({ saving: false, error: "", notice: "" });
 
   useEffect(() => {
     let active = true;
@@ -33,6 +36,7 @@ export default function SettingsPage() {
       const cachedTimezone = cached.timezone ?? timezone ?? DEFAULT_ORG_TIMEZONE;
       const cachedLabel = cached.timezoneLabel ?? timezoneLabel ?? DEFAULT_ORG_TIMEZONE_LABEL;
       const cachedNotifyRecruitingTeam = cached.notifyRecruitingTeam ?? true;
+      const cachedRetentionDays = cached.candidateDataRetentionDays ? String(cached.candidateDataRetentionDays) : "";
       window.queueMicrotask(() => {
         if (!active) {
           return;
@@ -41,6 +45,7 @@ export default function SettingsPage() {
         setSelectedTimezone(cachedTimezone);
         setSelectedLabel(cachedLabel);
         setNotifyRecruitingTeam(cachedNotifyRecruitingTeam);
+        setRetentionDays(cachedRetentionDays);
         setTimezoneState({ timezone: cachedTimezone, timezoneLabel: cachedLabel });
         setStatus({ loading: false, saving: false, error: "", notice: "" });
       });
@@ -64,15 +69,18 @@ export default function SettingsPage() {
         const nextTimezone = payload?.data?.timezone ?? timezone ?? DEFAULT_ORG_TIMEZONE;
         const nextLabel = payload?.data?.timezoneLabel ?? timezoneLabel ?? DEFAULT_ORG_TIMEZONE_LABEL;
         const nextNotifyRecruitingTeam = payload?.data?.notifyRecruitingTeam ?? true;
+        const nextRetentionDays = payload?.data?.candidateDataRetentionDays ?? null;
 
         setSelectedTimezone(nextTimezone);
         setSelectedLabel(nextLabel);
         setNotifyRecruitingTeam(nextNotifyRecruitingTeam);
+        setRetentionDays(nextRetentionDays ? String(nextRetentionDays) : "");
         setTimezoneState({ timezone: nextTimezone, timezoneLabel: nextLabel });
         writeSessionJsonCache(cacheKey, {
           timezone: nextTimezone,
           timezoneLabel: nextLabel,
           notifyRecruitingTeam: nextNotifyRecruitingTeam,
+          candidateDataRetentionDays: nextRetentionDays,
         });
         setStatus({ loading: false, saving: false, error: "", notice: "" });
       } catch {
@@ -177,6 +185,43 @@ export default function SettingsPage() {
       setNotificationStatus({
         saving: false,
         error: error instanceof Error ? error.message : "Failed to save interview notification setting.",
+        notice: "",
+      });
+    }
+  }
+
+  async function saveRetention() {
+    setRetentionStatus({ saving: true, error: "", notice: "" });
+
+    try {
+      const response = await fetch(buildAuthUrl("/api/organization/settings", searchParams), {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          candidateDataRetentionDays: retentionDays ? Number(retentionDays) : null,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error?.message || payload?.message || "Failed to save data retention setting.");
+      }
+
+      writeSessionJsonCache(cacheKey, {
+        timezone: selectedTimezone,
+        timezoneLabel: selectedLabel,
+        notifyRecruitingTeam,
+        candidateDataRetentionDays: retentionDays ? Number(retentionDays) : null,
+      });
+      setRetentionStatus({ saving: false, error: "", notice: "Data retention setting updated." });
+    } catch (error) {
+      setRetentionStatus({
+        saving: false,
+        error: error instanceof Error ? error.message : "Failed to save data retention setting.",
         notice: "",
       });
     }
@@ -309,6 +354,47 @@ export default function SettingsPage() {
               className="mt-6 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {notificationStatus.saving ? "Saving..." : "Save"}
+            </button>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-950/40 p-6">
+            <p className="text-xs uppercase tracking-[0.35em] text-blue-300/80">Candidate Data Retention</p>
+            <p className="mt-4 text-sm font-medium text-white">Keep candidate interview data for</p>
+            <p className="mt-1 max-w-2xl text-sm text-slate-400">
+              Answers, transcripts, scores and candidate details are deleted automatically after this period.
+              Interview recordings and identity documents are always deleted 30 days after the interview.
+            </p>
+            <select
+              value={retentionDays}
+              onChange={(event) => setRetentionDays(event.target.value)}
+              className="mt-4 w-full max-w-xs rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-violet-400/60"
+            >
+              <option value="">1 year (default)</option>
+              <option value="90">90 days</option>
+              <option value="180">180 days</option>
+              <option value="365">1 year</option>
+              <option value="730">2 years</option>
+            </select>
+
+            {retentionStatus.error ? (
+              <p className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                {retentionStatus.error}
+              </p>
+            ) : null}
+
+            {retentionStatus.notice ? (
+              <p className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                {retentionStatus.notice}
+              </p>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => void saveRetention()}
+              disabled={status.loading || retentionStatus.saving}
+              className="mt-6 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {retentionStatus.saving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>

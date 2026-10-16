@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { getRecruiterRequestContext } from "@/lib/server/auth-context"
+import {
+  CANDIDATE_DATA_RETENTION_OPTIONS,
+  DEFAULT_CANDIDATE_DATA_RETENTION_DAYS,
+} from "@/lib/server/data-retention"
 import { prisma } from "@/lib/server/prisma"
 import { errorResponse } from "@/lib/server/response"
 import {
@@ -14,6 +18,9 @@ const payloadSchema = z.object({
   timezone: z.string().trim().min(1).optional(),
   timezoneLabel: z.string().trim().min(1).optional(),
   notifyRecruitingTeam: z.boolean().optional(),
+  candidateDataRetentionDays: z
+    .union([z.literal(90), z.literal(180), z.literal(365), z.literal(730), z.null()])
+    .optional(),
 })
 
 function resolveTimezoneLabel(timezone: string, timezoneLabel?: string) {
@@ -34,8 +41,9 @@ export async function GET(request: Request) {
       timezone: string | null
       timezone_label: string | null
       notify_recruiting_team: boolean | null
+      candidate_data_retention_days: number | null
     }>>`
-      select timezone, timezone_label, notify_recruiting_team
+      select timezone, timezone_label, notify_recruiting_team, candidate_data_retention_days
       from public.organizations
       where organization_id = ${auth.organizationId}::uuid
       limit 1
@@ -49,6 +57,9 @@ export async function GET(request: Request) {
         timezone: organization?.timezone ?? DEFAULT_ORG_TIMEZONE,
         timezoneLabel: organization?.timezone_label ?? DEFAULT_ORG_TIMEZONE_LABEL,
         notifyRecruitingTeam: organization?.notify_recruiting_team ?? true,
+        candidateDataRetentionDays: organization?.candidate_data_retention_days ?? null,
+        defaultCandidateDataRetentionDays: DEFAULT_CANDIDATE_DATA_RETENTION_DAYS,
+        candidateDataRetentionOptions: CANDIDATE_DATA_RETENTION_OPTIONS,
       },
     })
     response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120")
@@ -63,7 +74,12 @@ export async function PATCH(request: Request) {
     const auth = await getRecruiterRequestContext(request)
     const parsed = payloadSchema.parse(await request.json())
 
-    const data: { timezone?: string; timezoneLabel?: string; notifyRecruitingTeam?: boolean } = {}
+    const data: {
+      timezone?: string
+      timezoneLabel?: string
+      notifyRecruitingTeam?: boolean
+      candidateDataRetentionDays?: number | null
+    } = {}
 
     if (parsed.timezone !== undefined) {
       data.timezone = parsed.timezone
@@ -88,6 +104,15 @@ export async function PATCH(request: Request) {
       await prisma.$executeRaw`
         update public.organizations
         set notify_recruiting_team = ${data.notifyRecruitingTeam}
+        where organization_id = ${auth.organizationId}::uuid
+      `
+    }
+
+    if (parsed.candidateDataRetentionDays !== undefined) {
+      data.candidateDataRetentionDays = parsed.candidateDataRetentionDays
+      await prisma.$executeRaw`
+        update public.organizations
+        set candidate_data_retention_days = ${parsed.candidateDataRetentionDays}::integer
         where organization_id = ${auth.organizationId}::uuid
       `
     }
