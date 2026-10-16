@@ -270,18 +270,34 @@ body {
   color: #ffffff;
 }
 
-.hv-brand-wordmark {
-  background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 45%, #818cf8 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* One brand blue for the mark and the wordmark: the dark-theme primary, and in
+   light theme the same cyan as the selected nav tab (AA contrast on white). */
+.hv-brand-wordmark,
+.hv-brand-mark {
+  color: #67e8f9;
 }
 
-:root[data-theme="light"] .hv-brand-wordmark {
-  background: linear-gradient(135deg, #0369a1 0%, #0284c7 45%, #4338ca 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.hv-brand-tile {
+  border-color: rgba(34, 211, 238, 0.2);
+  background: #0f172a;
+}
+
+.group:hover .hv-brand-tile {
+  border-color: rgba(103, 232, 249, 0.4);
+}
+
+:root[data-theme="light"] .hv-brand-wordmark,
+:root[data-theme="light"] .hv-brand-mark {
+  color: #0e7490;
+}
+
+:root[data-theme="light"] .hv-brand-tile {
+  border-color: #cffafe;
+  background: #ecfeff;
+}
+
+:root[data-theme="light"] .group:hover .hv-brand-tile {
+  border-color: #a5f3fc;
 }
 
 :root[data-theme="light"] .hv-navbar {
