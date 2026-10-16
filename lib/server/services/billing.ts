@@ -1270,6 +1270,77 @@ export async function verifyAndActivatePayment(input: {
     throw new ApiError(400, "INVALID_RAZORPAY_SIGNATURE", "Invalid Razorpay payment signature")
   }
 
+  return activateCapturedPayment({
+    auth: input.auth,
+    payment,
+    razorpayOrderId: input.razorpayOrderId,
+    razorpayPaymentId: input.razorpayPaymentId,
+    razorpaySignature: input.razorpaySignature,
+  })
+}
+
+/**
+ * Server-to-server confirmation from the Razorpay webhook (already signature-
+ * verified by the route). Covers the case where the customer paid but the
+ * browser closed before /api/verify-payment ran. Activation is the same locked,
+ * idempotent path as the browser flow, so a payment confirmed by both is
+ * activated once.
+ */
+export async function activatePaymentFromWebhook(input: { razorpayOrderId: string; razorpayPaymentId: string }) {
+  const rows = await prisma.$queryRaw<Array<{ organization_id: string; user_id: string }>>(Prisma.sql`
+    select "organizationId"::text as organization_id, "userId" as user_id
+    from public.verisnova_payments
+    where "razorpayOrderId" = ${input.razorpayOrderId}
+    limit 1
+  `)
+  const owner = rows[0]
+
+  if (!owner) {
+    // Not a recruiter-billing order (e.g. a candidate-dashboard purchase on the same account).
+    return { handled: false as const, reason: "unknown_order" }
+  }
+
+  const auth = {
+    userId: owner.user_id,
+    organizationId: owner.organization_id,
+    sessionCookiePresent: false,
+    sessionCookieMatched: false,
+    sessionValidatedVia: "jwt",
+  } as RecruiterRequestContext
+  const payment = await getPaymentByOrderForAuth({ orderId: input.razorpayOrderId, auth })
+
+  if (!payment) {
+    return { handled: false as const, reason: "unknown_order" }
+  }
+
+  if (payment.status === "success") {
+    return { handled: true as const, alreadyVerified: true, paymentId: payment.id }
+  }
+
+  if (payment.status !== "pending") {
+    throw new ApiError(409, "PAYMENT_NOT_PENDING", "Payment is not pending")
+  }
+
+  const result = await activateCapturedPayment({
+    auth,
+    payment,
+    razorpayOrderId: input.razorpayOrderId,
+    razorpayPaymentId: input.razorpayPaymentId,
+    razorpaySignature: null,
+  })
+
+  return { handled: true as const, alreadyVerified: result.alreadyVerified, paymentId: result.paymentId }
+}
+
+async function activateCapturedPayment(input: {
+  auth: RecruiterRequestContext
+  payment: PaymentRow
+  razorpayOrderId: string
+  razorpayPaymentId: string
+  razorpaySignature: string | null
+}) {
+  const { payment } = input
+
   await validatePendingPaymentAgainstCurrentDb(payment)
   await ensureEntitlementSchema()
   const razorpayPayment = await fetchAndCaptureRazorpayPayment(payment, input.razorpayPaymentId)
@@ -1351,7 +1422,7 @@ export async function verifyAndActivatePayment(input: {
       set status = 'success'::"PaymentStatus",
           "paymentRef" = ${input.razorpayPaymentId},
           "razorpayPaymentId" = ${input.razorpayPaymentId},
-          "razorpaySignature" = ${input.razorpaySignature},
+          "razorpaySignature" = coalesce(${input.razorpaySignature}, "razorpaySignature"),
           "razorpayPaymentStatus" = ${String(razorpayPayment.status ?? "captured")},
           "razorpayPaymentPayload" = ${sanitizeRazorpayPaymentPayload(razorpayPayment)}::jsonb,
           "failureReason" = null,
