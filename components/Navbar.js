@@ -2,7 +2,6 @@
 
 import { Bell, BrainCircuit, Moon, Sun } from "lucide-react";
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -13,6 +12,7 @@ import { logoutRecruiter } from "@/lib/client/logout";
 import { DEFAULT_RECRUITER_PERMISSION_PROFILE, canAccessFeature } from "@/lib/client/permissions";
 import { useAuthSearchParams } from "@/lib/client/use-auth-search-params";
 import { useTheme } from "@/components/ThemeProvider";
+import VerisNovaMark from "@/components/VerisNovaMark";
 
 const CreateJobModal = dynamic(() => import("./CreateJobModal"), {
   ssr: false,
@@ -239,19 +239,6 @@ function cacheAlerts(alerts) {
 
 export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, initialProfile = null, initialAlerts = undefined }) {
   const { resolvedTheme, theme, setTheme } = useTheme();
-  /* Two different marks, and they need different treatment. The dark-theme
-     asset is line art on transparency with wide padding baked in, so it is
-     oversized and cropped by the tile to trim that padding. The light-theme
-     asset already fills its own frame, so the same crop cut into the mark -
-     it is fitted to the tile instead, on a white ground rather than navy. */
-  const isLightTheme = resolvedTheme === "light";
-  const logoSrc = isLightTheme ? "/verisnova_logo_on_white.png" : "/verisnova_logo.png";
-  const logoTileClass = isLightTheme
-    ? "border-cyan-200 bg-white ring-2 ring-cyan-50 group-hover:border-cyan-300"
-    : "border-cyan-400/25 bg-slate-900 group-hover:border-cyan-300/45";
-  const logoImageClass = isLightTheme
-    ? "h-full w-full object-contain"
-    : "h-[4.2rem] w-[4.2rem] max-w-none object-contain";
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useAuthSearchParams();
@@ -621,18 +608,8 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               className="group flex w-[108px] shrink-0 items-center gap-3 leading-none sm:w-[220px] xl:w-[244px]"
               aria-label="VerisNova home"
             >
-              <span
-                className={`relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-sm transition-all duration-200 ${logoTileClass}`}
-              >
-                <Image
-                  src={logoSrc}
-                  alt=""
-                  width={88}
-                  height={88}
-                  priority
-                  className={logoImageClass}
-                  sizes="48px"
-                />
+              <span className="hv-brand-tile flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200">
+                <VerisNovaMark className="hv-brand-mark h-[26px] w-[26px]" />
               </span>
               <span className="min-w-0">
                 <span className="hv-brand-wordmark block text-lg font-bold tracking-tight">VerisNova</span>
