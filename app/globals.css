@@ -270,34 +270,28 @@ body {
   color: #ffffff;
 }
 
-/* One brand blue for the mark and the wordmark: the dark-theme primary, and in
-   light theme the same cyan as the selected nav tab (AA contrast on white). */
-.hv-brand-wordmark,
-.hv-brand-mark {
+/* Wordmark brand blue: the dark-theme primary, and in light theme the same
+   cyan as the selected nav tab (AA contrast on white). */
+.hv-brand-wordmark {
   color: #67e8f9;
 }
 
-.hv-brand-tile {
-  border-color: rgba(34, 211, 238, 0.2);
-  background: #0f172a;
-}
-
-.group:hover .hv-brand-tile {
-  border-color: rgba(103, 232, 249, 0.4);
-}
-
-:root[data-theme="light"] .hv-brand-wordmark,
-:root[data-theme="light"] .hv-brand-mark {
+:root[data-theme="light"] .hv-brand-wordmark {
   color: #0e7490;
 }
 
-:root[data-theme="light"] .hv-brand-tile {
-  border-color: #cffafe;
-  background: #ecfeff;
+/* Enterprise mark: the dark-theme tile by default, the light-theme mark when
+   the light theme is on. Pure CSS so there is no flash on first paint. */
+.hv-brand-mark-light {
+  display: none;
 }
 
-:root[data-theme="light"] .group:hover .hv-brand-tile {
-  border-color: #a5f3fc;
+:root[data-theme="light"] .hv-brand-mark-dark {
+  display: none;
+}
+
+:root[data-theme="light"] .hv-brand-mark-light {
+  display: block;
 }
 
 :root[data-theme="light"] .hv-navbar {

@@ -608,9 +608,7 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
               className="group flex w-[108px] shrink-0 items-center gap-3 leading-none sm:w-[220px] xl:w-[244px]"
               aria-label="VerisNova home"
             >
-              <span className="hv-brand-tile flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200">
-                <VerisNovaMark className="hv-brand-mark h-[26px] w-[26px]" />
-              </span>
+              <VerisNovaMark className="h-9 w-9 shrink-0 transition-transform duration-200 group-hover:-translate-y-px" />
               <span className="min-w-0">
                 <span className="hv-brand-wordmark block text-lg font-bold tracking-tight">VerisNova</span>
                 <span className="mt-0.5 hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400 sm:block">
