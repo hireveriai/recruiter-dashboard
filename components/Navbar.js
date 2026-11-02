@@ -657,7 +657,8 @@ export default function Navbar({ onSendInterviewClick: _onSendInterviewClick, in
                 title="VERIS AI"
               >
                 <BrainCircuit className="h-4 w-4" strokeWidth={2} />
-                <span className="hv-veris-ai-dot pointer-events-none absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_6px_rgba(34,211,238,0.9)]" />
+                {/* Green "online" status dot: VERIS AI is available. */}
+                <span className="hv-veris-ai-dot pointer-events-none absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_0_2px_#020617,0_0_8px_rgba(52,211,153,0.85)]" />
               </button>
             ) : null}
             {canViewAlerts ? (

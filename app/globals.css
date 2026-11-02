@@ -340,8 +340,8 @@ body {
 }
 
 :root[data-theme="light"] .hv-veris-ai-dot {
-  background: #0891b2;
-  box-shadow: 0 0 6px rgba(8, 145, 178, 0.55);
+  background: #10b981;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 6px rgba(16, 185, 129, 0.55);
 }
 
 :root[data-theme="light"] .hv-theme-panel {
