@@ -121,8 +121,10 @@ function FormStep({ number, title, hint, aside = null, children }) {
 function SummaryItem({ label, value, muted }) {
   return (
     <div className="py-2.5">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-      <p className={`mt-0.5 text-sm ${muted ? "text-slate-500" : "font-medium text-white"}`}>{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300">{label}</p>
+      {/* Empty states stay a step lighter than filled values but at full
+          weight, so they read as status rather than placeholder text. */}
+      <p className={`mt-0.5 text-sm font-medium ${muted ? "text-slate-300" : "font-semibold text-white"}`}>{value}</p>
     </div>
   )
 }
@@ -1367,7 +1369,7 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                 <aside className="min-w-0">
                   <div className="space-y-4 lg:sticky lg:top-0">
                     <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Invite summary</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">Invite summary</p>
                       <div className="mt-1 divide-y divide-slate-800">
                         <SummaryItem label="Job" value={selectedJobTitle || "Select a job"} muted={!selectedJobTitle} />
                         <SummaryItem
@@ -1407,9 +1409,9 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                         </>
                       ) : (
                         <>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">AI/Live interview credits</p>
-                          <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{trialCredits.interviewCreditsRemaining}</p>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-white">AI/Live interview credits</p>
+                          <p className="mt-1 text-3xl font-bold tabular-nums text-white">{trialCredits.interviewCreditsRemaining}</p>
+                          <p className="text-xs font-medium text-slate-300">
                             remaining{pendingCandidateCount > 0 ? ` · this batch uses ${pendingCandidateCount}` : ""}
                           </p>
                         </>
@@ -1427,8 +1429,8 @@ function AiSendInterviewModal({ isOpen, onClose, initialTrialCredits = null }) {
                             <AccessFeatureIcon type={type} />
                           </span>
                           <span>
-                            <span className="block text-xs font-semibold text-white">{title}</span>
-                            <span className="block text-xs text-slate-400">{detail}</span>
+                            <span className="block text-sm font-semibold text-white">{title}</span>
+                            <span className="block text-xs leading-relaxed text-slate-300">{detail}</span>
                           </span>
                         </li>
                       ))}

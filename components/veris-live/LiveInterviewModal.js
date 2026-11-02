@@ -108,8 +108,8 @@ function SummaryRow({ icon, label, value, muted }) {
     <div className="flex items-start gap-3 py-2">
       <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-        <p className={`truncate text-sm ${muted ? "text-slate-500" : "font-medium text-white"}`}>{value}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300">{label}</p>
+        <p className={`truncate text-sm font-medium ${muted ? "text-slate-300" : "font-semibold text-white"}`}>{value}</p>
       </div>
     </div>
   )
@@ -484,7 +484,7 @@ export default function LiveInterviewModal({ onClose, onBack }) {
               {/* Live summary */}
               <aside className="border-t border-slate-800 bg-slate-950/40 p-5 sm:p-6 lg:border-l lg:border-t-0">
                 <div className="lg:sticky lg:top-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Interview summary</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">Interview summary</p>
                   <div className="mt-2 divide-y divide-slate-800">
                     <SummaryRow icon={Icons.user} label="Candidate" value={name.trim() || "Not added yet"} muted={!name.trim()} />
                     <SummaryRow icon={Icons.file} label="Role" value={jobTitle || "Select a job"} muted={!jobTitle} />
@@ -494,7 +494,7 @@ export default function LiveInterviewModal({ onClose, onBack }) {
                       <div className="flex items-start gap-3">
                         <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">{Icons.users}</span>
                         <div className="min-w-0">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Panel</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300">Panel</p>
                           {panelPeople.length ? (
                             <div className="mt-1.5 flex items-center">
                               <div className="flex -space-x-2">
@@ -502,12 +502,12 @@ export default function LiveInterviewModal({ onClose, onBack }) {
                                   <Avatar key={person.key} label={person.label} />
                                 ))}
                               </div>
-                              <span className="ml-2 text-sm font-medium text-white">
+                              <span className="ml-2 text-sm font-semibold text-white">
                                 {panelPeople.length} interviewer{panelPeople.length > 1 ? "s" : ""}
                               </span>
                             </div>
                           ) : (
-                            <p className="text-sm text-slate-500">No one added yet</p>
+                            <p className="text-sm font-medium text-slate-300">No one added yet</p>
                           )}
                         </div>
                       </div>
@@ -515,8 +515,8 @@ export default function LiveInterviewModal({ onClose, onBack }) {
                   </div>
 
                   <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">What happens next</p>
-                    <ul className="mt-2 space-y-2 text-xs text-slate-300">
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-white">What happens next</p>
+                    <ul className="mt-2 space-y-2 text-xs leading-relaxed text-slate-200">
                       <li className="flex gap-2">
                         <span className="text-cyan-300">{Icons.mail}</span>
                         Candidate and each interviewer get their own secure, expiring link.
