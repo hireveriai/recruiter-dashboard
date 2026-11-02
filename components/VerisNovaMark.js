@@ -3,7 +3,8 @@ import Image from "next/image";
 /* VerisNova enterprise mark, swapped by theme in CSS (globals.css) rather than
    in JS so the right variant paints on first load with no hydration flash:
    - dark theme (default): white + teal mark on a transparent ground
-   - light theme: navy + teal mark on a transparent ground */
+   - light theme: the same mark on its navy tile, since its white half would
+     vanish on a light navbar */
 export default function VerisNovaMark({ className = "" }) {
   return (
     <span aria-hidden="true" className={`hv-brand-mark relative inline-block ${className}`.trim()}>
