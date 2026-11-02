@@ -280,7 +280,7 @@ body {
   color: #0e7490;
 }
 
-/* Enterprise mark: the dark-theme tile by default, the light-theme mark when
+/* Enterprise mark: the dark-theme mark by default, the light-theme mark when
    the light theme is on. Pure CSS so there is no flash on first paint. */
 .hv-brand-mark-light {
   display: none;

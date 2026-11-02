@@ -2,7 +2,7 @@ import Image from "next/image";
 
 /* VerisNova enterprise mark, swapped by theme in CSS (globals.css) rather than
    in JS so the right variant paints on first load with no hydration flash:
-   - dark theme (default): white + teal mark on its own navy tile
+   - dark theme (default): white + teal mark on a transparent ground
    - light theme: navy + teal mark on a transparent ground */
 export default function VerisNovaMark({ className = "" }) {
   return (
